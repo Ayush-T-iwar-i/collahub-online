@@ -1,10 +1,14 @@
 const mongoose = require("mongoose");
 
+// ⚠️  NOTE: Ye model sirf legacy purpose ke liye hai.
+// Actual student data User.js model mein store hota hai.
+// Controllers User model use karte hain — Student model nahi.
+
 const studentSchema = new mongoose.Schema(
   {
     name: String,
     email: { type: String, unique: true },
-    phone: String,
+    phone: { type: String, unique: true }, // ✅ syntax fix — {String, unique} galat tha
     studentId: { type: String, unique: true },
     admissionYear: String,
     department: String,

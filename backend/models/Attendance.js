@@ -11,7 +11,8 @@ const attendanceSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["Present", "Absent"],
+    enum: ["present", "absent"], // ✅ lowercase — controller bhi lowercase save karta hai
+    default: "absent",
   },
   date: {
     type: Date,

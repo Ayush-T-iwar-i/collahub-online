@@ -2,105 +2,30 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    // ===== COMMON FIELDS =====
+    name: String,
+    email: { type: String, unique: true },
+    password: String,
+    phone: String,
+    role: { type: String, enum: ["student", "teacher", "admin"] },
+    profileImage: String,
+    refreshToken: String,
 
-    email: {
-      type: String,
-      unique: true,
-      required: true,
-      lowercase: true,
-      trim: true,
-    },
+    // ===== OTP (for email verify / forgot password) =====
+    otp: String,
+    otpExpire: Date,
 
-phone: {
-  type: String,
-  required: function () {
-    return this.role === "student" || this.role === "teacher";
-  },
-},
+    // ===== STUDENT FIELDS =====
+    studentId: { type: String, sparse: true },
+    department: String,
+    gender: String,
+    admissionYear: String,
+    college: String,
 
-  studentId: {
-  type: String,
-  unique: true,
-  sparse: true,   // 🔥 ADD THIS
-  required: function () {
-    return this.role === "student";
-  },
-},
-
-  admissionYear: {
-  type: String,
-  required: function () {
-    return this.role === "student";
-  },
-},
-    
-college: {
-  type: String,
-  required: false,
-},
-
-department: {
-  type: String,
-  required: function () {
-    return this.role === "student";
-  },
-},
-
-university: {
-  type: String,
-  required: function () {
-    return this.role === "teacher";
-  },
-  trim: true,
-},
-
-
-age: {
-  type: Number,
-  required: function () {
-    return this.role === "teacher";
-  },
-},
-
-    password: {
-      type: String,
-      required: true,
-    },
-
-    role: {
-      type: String,
-      enum: ["admin", "teacher", "student"],
-      default: "student",
-      lowercase: true,
-    },
-
-      gender: {
-  type: String,
-},
-
-    otp: {
-      type: String,
-    },
-
-    otpExpire: {
-      type: Date,
-    },
-
-    profileImage: {
-      type: String,
-    },
-
-    refreshToken: {
-      type: String,
-    },
-
-
-
+    // ===== TEACHER FIELDS =====
+    teacherId: { type: String, sparse: true },
+    university: String,
+    age: Number,
   },
   { timestamps: true }
 );

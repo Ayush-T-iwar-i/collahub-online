@@ -31,7 +31,7 @@ export default function TeacherDashboard() {
         const token = await AsyncStorage.getItem("teacherToken");
 
         if (!token) {
-          router.replace("/teacher-login");
+          router.replace("/auth/teacher-login");
         } else {
           setCheckingAuth(false);
         }
@@ -74,29 +74,35 @@ export default function TeacherDashboard() {
   );
 
   // 👤 Load Profile Image
-  useFocusEffect(
-    useCallback(() => {
-      const loadImage = async () => {
-        const teacherData = await AsyncStorage.getItem("teacherData");
+// 👤 Load Profile Image
+useFocusEffect(
+  useCallback(() => {
+    const loadData = async () => {
+      try {
+        const data = await AsyncStorage.getItem("teacherData");
 
-        if (teacherData) {
-          const parsed = JSON.parse(teacherData);
+        if (!data) return;
 
-          const saved = await AsyncStorage.getItem(
-            `teacherProfile_${parsed.teacherId}`
-          );
+        const parsed = JSON.parse(data);
 
-          if (saved) {
-            setImage(saved);
-          } else {
-            setImage(null);
-          }
+        const savedImage = await AsyncStorage.getItem(
+          `profileImage_${parsed.teacherId}`
+        );
+
+        if (savedImage) {
+          setImage(savedImage);
+        } else {
+          setImage(null);
         }
-      };
 
-      loadImage();
-    }, [])
-  );
+      } catch (error) {
+        console.log("Dashboard Image Load Error:", error);
+      }
+    };
+
+    loadData();
+  }, [])
+);
 
   const openDrawer = () => {
     navigation.openDrawer();
@@ -160,7 +166,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     paddingTop: 55,
-    backgroundColor: "#4C1D95",
+    backgroundColor: "#7c53b9",
   },
   title: {
     color: "white",
@@ -176,7 +182,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1E1B4B",
+    backgroundColor: "#acaac8cc",
   },
   welcomeText: {
     color: "white",

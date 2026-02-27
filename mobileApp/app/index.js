@@ -67,7 +67,7 @@ export default function LandingPage() {
           </Text>
 
 <RoleButton title="Student" route="/student-login" />
-          <RoleButton title="Teacher" route="/teacher/login" />
+<RoleButton title="Teacher" route="/teacher-login" />
           <RoleButton title="Admin" route="/admin/login" />
         </BlurView>
       </Animated.View>

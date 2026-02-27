@@ -6,24 +6,23 @@ export default function StudentLayout() {
     <Drawer
       screenOptions={{
         headerShown: false,
-        drawerType: "slide",
+        drawerType: "front",
 
-        // Drawer background
+        
         drawerStyle: {
           backgroundColor: "transparent",
         },
-        sceneContainerStyle: {
-  backgroundColor: "transparent",
-},
 
-        // Main screen background (IMPORTANT)
+        sceneContainerStyle: {
+          backgroundColor: "#1E1B4B",
+        },
+
         contentStyle: {
           backgroundColor: "transparent",
         },
 
-        // Overlay behind drawer
+
         overlayColor: "rgba(34, 33, 33, 0.4)",
-        
       }}
       drawerContent={(props) => <CustomDrawer {...props} />}
     >

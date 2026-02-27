@@ -7,6 +7,10 @@ const notificationSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    title: {
+      type: String, // ✅ added — controller title save karta hai
+      default: "Notification",
+    },
     message: {
       type: String,
       required: true,

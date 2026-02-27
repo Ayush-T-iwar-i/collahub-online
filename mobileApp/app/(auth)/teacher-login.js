@@ -15,12 +15,14 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withRepeat,
+  withSpring,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Text } from "react-native-paper";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import API from "../../services/api";
 
 const { width } = Dimensions.get("window");
@@ -31,16 +33,18 @@ export default function TeacherLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const opacity = useSharedValue(0);
-  const translateY = useSharedValue(40);
+  const translateY = useSharedValue(50);
   const scale = useSharedValue(1);
+  const titleScale = useSharedValue(0.8);
 
-  // 🔥 Animation
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 800 });
-    translateY.value = withTiming(0, { duration: 800 });
-    scale.value = withRepeat(withTiming(1.1, { duration: 10000 }), -1, true);
+    opacity.value = withTiming(1, { duration: 900 });
+    translateY.value = withSpring(0, { damping: 15 });
+    titleScale.value = withSpring(1, { damping: 12 });
+    scale.value = withRepeat(withTiming(1.08, { duration: 12000 }), -1, true);
   }, []);
 
   const animatedCardStyle = useAnimatedStyle(() => ({
@@ -52,7 +56,10 @@ export default function TeacherLogin() {
     transform: [{ scale: scale.value }],
   }));
 
-  // 🔙 Back → Home
+  const animatedTitleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: titleScale.value }],
+  }));
+
   useFocusEffect(
     useCallback(() => {
       const subscription = BackHandler.addEventListener(
@@ -68,13 +75,14 @@ export default function TeacherLogin() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Enter email and password");
+      Alert.alert("Error", "Please enter email and password");
       return;
     }
 
     try {
       setLoading(true);
 
+      // ✅ Teacher has separate login endpoint
       const response = await API.post("/teacher/login", {
         email: email.trim().toLowerCase(),
         password,
@@ -82,25 +90,21 @@ export default function TeacherLogin() {
 
       const data = response.data;
 
-      // 🔐 Save Token
+      // ✅ Consistent token storage
       if (data.accessToken) {
-        await AsyncStorage.setItem("teacherToken", data.accessToken);
+        await AsyncStorage.setItem("accessToken", data.accessToken);
       }
-
-      // 👤 Save Teacher Data
+      if (data.refreshToken) {
+        await AsyncStorage.setItem("refreshToken", data.refreshToken);
+      }
       if (data.user) {
-        await AsyncStorage.setItem(
-          "teacherData",
-          JSON.stringify(data.user)
-        );
+        await AsyncStorage.setItem("teacherData", JSON.stringify(data.user));
       }
-
       await AsyncStorage.setItem("teacherLoggedIn", "true");
 
       router.replace("/teacher/dashboard");
 
     } catch (error) {
-      console.log("LOGIN ERROR:", error.response?.data || error.message);
       Alert.alert(
         "Login Failed",
         error.response?.data?.message || "Server not reachable"
@@ -121,47 +125,98 @@ export default function TeacherLogin() {
       />
 
       <LinearGradient
-        colors={["rgba(0,0,0,0.6)", "rgba(0,0,0,0.7)"]}
+        colors={["rgba(10,20,40,0.78)", "rgba(0,0,0,0.88)"]}
         style={StyleSheet.absoluteFillObject}
       />
 
       <Animated.View style={[styles.container, animatedCardStyle]}>
-        <BlurView intensity={80} tint="dark" style={styles.card}>
-          <Text style={styles.title}>Teacher Login</Text>
+        <BlurView intensity={90} tint="dark" style={styles.card}>
 
-          <TextInput
-            placeholder="Email"
-            placeholderTextColor="#aaa"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-          />
+          {/* Logo area */}
+          <Animated.View style={[styles.logoArea, animatedTitleStyle]}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="person-circle" size={32} color="#f59e0b" />
+            </View>
+            <Text style={styles.title}>Teacher Login</Text>
+            <Text style={styles.subtitle}>Access your teacher portal</Text>
+          </Animated.View>
 
-          <TextInput
-            placeholder="Password"
-            placeholderTextColor="#aaa"
-            style={styles.input}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          {/* Email */}
+          <View style={styles.inputWrapper}>
+            <Ionicons name="mail-outline" size={20} color="#aaa" style={styles.inputIcon} />
+            <TextInput
+              placeholder="Email address"
+              placeholderTextColor="#888"
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
 
-          <Pressable style={styles.loginBtn} onPress={handleLogin}>
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginText}>Login</Text>
-            )}
+          {/* Password */}
+          <View style={styles.inputWrapper}>
+            <Ionicons name="lock-closed-outline" size={20} color="#aaa" style={styles.inputIcon} />
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="#888"
+              style={[styles.input, { flex: 1 }]}
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+              <Ionicons
+                name={showPassword ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color="#aaa"
+              />
+            </Pressable>
+          </View>
+
+          {/* Forgot */}
+          <Pressable
+            onPress={() => router.push("/teacher/forgot")}
+            style={styles.forgotBtn}
+          >
+            <Text style={styles.forgotText}>Forgot Password?</Text>
           </Pressable>
 
-          <Pressable onPress={() => router.push("/teacher/register")}>
-            <Text style={styles.link}>Create Account</Text>
+          {/* Login Button */}
+          <Pressable style={styles.loginBtn} onPress={handleLogin} disabled={loading}>
+            <LinearGradient
+              colors={["#f59e0b", "#d97706"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.loginGradient}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.loginText}>Login</Text>
+              )}
+            </LinearGradient>
           </Pressable>
 
-          <Pressable onPress={() => router.push("/teacher/forgot")}>
-            <Text style={styles.link}>Forgot Password?</Text>
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Register */}
+          <Pressable
+            onPress={() => router.push("/teacher/register")}
+            style={styles.registerBtn}
+          >
+            <Text style={styles.registerText}>
+              New teacher?{" "}
+              <Text style={styles.registerLink}>Create Account</Text>
+            </Text>
           </Pressable>
+
         </BlurView>
       </Animated.View>
     </View>
@@ -169,42 +224,118 @@ export default function TeacherLogin() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
   card: {
-    width: width > 500 ? 500 : "90%",
-    padding: 30,
-    borderRadius: 25,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    width: width > 500 ? 460 : "100%",
+    padding: 32,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    overflow: "hidden",
+  },
+  logoArea: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(245,158,11,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.3)",
   },
   title: {
     fontSize: 26,
-    fontWeight: "bold",
+    fontWeight: "800",
     color: "#fff",
-    marginBottom: 25,
-    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: "#888",
+    marginTop: 4,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 14,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
+    flex: 1,
+    paddingVertical: 16,
     color: "#fff",
+    fontSize: 15,
+  },
+  eyeBtn: {
+    padding: 4,
+  },
+  forgotBtn: {
+    alignSelf: "flex-end",
+    marginBottom: 20,
+    marginTop: -4,
+  },
+  forgotText: {
+    color: "#f59e0b",
+    fontSize: 13,
   },
   loginBtn: {
-    backgroundColor: "#0077B5",
-    padding: 15,
-    borderRadius: 12,
+    borderRadius: 14,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  loginGradient: {
+    paddingVertical: 16,
     alignItems: "center",
-    marginBottom: 15,
+    borderRadius: 14,
   },
   loginText: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: 18,
+    fontWeight: "700",
+    fontSize: 17,
+    letterSpacing: 0.5,
   },
-  link: {
-    color: "#cbd5e1",
-    textAlign: "center",
-    marginTop: 8,
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  dividerText: {
+    color: "#666",
+    marginHorizontal: 12,
+    fontSize: 13,
+  },
+  registerBtn: {
+    alignItems: "center",
+  },
+  registerText: {
+    color: "#888",
+    fontSize: 14,
+  },
+  registerLink: {
+    color: "#f59e0b",
+    fontWeight: "700",
   },
 });

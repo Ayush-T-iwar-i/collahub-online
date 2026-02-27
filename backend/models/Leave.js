@@ -11,6 +11,10 @@ const leaveSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    leaveType: {
+      type: String, // ✅ added — validator check karta hai
+      default: "general",
+    },
     fromDate: {
       type: Date,
       required: true,
@@ -21,7 +25,8 @@ const leaveSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      default: "pending", // pending, approved, rejected
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
     },
   },
   { timestamps: true }

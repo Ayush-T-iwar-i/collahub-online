@@ -1,6 +1,23 @@
 const User = require("../models/User");
-const bcrypt = require("bcryptjs"); 
+const bcrypt = require("bcryptjs");
 const cloudinary = require("../config/cloudinary");
+const streamifier = require("streamifier");
+
+// ================= GET MY PROFILE =================
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .select("-password -refreshToken -otp -otpExpire");
+
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({ success: true, user });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // ================= UPDATE PROFILE =================
 exports.updateProfile = async (req, res) => {
@@ -9,73 +26,63 @@ exports.updateProfile = async (req, res) => {
 
     const user = await User.findById(req.user.id);
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
 
-    // Update Name (if provided)
-    if (name) {
-      user.name = name;
-    }
+    if (name) user.name = name.trim();
 
-    // Change Password (if provided)
     if (oldPassword && newPassword) {
-
       const isMatch = await bcrypt.compare(oldPassword, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ message: "Old password is incorrect" });
-      }
+      if (!isMatch)
+        return res.status(400).json({ success: false, message: "Old password is incorrect" });
 
-      if (newPassword.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
+      if (newPassword.length < 6)
+        return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
 
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      user.password = hashedPassword;
+      user.password = await bcrypt.hash(newPassword, 10);
     }
 
     await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Profile updated successfully"
-    });
+    res.json({ success: true, message: "Profile updated successfully" });
 
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// ================= UPLOAD PROFILE IMAGE =================
 exports.uploadProfileImage = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
+    if (!req.file)
+      return res.status(400).json({ success: false, message: "No file uploaded" });
 
-    const result = await cloudinary.uploader.upload_stream(
-      { folder: "college_app_profiles" },
-      async (error, result) => {
-        if (error) {
-          return res.status(500).json({ message: error.message });
-        }
+    // ✅ Fixed: streamifier se buffer pipe kiya
+    const uploadFromBuffer = () => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: "college_app_profiles" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+      });
+    };
 
-        const user = await User.findById(req.user.id);
-        user.profileImage = result.secure_url;
-        await user.save();
+    const result = await uploadFromBuffer();
 
-        res.json({
-          success: true,
-          imageUrl: result.secure_url,
-        });
-      }
-    );
+    const user = await User.findById(req.user.id);
+    user.profileImage = result.secure_url;
+    await user.save();
 
-    result.end(req.file.buffer);
+    res.json({
+      success: true,
+      message: "Profile image uploaded successfully",
+      imageUrl: result.secure_url,
+    });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
-import { MaterialIcons } from "@expo/vector-icons";
+import React, { useState, useRef, useEffect } from "react";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import {
   View,
   StyleSheet,
@@ -34,17 +34,6 @@ export default function StudentRegister() {
     "Chemical Engineering",
     "Artificial Intelligence & Machine Learning",
     "Data Science Engineering",
-    "Robotics Engineering",
-    "Mechatronics Engineering",
-    "Automobile Engineering",
-    "Aerospace Engineering",
-    "Biotechnology Engineering",
-    "Production Engineering",
-    "Industrial Engineering",
-    "Petroleum Engineering",
-    "Mining Engineering",
-    "Environmental Engineering",
-    "Structural Engineering",
   ];
 
   const colleges = [
@@ -59,22 +48,14 @@ export default function StudentRegister() {
   const genders = ["Male", "Female", "Other"];
 
   const [showDeptOptions, setShowDeptOptions] = useState(false);
-  const [filteredDepartments, setFilteredDepartments] =
-    useState(departments);
-  const [showGenderOptions, setShowGenderOptions] =
-    useState(false);
-    const [showCollegeOptions, setShowCollegeOptions] = useState(false);
+  const [filteredDepartments, setFilteredDepartments] = useState(departments);
+  const [showGenderOptions, setShowGenderOptions] = useState(false);
+  const [showCollegeOptions, setShowCollegeOptions] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    college: "",
-    department: "",
-    phone: "",
-    studentId: "",
-    gender: "",
-    admissionYear: "",
+    name: "", email: "", password: "", college: "",
+    department: "", phone: "", studentId: "", gender: "", admissionYear: "",
   });
 
   const [emailOtp, setEmailOtp] = useState(["", "", "", "", "", ""]);
@@ -82,18 +63,14 @@ export default function StudentRegister() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [emailChecking, setEmailChecking] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
-
+  const [registering, setRegistering] = useState(false);
   const [timer, setTimer] = useState(120);
   const [otpExpired, setOtpExpired] = useState(false);
 
   const scale = useSharedValue(1);
 
   useEffect(() => {
-    scale.value = withRepeat(
-      withTiming(1.2, { duration: 10000 }),
-      -1,
-      true
-    );
+    scale.value = withRepeat(withTiming(1.2, { duration: 12000 }), -1, true);
   }, []);
 
   const animatedBgStyle = useAnimatedStyle(() => ({
@@ -102,42 +79,28 @@ export default function StudentRegister() {
 
   useEffect(() => {
     let interval;
-
     if (showEmailOtpInput && timer > 0) {
-      interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
+      interval = setInterval(() => setTimer((p) => p - 1), 1000);
     }
-
-    if (timer === 0 && showEmailOtpInput) {
-      setOtpExpired(true);
-    }
-
+    if (timer === 0 && showEmailOtpInput) setOtpExpired(true);
     return () => clearInterval(interval);
   }, [showEmailOtpInput, timer]);
 
   const handleSendEmailOtp = async () => {
-    if (!form.email) {
-      Alert.alert("Error", "Enter email first");
-      return;
-    }
-
+    if (!form.email) return Alert.alert("Error", "Enter email first");
     try {
       setEmailChecking(true);
-
-      await API.post("/send-email-otp", {
+      // ✅ Fixed: /auth/send-email-otp
+      await API.post("/auth/send-email-otp", {
         email: form.email.trim().toLowerCase(),
       });
-
       setShowEmailOtpInput(true);
       setTimer(120);
       setOtpExpired(false);
       setEmailOtp(["", "", "", "", "", ""]);
+      setTimeout(() => inputRefs.current[0]?.focus(), 200);
     } catch (error) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Server not reachable"
-      );
+      Alert.alert("Error", error.response?.data?.message || "Server not reachable");
     } finally {
       setEmailChecking(false);
     }
@@ -145,97 +108,73 @@ export default function StudentRegister() {
 
   const handleVerifyEmailOtp = async () => {
     const otp = emailOtp.join("");
-
-    if (otp.length !== 6) {
-      Alert.alert("Error", "Enter full 6 digit OTP");
-      return;
-    }
-
-    if (otpExpired) {
-      Alert.alert("Error", "OTP Expired. Please resend.");
-      return;
-    }
-
+    if (otp.length !== 6) return Alert.alert("Error", "Enter full 6 digit OTP");
+    if (otpExpired) return Alert.alert("Error", "OTP Expired. Please resend.");
     try {
       setVerifyingOtp(true);
-
-      await API.post("/verify-email-otp", {
+      // ✅ Fixed: /auth/verify-email-otp
+      await API.post("/auth/verify-email-otp", {
         email: form.email.trim().toLowerCase(),
         otp,
       });
-
       setEmailVerified(true);
       setShowEmailOtpInput(false);
     } catch (error) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Invalid OTP"
-      );
+      Alert.alert("Error", error.response?.data?.message || "Invalid OTP");
     } finally {
       setVerifyingOtp(false);
     }
   };
 
+  const handleRegister = async () => {
+    if (!emailVerified) return Alert.alert("Error", "Verify email first");
+    if (!form.name.trim()) return Alert.alert("Error", "Full Name is required");
+    if (!form.phone.trim()) return Alert.alert("Error", "Phone Number is required");
+    if (!form.studentId.trim()) return Alert.alert("Error", "Student ID is required");
+    if (!form.admissionYear.trim()) return Alert.alert("Error", "Admission Year is required");
+    if (!form.college) return Alert.alert("Error", "Please select college");
+    if (!form.department) return Alert.alert("Error", "Please select department");
+    if (!form.gender) return Alert.alert("Error", "Please select gender");
+    if (!form.password || form.password.length < 6)
+      return Alert.alert("Error", "Password must be at least 6 characters");
 
-const handleRegister = async () => {
-  if (!emailVerified) {
-    Alert.alert("Error", "Verify email first");
-    return;
-  }
-
-  if (!form.name.trim())
-    return Alert.alert("Error", "Full Name is required");
-
-  if (!form.phone.trim())
-    return Alert.alert("Error", "Phone Number is required");
-
-  if (!form.studentId.trim())
-    return Alert.alert("Error", "Student ID is required");
-
-  if (!form.admissionYear.trim())
-    return Alert.alert("Error", "Admission Year is required");
-
-  if (!form.college)
-    return Alert.alert("Error", "Please select college");
-
-  if (!form.department)
-    return Alert.alert("Error", "Please select department");
-
-  if (!form.gender)
-    return Alert.alert("Error", "Please select gender");
-
-  if (!form.password || form.password.length < 6)
-    return Alert.alert("Error", "Password must be at least 6 characters");
-
-  try {
-    
-
-    await API.post("/student/register", {
-      ...form,
-      email: form.email.trim().toLowerCase(),
-    });
-
-    Alert.alert("Success", "Registration Successful 🎉", [
-      {
-        text: "OK",
-        onPress: () => router.replace("/student-login"),
-      },
-    ]);
-
-  } catch (error) {
-    console.log("REGISTER ERROR:", error.response?.data);
-    Alert.alert(
-      "Error",
-      error.response?.data?.message || "Registration failed"
-    );
-  }
-};
+    try {
+      setRegistering(true);
+      // ✅ Fixed: /auth/register
+      await API.post("/auth/register", {
+        ...form,
+        email: form.email.trim().toLowerCase(),
+      });
+      Alert.alert("Success 🎉", "Registration Successful! Please verify your email OTP to login.", [
+        { text: "OK", onPress: () => router.replace("/(auth)/student-login") },
+      ]);
+    } catch (error) {
+      Alert.alert("Error", error.response?.data?.message || "Registration failed");
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   const formatTime = () => {
-    const minutes = Math.floor(timer / 60);
-    const seconds = timer % 60;
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+    const m = Math.floor(timer / 60);
+    const s = timer % 60;
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
+
+  const InputField = ({ placeholder, value, onChangeText, keyboardType, secureEntry, maxLength }) => (
+    <View style={styles.inputWrapper}>
+      <TextInput
+        placeholder={placeholder}
+        placeholderTextColor="#888"
+        style={styles.input}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        secureTextEntry={secureEntry}
+        maxLength={maxLength}
+      />
+    </View>
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -248,53 +187,52 @@ const handleRegister = async () => {
       />
 
       <LinearGradient
-        colors={["rgba(0,0,0,0.6)", "rgba(0,0,0,0.7)"]}
+        colors={["rgba(0,0,0,0.7)", "rgba(0,10,30,0.88)"]}
         style={StyleSheet.absoluteFillObject}
       />
 
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Student Registration</Text>
+        <Text style={styles.subtitle}>Join CollaHub today</Text>
 
+        {/* STEP 1 — Email Verification */}
         {!emailVerified && !showEmailOtpInput && (
-          <>
-            <TextInput
-              placeholder="Email"
-              placeholderTextColor="#ccc"
-              style={styles.input}
-              value={form.email}
-              onChangeText={(text) =>
-                setForm({ ...form, email: text })
-              }
-            />
+          <View style={styles.section}>
+            <Text style={styles.stepLabel}>Step 1 — Verify your email</Text>
 
-            <Pressable
-              style={styles.verifyBtn}
-              onPress={handleSendEmailOtp}
-            >
-              <Text style={styles.btnText}>
-                {emailChecking ? "Sending..." : "Verify Email"}
-              </Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="mail-outline" size={18} color="#888" style={styles.inputIcon} />
+              <TextInput
+                placeholder="Email address"
+                placeholderTextColor="#888"
+                style={styles.input}
+                value={form.email}
+                onChangeText={(text) => setForm({ ...form, email: text })}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+
+            <Pressable style={styles.verifyBtn} onPress={handleSendEmailOtp} disabled={emailChecking}>
+              <LinearGradient colors={["#10b981", "#059669"]} style={styles.btnGrad}>
+                <Text style={styles.btnText}>
+                  {emailChecking ? "Sending OTP..." : "Send OTP"}
+                </Text>
+              </LinearGradient>
             </Pressable>
-          </>
+          </View>
         )}
 
+        {/* OTP INPUT */}
         {showEmailOtpInput && (
-          <>
-          {/* Email Bold Row */}
+          <View style={styles.section}>
             <View style={styles.emailRow}>
               <Text style={styles.boldEmail}>{form.email}</Text>
-              <Pressable
-                style={styles.editIcon}
-                onPress={() => {
-                  setShowEmailOtpInput(false);
-                  setEmailOtp(["", "", "", "", "", ""]);
-                }}
-              >
-                <MaterialIcons name="edit" size={22} color="#fff" />
+              <Pressable onPress={() => { setShowEmailOtpInput(false); setEmailOtp(["", "", "", "", "", ""]); }}>
+                <MaterialIcons name="edit" size={20} color="#00c6ff" />
               </Pressable>
             </View>
 
-                    {/* OTP BOXES */}
             <View style={styles.otpContainer}>
               {emailOtp.map((digit, index) => (
                 <TextInput
@@ -306,21 +244,13 @@ const handleRegister = async () => {
                   value={digit}
                   onChangeText={(text) => {
                     if (!/^[0-9]?$/.test(text)) return;
-
                     const newOtp = [...emailOtp];
                     newOtp[index] = text;
                     setEmailOtp(newOtp);
-
-                    if (text && index < 5) {
-                      inputRefs.current[index + 1]?.focus();
-                    }
+                    if (text && index < 5) inputRefs.current[index + 1]?.focus();
                   }}
                   onKeyPress={({ nativeEvent }) => {
-                    if (
-                      nativeEvent.key === "Backspace" &&
-                      !emailOtp[index] &&
-                      index > 0
-                    ) {
+                    if (nativeEvent.key === "Backspace" && !emailOtp[index] && index > 0) {
                       inputRefs.current[index - 1]?.focus();
                     }
                   }}
@@ -328,151 +258,96 @@ const handleRegister = async () => {
               ))}
             </View>
 
-            <Pressable
-              style={styles.btn}
-              onPress={
-                otpExpired ? handleSendEmailOtp : handleVerifyEmailOtp
-              }
-            >
-              <Text style={styles.btnText}>
-                {otpExpired
-                  ? "Resend OTP"
-                  : verifyingOtp
-                  ? "Verifying..."
-                  : "Submit OTP"}
-              </Text>
-            </Pressable>
-
-            <Text style={{ color: "#fff", marginTop: 10 }}>
-              {otpExpired
-                ? "OTP Expired"
-                : `OTP expires in ${formatTime()}`}
+            <Text style={styles.timerText}>
+              {otpExpired ? "⚠️ OTP Expired" : `Expires in ${formatTime()}`}
             </Text>
-          </>
+
+            <Pressable
+              style={styles.verifyBtn}
+              onPress={otpExpired ? handleSendEmailOtp : handleVerifyEmailOtp}
+              disabled={verifyingOtp}
+            >
+              <LinearGradient colors={["#0072ff", "#00c6ff"]} style={styles.btnGrad}>
+                <Text style={styles.btnText}>
+                  {otpExpired ? "Resend OTP" : verifyingOtp ? "Verifying..." : "Verify OTP"}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
         )}
 
+        {/* STEP 2 — Registration Form */}
         {emailVerified && (
-          <>
-            <View style={{ alignItems: "center", marginBottom: 15 }}>
-              <MaterialIcons name="check-circle" size={50} color="#28a745" />
+          <View style={styles.section}>
+            <View style={styles.verifiedBadge}>
+              <MaterialIcons name="check-circle" size={22} color="#10b981" />
+              <Text style={styles.verifiedText}>Email Verified</Text>
             </View>
 
-            <TextInput
-              placeholder="Full Name"
-              placeholderTextColor="#ccc"
-              style={styles.input}
-              value={form.name}
-              onChangeText={(text) =>
-                setForm({ ...form, name: text })
-              }
-            />
+            <Text style={styles.stepLabel}>Step 2 — Fill your details</Text>
 
-            <TextInput
-              placeholder="Phone Number"
-              placeholderTextColor="#ccc"
-              style={styles.input}
-              keyboardType="phone-pad"
-              value={form.phone}
-              onChangeText={(text) =>
-                setForm({ ...form, phone: text })
-              }
-            />
+            <View style={styles.inputWrapper}>
+              <Ionicons name="person-outline" size={18} color="#888" style={styles.inputIcon} />
+              <TextInput placeholder="Full Name" placeholderTextColor="#888" style={styles.input}
+                value={form.name} onChangeText={(t) => setForm({ ...form, name: t })} />
+            </View>
 
-            <TextInput
-              placeholder="Student ID"
-              placeholderTextColor="#ccc"
-              style={styles.input}
-              value={form.studentId}
-              onChangeText={(text) =>
-                setForm({ ...form, studentId: text })
-              }
-            />
+            <View style={styles.inputWrapper}>
+              <Ionicons name="call-outline" size={18} color="#888" style={styles.inputIcon} />
+              <TextInput placeholder="Phone Number" placeholderTextColor="#888" style={styles.input}
+                keyboardType="phone-pad" value={form.phone} onChangeText={(t) => setForm({ ...form, phone: t })} />
+            </View>
 
-            <TextInput
-              placeholder="Admission Year (e.g. 2024)"
-              placeholderTextColor="#ccc"
-              style={styles.input}
-              keyboardType="numeric"
-              maxLength={4}
-              value={form.admissionYear}
-              onChangeText={(text) =>
-                setForm({
-                  ...form,
-                  admissionYear: text.replace(/[^0-9]/g, ""),
-                })
-              }
-            />
-{/* College */}
-<Pressable
-  style={styles.input}
-  onPress={() => setShowCollegeOptions(!showCollegeOptions)}
->
-  <Text style={{ color: form.college ? "#fff" : "#ccc" }}>
-    {form.college || "Select College"}
-  </Text>
-</Pressable>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="card-outline" size={18} color="#888" style={styles.inputIcon} />
+              <TextInput placeholder="Student ID" placeholderTextColor="#888" style={styles.input}
+                value={form.studentId} onChangeText={(t) => setForm({ ...form, studentId: t })} />
+            </View>
 
-{showCollegeOptions && (
-  <View
-    style={{
-      width: 280,
-      backgroundColor: "#222",
-      borderRadius: 10,
-      marginBottom: 15,
-    }}
-  >
-    <ScrollView style={{ maxHeight: 150 }}>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="calendar-outline" size={18} color="#888" style={styles.inputIcon} />
+              <TextInput placeholder="Admission Year (e.g. 2024)" placeholderTextColor="#888" style={styles.input}
+                keyboardType="numeric" maxLength={4} value={form.admissionYear}
+                onChangeText={(t) => setForm({ ...form, admissionYear: t.replace(/[^0-9]/g, "") })} />
+            </View>
 
-{colleges.map((collegeItem, index) => (
-  <Pressable
-    key={index}
-    style={{ padding: 12 }}
-    onPress={() => {
-      setForm((prev) => ({
-        ...prev,
-        college: collegeItem,
-      }));
-      setShowCollegeOptions(false);
-    }}
-  >
-    <Text style={{ color: "#fff" }}>{collegeItem}</Text>
-  </Pressable>
-))}
+            {/* College Picker */}
+            <Pressable style={styles.inputWrapper} onPress={() => setShowCollegeOptions(!showCollegeOptions)}>
+              <Ionicons name="business-outline" size={18} color="#888" style={styles.inputIcon} />
+              <Text style={[styles.input, { color: form.college ? "#fff" : "#888", paddingVertical: 16 }]}>
+                {form.college || "Select College"}
+              </Text>
+              <Ionicons name={showCollegeOptions ? "chevron-up" : "chevron-down"} size={18} color="#888" />
+            </Pressable>
+            {showCollegeOptions && (
+              <View style={styles.dropdown}>
+                {colleges.map((c, i) => (
+                  <Pressable key={i} style={styles.dropdownItem}
+                    onPress={() => { setForm({ ...form, college: c }); setShowCollegeOptions(false); }}>
+                    <Text style={styles.dropdownText}>{c}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
 
-
-    </ScrollView>
-  </View>
-)}
-
-              {/* Department */}
-            <TextInput
-              placeholder="Department"
-              placeholderTextColor="#ccc"
-              style={styles.input}
-              value={form.department}
-              onFocus={() => setShowDeptOptions(true)}
-              onChangeText={(text) => {
-                setForm({ ...form, department: text });
-                const filtered = departments.filter((dept) =>
-                  dept.toLowerCase().includes(text.toLowerCase())
-                );
-                setFilteredDepartments(filtered);
-              }}
-            />
-
+            {/* Department */}
+            <View style={styles.inputWrapper}>
+              <Ionicons name="school-outline" size={18} color="#888" style={styles.inputIcon} />
+              <TextInput placeholder="Department" placeholderTextColor="#888" style={styles.input}
+                value={form.department}
+                onFocus={() => setShowDeptOptions(true)}
+                onChangeText={(t) => {
+                  setForm({ ...form, department: t });
+                  setFilteredDepartments(departments.filter(d => d.toLowerCase().includes(t.toLowerCase())));
+                }} />
+            </View>
             {showDeptOptions && (
-              <View style={{ width: 280, backgroundColor: "#222", borderRadius: 10 }}>
-                <ScrollView style={{ maxHeight: 150 }}>
-                  {filteredDepartments.map((dept, index) => (
-                    <Pressable
-                      key={index}
-                      style={{ padding: 12 }}
-                      onPress={() => {
-                        setForm({ ...form, department: dept });
-                        setShowDeptOptions(false);
-                      }}
-                    >
-                      <Text style={{ color: "#fff" }}>{dept}</Text>
+              <View style={styles.dropdown}>
+                <ScrollView style={{ maxHeight: 160 }}>
+                  {filteredDepartments.map((d, i) => (
+                    <Pressable key={i} style={styles.dropdownItem}
+                      onPress={() => { setForm({ ...form, department: d }); setShowDeptOptions(false); }}>
+                      <Text style={styles.dropdownText}>{d}</Text>
                     </Pressable>
                   ))}
                 </ScrollView>
@@ -480,45 +355,53 @@ const handleRegister = async () => {
             )}
 
             {/* Gender */}
-            <Pressable
-              style={styles.input}
-              onPress={() => setShowGenderOptions(!showGenderOptions)}
-            >
-              <Text style={{ color: form.gender ? "#fff" : "#ccc" }}>
+            <Pressable style={styles.inputWrapper} onPress={() => setShowGenderOptions(!showGenderOptions)}>
+              <Ionicons name="people-outline" size={18} color="#888" style={styles.inputIcon} />
+              <Text style={[styles.input, { color: form.gender ? "#fff" : "#888", paddingVertical: 16 }]}>
                 {form.gender || "Select Gender"}
               </Text>
+              <Ionicons name={showGenderOptions ? "chevron-up" : "chevron-down"} size={18} color="#888" />
+            </Pressable>
+            {showGenderOptions && (
+              <View style={styles.dropdown}>
+                {genders.map((g, i) => (
+                  <Pressable key={i} style={styles.dropdownItem}
+                    onPress={() => { setForm({ ...form, gender: g }); setShowGenderOptions(false); }}>
+                    <Text style={styles.dropdownText}>{g}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {/* Password */}
+            <View style={styles.inputWrapper}>
+              <Ionicons name="lock-closed-outline" size={18} color="#888" style={styles.inputIcon} />
+              <TextInput placeholder="Password (min 6 chars)" placeholderTextColor="#888"
+                style={[styles.input, { flex: 1 }]}
+                secureTextEntry={!showPassword} value={form.password}
+                onChangeText={(t) => setForm({ ...form, password: t })} />
+              <Pressable onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={18} color="#888" />
+              </Pressable>
+            </View>
+
+            <Pressable style={styles.registerBtn} onPress={handleRegister} disabled={registering}>
+              <LinearGradient colors={["#0072ff", "#00c6ff"]} style={styles.btnGrad}>
+                <Text style={styles.btnText}>
+                  {registering ? "Registering..." : "Create Account"}
+                </Text>
+              </LinearGradient>
             </Pressable>
 
-            {showGenderOptions &&
-              genders.map((gender, index) => (
-                <Pressable
-                  key={index}
-                  style={{ padding: 12, width: 280, backgroundColor: "#222" }}
-                  onPress={() => {
-                    setForm({ ...form, gender });
-                    setShowGenderOptions(false);
-                  }}
-                >
-                  <Text style={{ color: "#fff" }}>{gender}</Text>
-                </Pressable>
-              ))}
-
-            <TextInput
-              placeholder="Password"
-              placeholderTextColor="#ccc"
-              style={styles.input}
-              secureTextEntry
-              value={form.password}
-              onChangeText={(text) =>
-                setForm({ ...form, password: text })
-              }
-            />
-
-            <Pressable style={styles.btn} onPress={handleRegister}>
-              <Text style={styles.btnText}>Register</Text>
+            <Pressable onPress={() => router.push("/(auth)/student-login")} style={{ alignItems: "center", marginTop: 16 }}>
+              <Text style={{ color: "#888" }}>
+                Already have an account? <Text style={{ color: "#00c6ff", fontWeight: "700" }}>Login</Text>
+              </Text>
             </Pressable>
-          </>
+          </View>
         )}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -527,73 +410,143 @@ const handleRegister = async () => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 40,
+    paddingVertical: 60,
+    paddingHorizontal: 20,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     color: "#fff",
-    marginBottom: 30,
-    fontWeight: "bold",
+    fontWeight: "800",
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    color: "#64748b",
+    fontSize: 14,
+    marginBottom: 28,
+  },
+  section: {
+    width: "100%",
+    maxWidth: 420,
+  },
+  stepLabel: {
+    color: "#94a3b8",
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 14,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 14,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    width: 280,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    flex: 1,
     color: "#fff",
-  },
-  btn: {
-    backgroundColor: "#00c6ff",
-    padding: 15,
-    width: 280,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 10,
+    fontSize: 15,
+    paddingVertical: 15,
   },
   verifyBtn: {
-    backgroundColor: "#28a745",
-    padding: 12,
-    width: 280,
-    borderRadius: 10,
+    borderRadius: 14,
+    overflow: "hidden",
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  registerBtn: {
+    borderRadius: 14,
+    overflow: "hidden",
+    marginTop: 10,
+  },
+  btnGrad: {
+    paddingVertical: 16,
     alignItems: "center",
-    marginBottom: 20,
+    borderRadius: 14,
   },
   btnText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
   emailRow: {
-    width: 280,
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
-    position: "relative",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    backgroundColor: "rgba(0,198,255,0.08)",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0,198,255,0.2)",
   },
   boldEmail: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  editIcon: {
-    position: "absolute",
-    right: 0,
+    fontWeight: "700",
+    fontSize: 14,
   },
   otpContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: 280,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   otpBox: {
-    width: 40,
-    height: 50,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 8,
+    width: 46,
+    height: 56,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 12,
     textAlign: "center",
-    fontSize: 20,
+    fontSize: 22,
     color: "#fff",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+  },
+  timerText: {
+    color: "#94a3b8",
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(16,185,129,0.1)",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(16,185,129,0.2)",
+  },
+  verifiedText: {
+    color: "#10b981",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  dropdown: {
+    backgroundColor: "#1a2535",
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  dropdownText: {
+    color: "#cbd5e1",
+    fontSize: 14,
   },
 });

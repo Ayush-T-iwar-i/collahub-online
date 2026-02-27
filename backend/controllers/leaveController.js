@@ -8,6 +8,10 @@ exports.applyLeave = async (req, res) => {
   try {
     const { reason, fromDate, toDate } = req.body;
 
+    if (!reason || !fromDate || !toDate) {
+      return res.status(400).json({ success: false, message: "All fields required" });
+    }
+
     const leave = await Leave.create({
       studentId: req.user.id,
       reason,
@@ -15,18 +19,15 @@ exports.applyLeave = async (req, res) => {
       toDate,
     });
 
-    // 🔔 Get all teachers
     const teachers = await User.find({ role: "teacher" });
 
     for (let teacher of teachers) {
-      // Create notification (INSIDE async function ✅)
       await Notification.create({
         userId: teacher._id,
         title: "New Leave Request",
         message: `New leave request from student.\nReason: ${reason}`,
       });
 
-      // Send email
       await sendEmail(
         teacher.email,
         `New Leave Request\n\nReason: ${reason}\nFrom: ${fromDate}\nTo: ${toDate}`
@@ -40,7 +41,7 @@ exports.applyLeave = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -51,10 +52,23 @@ exports.getAllLeaves = async (req, res) => {
       .populate("studentId", "name email")
       .sort({ createdAt: -1 });
 
-    res.json(leaves);
+    res.json({ success: true, leaves });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ================= GET MY LEAVES (Student) =================
+exports.getMyLeaves = async (req, res) => {
+  try {
+    const leaves = await Leave.find({ studentId: req.user.id })
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, leaves });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -63,6 +77,10 @@ exports.updateLeaveStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
+    if (!["approved", "rejected"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status" });
+    }
+
     const leave = await Leave.findByIdAndUpdate(
       req.params.id,
       { status },
@@ -70,17 +88,15 @@ exports.updateLeaveStatus = async (req, res) => {
     ).populate("studentId");
 
     if (!leave) {
-      return res.status(404).json({ message: "Leave not found" });
+      return res.status(404).json({ success: false, message: "Leave not found" });
     }
 
-    // 🔔 Create notification for student
     await Notification.create({
       userId: leave.studentId._id,
       title: "Leave Status Updated",
       message: `Your leave request has been ${status}`,
     });
 
-    // Send email
     await sendEmail(
       leave.studentId.email,
       `Your leave request has been ${status}`
@@ -93,6 +109,6 @@ exports.updateLeaveStatus = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };

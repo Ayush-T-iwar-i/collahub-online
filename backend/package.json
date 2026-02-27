@@ -28,6 +28,7 @@
     "nodemon": "^3.1.11",
     "pdfkit": "^0.17.2",
     "socket.io": "^4.8.3",
+    "streamifier": "^0.1.1",
     "validator": "^13.15.26"
   }
 }

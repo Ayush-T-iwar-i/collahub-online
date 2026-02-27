@@ -1,224 +1,74 @@
 const User = require("../models/User");
-const Result = require("../models/Result");
 const bcrypt = require("bcryptjs");
-const Leave = require("../models/Leave");
-const Attendance = require("../models/Attendance");
+const jwt = require("jsonwebtoken");
 
-
-// CREATE TEACHER
-exports.createTeacher = async (req, res) => {
+/* ================= REGISTER ADMIN ================= */
+const registerAdmin = async (req, res) => {
   try {
+    let { name, email, password } = req.body;
 
-    const { name, email, password } = req.body;
+    if (!name || !email || !password)
+      return res.status(400).json({ message: "All fields required" });
+
+    email = email.toLowerCase().trim();
+
+    const emailExist = await User.findOne({ email });
+    if (emailExist)
+      return res.status(400).json({ message: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const teacher = new User({
+    await User.create({
       name,
       email,
       password: hashedPassword,
-      role: "teacher"
+      role: "admin",
     });
 
-    await teacher.save();
-
-    res.json({ message: "Teacher Created" });
-
+    res.status(201).json({ message: "Admin created successfully" });
   } catch (error) {
-    res.status(500).json(error);
+    console.log("ADMIN REGISTER ERROR:", error.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-
-
-// CREATE STUDENT
-exports.createStudent = async (req, res) => {
+/* ================= LOGIN ADMIN ================= */
+const loginAdmin = async (req, res) => {
   try {
+    let { email, password } = req.body;
 
-    const { name, email, password } = req.body;
+    if (!email || !password)
+      return res.status(400).json({ message: "All fields required" });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    email = email.toLowerCase().trim();
 
-    const student = new User({
-      name,
-      email,
-      password: hashedPassword,
-      role: "student"
-    });
+    const user = await User.findOne({ email });
 
-    await student.save();
+    if (!user || user.role !== "admin")
+      return res.status(400).json({ message: "Invalid admin credentials" });
 
-    res.json({ message: "Student Created" });
+    const match = await bcrypt.compare(password, user.password);
+    if (!match)
+      return res.status(400).json({ message: "Invalid admin credentials" });
 
-  } catch (error) {
-    res.status(500).json(error);
-  }
-};
-
-// ================= GET ALL USERS =================
-exports.getAllUsers = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search || "";
-
-    const skip = (page - 1) * limit;
-
-    const query = {
-      $or: [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } }
-      ]
-    };
-
-    const users = await User.find(query)
-      .select("-password")
-      .skip(skip)
-      .limit(limit);
-
-    const total = await User.countDocuments(query);
-
-    res.json({
-      success: true,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalUsers: total,
-      users
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-
-// ================= ADMIN ANALYTICS =================
-exports.getAdminAnalytics = async (req, res) => {
-  try {
-    const totalUsers = await User.countDocuments();
-    const totalStudents = await User.countDocuments({ role: "student" });
-    const totalTeachers = await User.countDocuments({ role: "teacher" });
-
-    const totalLeaves = await Leave.countDocuments();
-    const totalAttendance = await Attendance.countDocuments();
-
-    // Role-wise data for Pie Chart
-    const roleData = await User.aggregate([
-      {
-        $group: {
-          _id: "$role",
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
-    res.json({
-      success: true,
-      stats: {
-        totalUsers,
-        totalStudents,
-        totalTeachers,
-        totalLeaves,
-        totalAttendance
-      },
-      roleChart: roleData
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// ================= TOP 5 STUDENTS =================
-exports.getTopStudents = async (req, res) => {
-  try {
-    const topStudents = await Result.aggregate([
-      {
-        $group: {
-          _id: "$studentId",
-          averageMarks: { $avg: "$marks" }
-        }
-      },
-      { $sort: { averageMarks: -1 } },
-      { $limit: 5 }
-    ]);
-
-    // Populate student details
-    const formatted = await Promise.all(
-      topStudents.map(async (item, index) => {
-        const student = await User.findById(item._id).select("name email");
-        return {
-          rank: index + 1,
-          student,
-          averageMarks: item.averageMarks.toFixed(2)
-        };
-      })
+    const accessToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
     );
 
     res.json({
-      success: true,
-      topStudents: formatted
+      message: "Admin login successful",
+      accessToken,
+      user,
     });
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.log("ADMIN LOGIN ERROR:", error.message);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// ================= MONTHLY ATTENDANCE GRAPH =================
-exports.getMonthlyAttendanceGraph = async (req, res) => {
-  try {
-    const year = new Date().getFullYear();
-
-    const data = await Attendance.aggregate([
-      {
-        $match: {
-          date: {
-            $gte: new Date(`${year}-01-01`),
-            $lte: new Date(`${year}-12-31`)
-          }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            month: { $month: "$date" },
-            status: "$status"
-          },
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
-    const months = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
-
-    const formatted = months.map((month, index) => {
-      const presentData = data.find(
-        d => d._id.month === index + 1 && d._id.status === "present"
-      );
-
-      const absentData = data.find(
-        d => d._id.month === index + 1 && d._id.status === "absent"
-      );
-
-      return {
-        month,
-        present: presentData ? presentData.count : 0,
-        absent: absentData ? absentData.count : 0
-      };
-    });
-
-    res.json({
-      success: true,
-      year,
-      attendanceGraph: formatted
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+module.exports = {
+  registerAdmin,
+  loginAdmin,
 };

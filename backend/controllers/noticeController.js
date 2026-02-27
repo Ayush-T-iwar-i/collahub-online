@@ -1,7 +1,6 @@
 const Notice = require("../models/Notice");
-const Notification = require("../models/Notification");
 
-// Create Notice (Admin/Teacher)
+// ================= CREATE NOTICE =================
 exports.createNotice = async (req, res) => {
   try {
     const { title, message } = req.body;
@@ -13,38 +12,33 @@ exports.createNotice = async (req, res) => {
       role: req.user.role,
     });
 
-    res.status(201).json(notice);
+    res.status(201).json({ success: true, notice });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Get All Notices (Student View)
+// ================= GET ALL NOTICES =================
 exports.getAllNotices = async (req, res) => {
   try {
     const notices = await Notice.find()
       .populate("postedBy", "name role")
       .sort({ createdAt: -1 });
 
-    res.json(notices);
+    res.json({ success: true, notices });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
-// ================= MARK AS READ =================
-exports.markAsRead = async (req, res) => {
+// ================= DELETE NOTICE =================
+exports.deleteNotice = async (req, res) => {
   try {
-    await Notification.findByIdAndUpdate(req.params.id, {
-      isRead: true,
-    });
-
-    res.json({
-      success: true,
-      message: "Notification marked as read",
-    });
+    await Notice.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Notice deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };

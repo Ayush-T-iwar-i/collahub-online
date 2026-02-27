@@ -1,24 +1,24 @@
 const express = require("express");
 const router = express.Router();
 
-const { verifyToken, isAdmin, isTeacher } = require("../middleware/authMiddleware");
-const { createNotice, getAllNotices } = require("../controllers/noticeController");
-
-// Create Notice
-router.post(
-  "/create",
+const {
   verifyToken,
-  (req, res, next) => {
-    if (req.user.role === "admin" || req.user.role === "teacher") {
-      next();
-    } else {
-      return res.status(403).json("Access Denied");
-    }
-  },
-  createNotice
-);
+  isTeacherOrAdmin,
+} = require("../middleware/authMiddleware");
 
-// Get Notices
+const {
+  createNotice,
+  getAllNotices,
+  deleteNotice,
+} = require("../controllers/noticeController");
+
+// ================= CREATE NOTICE (Teacher or Admin) =================
+router.post("/create", verifyToken, isTeacherOrAdmin, createNotice);
+
+// ================= GET ALL NOTICES =================
 router.get("/all", verifyToken, getAllNotices);
+
+// ================= DELETE NOTICE =================
+router.delete("/:id", verifyToken, isTeacherOrAdmin, deleteNotice);
 
 module.exports = router;

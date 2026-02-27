@@ -2,17 +2,16 @@ const mongoose = require("mongoose");
 
 const teacherSchema = new mongoose.Schema(
   {
+    teacherId: String,
     name: String,
     email: { type: String, unique: true },
-    phone: String,
-    department: String,
-    college: String,
     password: String,
+    phone: String,
+    college: String,
+    university: String,
+    age: Number,
+    profileImage: String,
     role: { type: String, default: "teacher" },
-    gender: String,
-    otp: String,
-    otpExpire: Date,
-    refreshToken: String,
   },
   { timestamps: true }
 );

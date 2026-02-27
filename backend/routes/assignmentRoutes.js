@@ -2,82 +2,38 @@ const express = require("express");
 const router = express.Router();
 
 const { verifyToken, isTeacher } = require("../middleware/authMiddleware");
-const Assignment = require("../models/Assignment");
+const {
+  createAssignment,
+  getAssignments,
+  getAssignmentById,
+  deleteAssignment,
+} = require("../controllers/assignmentController");
 
 // ================= CREATE ASSIGNMENT =================
-router.post("/", verifyToken, isTeacher, async (req, res) => {
-  try {
-    const { title, description, subjectId, dueDate } = req.body;
-
-    const assignment = await Assignment.create({
-      title,
-      description,
-      subjectId,
-      teacherId: req.user.id,
-      dueDate,
-    });
-
-    res.json({
-      success: true,
-      message: "Assignment Created",
-      assignment,
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router.post("/", verifyToken, isTeacher, createAssignment);
 
 // ================= GET ALL ASSIGNMENTS =================
-router.get("/", verifyToken, async (req, res) => {
-  try {
-    const assignments = await Assignment.find()
-      .populate("subjectId", "name")
-      .populate("teacherId", "name email");
+router.get("/", verifyToken, getAssignments);
 
-    res.json(assignments);
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-module.exports = router;
-
-
+// ================= GET ASSIGNMENT BY ID =================
+router.get("/:id", verifyToken, getAssignmentById);
 
 // ================= UPDATE ASSIGNMENT =================
 router.put("/:id", verifyToken, isTeacher, async (req, res) => {
   try {
+    const Assignment = require("../models/Assignment");
     const updated = await Assignment.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
     );
-
-    res.json({
-      success: true,
-      message: "Assignment Updated",
-      updated,
-    });
-
+    res.json({ success: true, updated });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
-
 
 // ================= DELETE ASSIGNMENT =================
-router.delete("/:id", verifyToken, isTeacher, async (req, res) => {
-  try {
-    await Assignment.findByIdAndDelete(req.params.id);
+router.delete("/:id", verifyToken, isTeacher, deleteAssignment);
 
-    res.json({
-      success: true,
-      message: "Assignment Deleted",
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+module.exports = router; // ✅ moved to end
