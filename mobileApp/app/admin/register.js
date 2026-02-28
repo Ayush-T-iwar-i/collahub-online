@@ -245,9 +245,20 @@ export default function AdminRegister() {
 }
 
 const styles = StyleSheet.create({
+
   scroll: { flexGrow:1,justifyContent:"center",padding:20,paddingVertical:50 },
-  glow1: { position:"absolute",width:260,height:260,borderRadius:130,backgroundColor:"rgba(124,58,237,0.07)",top:-80,right:-60 },
-  glow2: { position:"absolute",width:200,height:200,borderRadius:100,backgroundColor:"rgba(167,139,250,0.04)",bottom:40,left:-60 },
+
+  glow1: { position:"absolute",
+    width:260,
+    height:260,borderRadius:130,
+    backgroundColor:"rgba(124,58,237,0.07)",
+    top:-80,right:-60 },
+
+  glow2: { position:"absolute",
+    width:200,
+    height:200,
+    borderRadius:100,
+    backgroundColor:"rgba(167,139,250,0.04)",bottom:40,left:-60 },
   card: { borderRadius:28,overflow:"hidden",borderWidth:1,borderColor:"rgba(255,255,255,0.08)" },
   blur: { padding:28,backgroundColor:"rgba(255,255,255,0.04)" },
   logoRow: { flexDirection:"row",alignItems:"center",gap:12,marginBottom:16 },

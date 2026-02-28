@@ -108,7 +108,7 @@ export default function AdminDashboard() {
           </View>
           <View>
             <Text style={styles.headerTitle}>Admin Panel</Text>
-            <Text style={styles.headerSub}>CollaHub</Text>
+            <Text style={styles.headerSub}>COLLAहUB</Text>
           </View>
         </View>
         <Pressable onPress={handleLogout} style={styles.logoutBtn}>
@@ -133,8 +133,8 @@ export default function AdminDashboard() {
               style={styles.welcomeCard}
             >
               <View>
-                <Text style={styles.welcomeHi}>Hello, {adminData?.name?.split(" ")[0] || "Admin"} 👋</Text>
-                <Text style={styles.welcomeSub}>Administrator • CollaHub</Text>
+                <Text style={styles.welcomeHi}>Hello, {adminData?.name?.split(" ")[0] || "Admin"} 👋 By COLLAहUB</Text>
+                <Text style={styles.welcomeSub}>Administrator • COLLAहUB</Text>
                 <View style={styles.adminRoleBadge}>
                   <Ionicons name="shield-checkmark" size={12} color="#a78bfa" />
                   <Text style={styles.adminRoleBadgeText}>ADMIN ACCESS</Text>

@@ -14,18 +14,45 @@ const userSchema = new mongoose.Schema(
     // ===== OTP (for email verify / forgot password) =====
     otp: String,
     otpExpire: Date,
+    isEmailVerified: { type: Boolean, default: false },
 
     // ===== STUDENT FIELDS =====
-    studentId: { type: String, sparse: true },
-    department: String,
-    gender: String,
+    studentId:     { type: String, sparse: true },
+    department:    String,
+    gender:        String,
     admissionYear: String,
-    college: String,
+    college:       String,
+    semester:      { type: Number, default: 1 }, // ✅ ADDED
+    isPromoted:    { type: Boolean, default: false }, // last result mein pass hua?
+
+    // ===== RESULT HISTORY =====
+    // Array of results — ek per semester
+    results: [
+      {
+        semester:     Number,
+        year:         Number,         // e.g. 2024
+        sgpa:         Number,         // e.g. 8.5
+        cgpa:         Number,
+        status:       { type: String, enum: ["pass", "fail", "pending"], default: "pending" },
+        subjects:     [
+          {
+            name:     String,
+            code:     String,
+            marks:    Number,
+            maxMarks: Number,
+            grade:    String,
+            status:   { type: String, enum: ["pass", "fail"] },
+          }
+        ],
+        uploadedAt:   { type: Date, default: Date.now },
+        uploadedBy:   String,         // admin/teacher name
+      }
+    ],
 
     // ===== TEACHER FIELDS =====
-    teacherId: { type: String, sparse: true },
+    teacherId:  { type: String, sparse: true },
     university: String,
-    age: Number,
+    age:        Number,
   },
   { timestamps: true }
 );

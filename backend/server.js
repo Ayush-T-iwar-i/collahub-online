@@ -23,6 +23,7 @@ const submissionRoutes = require("./routes/submissionRoutes");
 const timetableRoutes = require("./routes/timetableRoutes");
 const userRoutes = require("./routes/userRoutes");
 const logger = require("./middleware/logger");
+const studentTeacherRoutes = require("./routes/studentTeacherRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const app = express();
 
@@ -56,6 +57,7 @@ app.use("/subjects", subjectRoutes);
 app.use("/submissions", submissionRoutes);
 app.use("/timetable", timetableRoutes);
 app.use("/user", userRoutes);
+app.use("/", studentTeacherRoutes);
 
 app.use(errorHandler);
 

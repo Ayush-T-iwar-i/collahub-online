@@ -128,11 +128,14 @@ export default function AdminLogin() {
               <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color="#888" />
             </Pressable>
           </View>
+          
 
           {/* Forgot */}
           <Pressable onPress={() => router.push("/admin/forgot")} style={styles.forgotBtn}>
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </Pressable>
+
+          
 
           {/* Login Button */}
           <Pressable style={styles.loginBtn} onPress={handleLogin} disabled={loading}>
@@ -147,6 +150,20 @@ export default function AdminLogin() {
               }
             </LinearGradient>
           </Pressable>
+          {/* Divider */}
+<View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+  <View style={{ flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+  <Text style={{ color: "#64748b", fontSize: 12, marginHorizontal: 10 }}>or</Text>
+  <View style={{ flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+</View>
+
+{/* Register Link */}
+<Pressable onPress={() => router.push("/admin/register")} style={{ alignItems: "center", marginBottom: 20 }}>
+  <Text style={{ color: "#64748b", fontSize: 14 }}>
+    Don’t have an account?{" "}
+    <Text style={{ color: "#a78bfa", fontWeight: "700" }}>Register</Text>
+  </Text>
+</Pressable>
 
           <Pressable onPress={() => router.replace("/")} style={styles.backLink}>
             <Ionicons name="arrow-back" size={14} color="#64748b" />
