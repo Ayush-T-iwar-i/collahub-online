@@ -25,17 +25,17 @@ const authStudent = [auth, isStudent].filter(Boolean);
 const authTeacher = [auth, isTeacher].filter(Boolean);
 
 // ── Student routes ──
-router.get("/results/my",            ...authStudent, getStudentResult);
-router.get("/results/export-pdf",    ...authStudent, exportResultPDF);
-router.get("/results/certificate",   ...authStudent, generateCertificate);
+router.get("/my",            ...authStudent, getStudentResult);
+router.get("/export-pdf",    ...authStudent, exportResultPDF);
+router.get("/certificate",   ...authStudent, generateCertificate);
 
 // ── Admin routes ──
-router.post("/results/upload",              auth, uploadResult);
-router.post("/results/sync-semesters",      auth, syncSemesters);
-router.get("/results/student/:id",          auth, getStudentResultById);
-router.delete("/results/:studentId/:semester", auth, deleteResult);
+router.post("/upload",              auth, uploadResult);
+router.post("/sync-semesters",      auth, syncSemesters);
+router.get("/student/:id",          auth, getStudentResultById);
+router.delete("/:studentId/:semester", auth, deleteResult);
 
 // ── Teacher routes ──
-router.get("/results/rank/:subjectId",  ...authTeacher, getSubjectRanking);
+router.get("/rank/:subjectId",  ...authTeacher, getSubjectRanking);
 
 module.exports = router;
