@@ -141,15 +141,17 @@ const loginTeacher = async (req, res) => {
       accessToken,
       refreshToken,
       user: {
-        id: user._id,
-        teacherId: user.teacherId,
-        name: user.name,
-        email: user.email,
-        college: user.college,
-        university: user.university,
-        role: user.role,
-        profileImage: user.profileImage,
-      },
+  id: user._id,
+  teacherId: user.teacherId,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  college: user.college,
+  university: user.university,
+  age: user.age,
+  role: user.role,
+  profileImage: user.profileImage,
+},
     });
 
   } catch (error) {

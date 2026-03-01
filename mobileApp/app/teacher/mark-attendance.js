@@ -2,561 +2,474 @@ import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable,
   ActivityIndicator, StatusBar, RefreshControl,
-  Alert, ScrollView, Dimensions,
+  ScrollView, Alert, Dimensions, Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import API from "../../services/api";
 
 const { width } = Dimensions.get("window");
 
-const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const ROLE_COLORS = { admin:"#a78bfa", teacher:"#f59e0b", student:"#00c6ff" };
+const DEPT_COLORS = {
+  CSE:"#00c6ff", ECE:"#a78bfa", ME:"#f59e0b",
+  CE:"#34d399",  IT:"#f87171", EEE:"#60a5fa",
+};
+const getColor = (dept="") => {
+  const key = Object.keys(DEPT_COLORS).find(k=>dept.toUpperCase().includes(k));
+  return DEPT_COLORS[key] || "#64748b";
+};
 
-// ── STEP 1: Today's Classes Card ──
-const ClassCard = ({ item, onPress }) => {
-  const color = item.color || "#00c6ff";
+// ── Subject Selector Card ──
+const SubjectCard = ({ item, isSelected, onPress }) => {
+  const color = getColor(item.department);
+  const short = item.department?.match(/\(([^)]+)\)/)?.[1] || item.department?.split(" ")[0] || "";
   return (
-    <Pressable style={styles.classCard} onPress={onPress}>
-      <View style={[styles.classAccent, { backgroundColor: color }]} />
-      <View style={styles.classBody}>
-        <View style={styles.classTop}>
-          <Text style={styles.classSubject} numberOfLines={1}>
-            {item.subjectId?.name || item.subjectName || "Subject"}
-          </Text>
-          <View style={[styles.classBadge, { backgroundColor: color + "22" }]}>
-            <Text style={[styles.classBadgeText, { color }]}>
-              {item.subjectId?.code || item.subjectCode || ""}
-            </Text>
-          </View>
+    <Pressable
+      style={[styles.subjectCard, isSelected && { borderColor: color, borderWidth: 1.5 }]}
+      onPress={onPress}
+    >
+      <LinearGradient
+        colors={isSelected ? [color+"30", color+"10"] : ["#1a2535","#1a2535"]}
+        style={styles.subjectGrad}
+      >
+        <View style={[styles.subjectIconBox, { backgroundColor: color+"22" }]}>
+          <Ionicons name="book" size={22} color={color} />
         </View>
-        <View style={styles.classMeta}>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={13} color="#64748b" />
-            <Text style={styles.metaText}>
-              {item.startTime} — {item.endTime}
-            </Text>
-          </View>
-          {item.room && (
-            <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={13} color="#64748b" />
-              <Text style={styles.metaText}>{item.room}</Text>
+        <View style={{ flex:1 }}>
+          <Text style={styles.subjectName} numberOfLines={1}>{item.subjectName}</Text>
+          {item.subjectCode ? <Text style={styles.subjectCode}>{item.subjectCode}</Text> : null}
+          <View style={styles.subjectMeta}>
+            <View style={[styles.metaBadge, { backgroundColor: color+"18" }]}>
+              <Text style={[styles.metaBadgeText, { color }]}>{short} {item.admissionYear}</Text>
             </View>
-          )}
-          <View style={styles.metaItem}>
-            <Ionicons name="people-outline" size={13} color="#64748b" />
-            <Text style={styles.metaText}>
-              {item.studentCount || "—"} students
-            </Text>
+            <View style={styles.metaBadge}>
+              <Text style={styles.metaBadgeText}>Sem {item.semester}</Text>
+            </View>
           </View>
         </View>
-      </View>
-      <View style={styles.classArrow}>
-        <Ionicons name="chevron-forward" size={20} color={color} />
-      </View>
+        {isSelected && (
+          <Ionicons name="checkmark-circle" size={20} color={color} />
+        )}
+      </LinearGradient>
     </Pressable>
   );
 };
 
-// ── STEP 2: Student Row ──
+// ── Student Attendance Row ──
 const StudentRow = ({ item, status, onToggle }) => {
+  const color    = getColor(item.department);
+  const initials = item.name?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"S";
   const isPresent = status === "present";
-  const isAbsent = status === "absent";
+  const isAbsent  = status === "absent";
 
   return (
     <View style={styles.studentRow}>
-      <View style={styles.studentLeft}>
-        <View style={[styles.studentAvatar, {
-          backgroundColor: isPresent ? "rgba(52,211,153,0.15)" :
-                           isAbsent  ? "rgba(248,113,113,0.15)" :
-                                       "rgba(255,255,255,0.06)"
-        }]}>
-          <Text style={[styles.studentInitial, {
-            color: isPresent ? "#34d399" : isAbsent ? "#f87171" : "#64748b"
-          }]}>
-            {item.name?.[0]?.toUpperCase() || "S"}
-          </Text>
-        </View>
-        <View>
-          <Text style={styles.studentName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.studentId}>{item.studentId || item.rollNo || "—"}</Text>
-        </View>
+      <View style={[styles.studentAvatar, { backgroundColor: color+"22" }]}>
+        {item.profileImage
+          ? <Image source={{ uri: item.profileImage }} style={styles.studentAvatarImg}/>
+          : <Text style={[styles.studentAvatarText, { color }]}>{initials}</Text>}
       </View>
-
-      <View style={styles.toggleRow}>
+      <View style={styles.studentInfo}>
+        <Text style={styles.studentName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.studentId}>{item.studentId || "—"}</Text>
+      </View>
+      {/* Present / Absent buttons */}
+      <View style={styles.attendanceBtns}>
         <Pressable
-          style={[styles.toggleBtn, isPresent && styles.togglePresent]}
+          style={[styles.attBtn, isPresent && styles.presentBtn]}
           onPress={() => onToggle(item._id, "present")}
         >
-          <Ionicons name="checkmark" size={16} color={isPresent ? "#fff" : "#374151"} />
-          {isPresent && <Text style={styles.toggleLabel}>P</Text>}
+          <Ionicons
+            name={isPresent ? "checkmark-circle" : "checkmark-circle-outline"}
+            size={22} color={isPresent ? "#34d399" : "#374151"}
+          />
         </Pressable>
         <Pressable
-          style={[styles.toggleBtn, isAbsent && styles.toggleAbsent]}
+          style={[styles.attBtn, isAbsent && styles.absentBtn]}
           onPress={() => onToggle(item._id, "absent")}
         >
-          <Ionicons name="close" size={16} color={isAbsent ? "#fff" : "#374151"} />
-          {isAbsent && <Text style={styles.toggleLabel}>A</Text>}
+          <Ionicons
+            name={isAbsent ? "close-circle" : "close-circle-outline"}
+            size={22} color={isAbsent ? "#f87171" : "#374151"}
+          />
         </Pressable>
       </View>
     </View>
   );
 };
 
+// ════════════════════════════════════════════
 export default function MarkAttendance() {
   const navigation = useNavigation();
 
-  // STEP: "classes" | "students"
-  const [step, setStep] = useState("classes");
+  // Step 1: Select subject
+  const [subjects, setSubjects]       = useState([]);
+  const [subLoading, setSubLoading]   = useState(true);
+  const [selectedSubject, setSelectedSubject] = useState(null);
 
-  // Step 1 data
-  const [todayClasses, setTodayClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [teacherData, setTeacherData] = useState(null);
+  // Step 2: Mark attendance
+  const [students, setStudents]       = useState([]);
+  const [stuLoading, setStuLoading]   = useState(false);
+  const [attendance, setAttendance]   = useState({}); // { studentId: "present"|"absent" }
+  const [submitting, setSubmitting]   = useState(false);
+  const [date, setDate]               = useState(() => new Date().toISOString().split("T")[0]);
+  const [alreadyMarked, setAlreadyMarked] = useState(false);
+  const [refreshing, setRefreshing]   = useState(false);
 
-  // Step 2 data
-  const [selectedClass, setSelectedClass] = useState(null);
-  const [students, setStudents] = useState([]);
-  const [attendance, setAttendance] = useState({});
-  // attendance = { studentId: "present" | "absent" }
-  const [studentsLoading, setStudentsLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  useFocusEffect(useCallback(() => {
+    loadSubjects();
+    return () => { setSelectedSubject(null); setStudents([]); setAttendance({}); };
+  }, []));
 
-  useFocusEffect(
-    useCallback(() => {
-      loadTodayClasses();
-    }, [])
-  );
-
-  const loadTodayClasses = async (isRefresh = false) => {
+  const loadSubjects = async () => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-
-      const raw = await AsyncStorage.getItem("teacherData");
-      const teacher = raw ? JSON.parse(raw) : null;
-      setTeacherData(teacher);
-
-      const todayName = DAYS[new Date().getDay()];
-
-      // Get timetable for this teacher
-      const res = await API.get("/timetable/teacher");
-      const all = res.data?.timetable || res.data || [];
-
-      // Filter: today's classes for this teacher
-      const todays = all
-        .filter((t) => t.day === todayName)
-        .map((t, i) => ({
-          ...t,
-          color: ["#00c6ff","#34d399","#f59e0b","#a78bfa","#f87171","#60a5fa"][i % 6],
-        }))
-        .sort((a, b) => a.startTime?.localeCompare(b.startTime));
-
-      setTodayClasses(todays);
-
-    } catch (e) {
-      console.log("Timetable load error:", e.message);
-      setTodayClasses([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+      setSubLoading(true);
+      const r = await API.get("/subject-requests/my-subjects");
+      setSubjects(r.data?.subjects || []);
+    } catch { setSubjects([]); }
+    finally { setSubLoading(false); }
   };
 
-  const handleClassPress = async (classItem) => {
+  const selectSubject = async (subject) => {
+    setSelectedSubject(subject);
+    setAttendance({});
+    setAlreadyMarked(false);
+    setStuLoading(true);
     try {
-      setSelectedClass(classItem);
-      setStep("students");
-      setStudentsLoading(true);
-      setSubmitted(false);
-      setAttendance({});
+      const r = await API.get(`/subject-requests/${subject._id}/students`);
+      const studs = r.data?.students || [];
+      setStudents(studs);
+      // Default all = absent
+      const init = {};
+      studs.forEach(s => { init[s._id] = "absent"; });
+      setAttendance(init);
 
-      // Get students enrolled in this subject / semester
-      const subjectId = classItem.subjectId?._id || classItem.subjectId;
-      const res = await API.get(`/students/by-subject/${subjectId}`);
-      const list = res.data?.students || res.data || [];
-      setStudents(list);
-
-      // Default all to absent
-      const defaultAtt = {};
-      list.forEach((s) => { defaultAtt[s._id] = "absent"; });
-      setAttendance(defaultAtt);
-
-    } catch (e) {
-      console.log("Students load error:", e.message);
-      setStudents([]);
-    } finally {
-      setStudentsLoading(false);
-    }
+      // Check if today's attendance already marked
+      try {
+        const ar = await API.get(`/attendance/check?subjectId=${subject._id}&date=${date}`);
+        if (ar.data?.marked) {
+          setAlreadyMarked(true);
+          // Pre-fill existing attendance
+          const existing = {};
+          ar.data.records?.forEach(r => { existing[r.studentId] = r.status; });
+          setAttendance(existing);
+        }
+      } catch {}
+    } catch { setStudents([]); }
+    finally { setStuLoading(false); }
   };
 
   const toggleAttendance = (studentId, status) => {
-    setAttendance((prev) => ({
-      ...prev,
-      [studentId]: prev[studentId] === status ? null : status,
-    }));
+    setAttendance(prev => ({ ...prev, [studentId]: status }));
   };
 
-  // Mark all present / absent
   const markAll = (status) => {
-    const updated = {};
-    students.forEach((s) => { updated[s._id] = status; });
-    setAttendance(updated);
+    const all = {};
+    students.forEach(s => { all[s._id] = status; });
+    setAttendance(all);
   };
+
+  const presentCount = Object.values(attendance).filter(v => v==="present").length;
+  const absentCount  = Object.values(attendance).filter(v => v==="absent").length;
 
   const handleSubmit = async () => {
-    const unmarked = students.filter((s) => !attendance[s._id]);
+    if (students.length === 0) return;
+    const unmarked = students.filter(s => !attendance[s._id]);
     if (unmarked.length > 0) {
-      Alert.alert(
-        "Unmarked Students",
-        `${unmarked.length} student(s) not marked. Mark them before submitting.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Mark Absent & Submit", onPress: () => submitAttendance(true) },
-        ]
-      );
+      Alert.alert("Incomplete", `${unmarked.length} students not marked. Mark all before submitting.`);
       return;
     }
-    submitAttendance(false);
+
+    Alert.alert(
+      "Submit Attendance",
+      `Present: ${presentCount} | Absent: ${absentCount}\n\nSubmit attendance for ${selectedSubject?.subjectName}?`,
+      [
+        { text:"Cancel", style:"cancel" },
+        { text:"Submit", onPress: async () => {
+          try {
+            setSubmitting(true);
+            const records = students.map(s => ({
+              studentId: s._id,
+              status:    attendance[s._id] || "absent",
+            }));
+            await API.post("/attendance/mark", {
+              subjectId:    selectedSubject._id,
+              subjectName:  selectedSubject.subjectName,
+              department:   selectedSubject.department,
+              semester:     selectedSubject.semester,
+              admissionYear:selectedSubject.admissionYear,
+              date,
+              records,
+            });
+            Alert.alert("✅ Done!","Attendance submitted successfully!",[
+              { text:"OK", onPress:()=>{ setSelectedSubject(null); setStudents([]); setAttendance({}); } }
+            ]);
+          } catch(e) {
+            Alert.alert("Error", e.response?.data?.message || "Could not submit attendance");
+          } finally { setSubmitting(false); }
+        }},
+      ]
+    );
   };
 
-  const submitAttendance = async (markRemainingAbsent = false) => {
-    try {
-      setSubmitting(true);
-
-      const records = students.map((s) => ({
-        studentId: s._id,
-        status: attendance[s._id] || (markRemainingAbsent ? "absent" : "absent"),
-      }));
-
-      await API.post("/attendance/mark", {
-        subjectId: selectedClass.subjectId?._id || selectedClass.subjectId,
-        timetableId: selectedClass._id,
-        date: new Date().toISOString().split("T")[0],
-        records,
-      });
-
-      setSubmitted(true);
-      Alert.alert("✅ Done!", "Attendance marked successfully!");
-
-    } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Could not submit attendance");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const presentCount = Object.values(attendance).filter((v) => v === "present").length;
-  const absentCount  = Object.values(attendance).filter((v) => v === "absent").length;
-  const unmarkedCount = students.length - presentCount - absentCount;
-  const todayName = DAYS[new Date().getDay()];
-
-  // ── STEP 1 VIEW ──
-  if (step === "classes") {
+  // ── STEP 1: Subject Selection ──
+  if (!selectedSubject) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
-
-        {/* Header */}
+        <StatusBar barStyle="light-content" backgroundColor="#0a0f1e"/>
         <LinearGradient colors={["#0a0f1e","#1a2a3a"]} style={styles.header}>
-          <Pressable onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
-            <Ionicons name="menu" size={24} color="#fff" />
+          <Pressable onPress={()=>navigation.openDrawer()} style={styles.menuBtn}>
+            <Ionicons name="menu" size={24} color="#fff"/>
           </Pressable>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Mark Attendance</Text>
-            <Text style={styles.headerSub}>{todayName}'s Classes</Text>
+            <Text style={styles.headerSub}>Select a subject to begin</Text>
           </View>
-          <View style={{ width: 40 }} />
+          <View style={{width:40}}/>
         </LinearGradient>
 
-        {/* Today Banner */}
-        <View style={styles.todayBanner}>
-          <Ionicons name="today" size={16} color="#00c6ff" />
-          <Text style={styles.todayText}>
-            {todayName}, {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}
-          </Text>
-        </View>
-
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#00c6ff" />
-          </View>
-        ) : (
-          <FlatList
-            data={todayClasses}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={() => loadTodayClasses(true)} tintColor="#00c6ff" />
-            }
-            ListEmptyComponent={() => (
-              <View style={styles.emptyState}>
+        {subLoading
+          ? <View style={styles.center}><ActivityIndicator size="large" color="#f59e0b"/></View>
+          : subjects.length === 0
+            ? (
+              <View style={styles.center}>
                 <View style={styles.emptyIcon}>
-                  <Ionicons name="cafe-outline" size={40} color="#374151" />
+                  <Ionicons name="book-outline" size={40} color="#374151"/>
                 </View>
-                <Text style={styles.emptyTitle}>No Classes Today</Text>
-                <Text style={styles.emptyText}>Enjoy your free day! 🎉</Text>
+                <Text style={styles.emptyTitle}>No Accepted Subjects</Text>
+                <Text style={styles.emptySubtitle}>Request subjects from the Students tab and wait for admin approval.</Text>
+                <Pressable style={styles.goBtn} onPress={()=>navigation.navigate("students")}>
+                  <Text style={styles.goBtnText}>Go to My Subjects →</Text>
+                </Pressable>
               </View>
-            )}
-            ListHeaderComponent={() => todayClasses.length > 0 && (
-              <View style={styles.classCountBadge}>
-                <Text style={styles.classCountText}>
-                  {todayClasses.length} {todayClasses.length === 1 ? "class" : "classes"} scheduled
-                </Text>
-              </View>
-            )}
-            renderItem={({ item }) => (
-              <ClassCard item={item} onPress={() => handleClassPress(item)} />
-            )}
-          />
-        )}
+            )
+            : (
+              <FlatList
+                data={subjects}
+                keyExtractor={item=>item._id}
+                contentContainerStyle={{ padding:16, paddingBottom:40 }}
+                showsVerticalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadSubjects} tintColor="#f59e0b"/>}
+                ListHeaderComponent={() => (
+                  <View style={styles.stepCard}>
+                    <View style={styles.stepDot}><Text style={styles.stepNum}>1</Text></View>
+                    <View>
+                      <Text style={styles.stepTitle}>Choose Subject</Text>
+                      <Text style={styles.stepSub}>Tap a subject to start marking attendance</Text>
+                    </View>
+                  </View>
+                )}
+                renderItem={({item}) => (
+                  <SubjectCard
+                    item={item}
+                    isSelected={false}
+                    onPress={() => selectSubject(item)}
+                  />
+                )}
+              />
+            )
+        }
       </View>
     );
   }
 
-  // ── STEP 2 VIEW ──
-  const color = selectedClass?.color || "#00c6ff";
+  // ── STEP 2: Mark Attendance ──
+  const color    = getColor(selectedSubject.department);
+  const short    = selectedSubject.department?.match(/\(([^)]+)\)/)?.[1] || selectedSubject.department?.split(" ")[0] || "";
+  const section  = `${short} ${selectedSubject.admissionYear}`;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
+      <StatusBar barStyle="light-content" backgroundColor="#0a0f1e"/>
 
       {/* Header */}
       <LinearGradient colors={["#0a0f1e","#1a2a3a"]} style={styles.header}>
-        <Pressable onPress={() => { setStep("classes"); setSelectedClass(null); }} style={styles.menuBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
+        <Pressable onPress={()=>{ setSelectedSubject(null); setStudents([]); setAttendance({}); }} style={styles.menuBtn}>
+          <Ionicons name="arrow-back" size={22} color="#fff"/>
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {selectedClass?.subjectId?.name || "Attendance"}
-          </Text>
-          <Text style={styles.headerSub}>
-            {selectedClass?.startTime} — {selectedClass?.endTime}
-          </Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{selectedSubject.subjectName}</Text>
+          <Text style={styles.headerSub}>{section} · Sem {selectedSubject.semester}</Text>
         </View>
-        <View style={{ width: 40 }} />
+        <View style={{width:40}}/>
       </LinearGradient>
 
-      {/* Stats Bar */}
-      {!studentsLoading && (
-        <View style={styles.statsBar}>
-          <View style={[styles.statChip, { backgroundColor: "rgba(52,211,153,0.12)" }]}>
-            <Text style={[styles.statChipNum, { color: "#34d399" }]}>{presentCount}</Text>
-            <Text style={styles.statChipLabel}>Present</Text>
-          </View>
-          <View style={[styles.statChip, { backgroundColor: "rgba(248,113,113,0.12)" }]}>
-            <Text style={[styles.statChipNum, { color: "#f87171" }]}>{absentCount}</Text>
-            <Text style={styles.statChipLabel}>Absent</Text>
-          </View>
-          <View style={[styles.statChip, { backgroundColor: "rgba(100,116,139,0.12)" }]}>
-            <Text style={[styles.statChipNum, { color: "#64748b" }]}>{unmarkedCount}</Text>
-            <Text style={styles.statChipLabel}>Unmarked</Text>
-          </View>
-          <View style={[styles.statChip, { backgroundColor: color + "12" }]}>
-            <Text style={[styles.statChipNum, { color }]}>{students.length}</Text>
-            <Text style={styles.statChipLabel}>Total</Text>
-          </View>
-        </View>
-      )}
+      {stuLoading
+        ? <View style={styles.center}><ActivityIndicator size="large" color={color}/></View>
+        : (
+          <FlatList
+            data={students}
+            keyExtractor={item=>item._id}
+            contentContainerStyle={{ padding:16, paddingBottom:100 }}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={() => (
+              <>
+                {/* Subject Info Banner */}
+                <LinearGradient colors={[color+"30", color+"10"]} style={styles.subjectBanner}>
+                  <View style={[styles.subjectIconBox,{backgroundColor:color+"22",marginRight:12}]}>
+                    <Ionicons name="book" size={20} color={color}/>
+                  </View>
+                  <View style={{flex:1}}>
+                    <Text style={[styles.subjectName,{fontSize:15}]}>{selectedSubject.subjectName}</Text>
+                    <Text style={styles.subjectCode}>{section} · Sem {selectedSubject.semester}</Text>
+                  </View>
+                  {alreadyMarked && (
+                    <View style={styles.alreadyBadge}>
+                      <Ionicons name="checkmark-circle" size={12} color="#34d399"/>
+                      <Text style={styles.alreadyBadgeText}>Marked</Text>
+                    </View>
+                  )}
+                </LinearGradient>
 
-      {/* Mark All Buttons */}
-      {!studentsLoading && students.length > 0 && !submitted && (
-        <View style={styles.markAllRow}>
-          <Pressable style={styles.markAllPresent} onPress={() => markAll("present")}>
-            <Ionicons name="checkmark-done" size={15} color="#34d399" />
-            <Text style={styles.markAllPresentText}>All Present</Text>
-          </Pressable>
-          <Pressable style={styles.markAllAbsent} onPress={() => markAll("absent")}>
-            <Ionicons name="close-circle" size={15} color="#f87171" />
-            <Text style={styles.markAllAbsentText}>All Absent</Text>
-          </Pressable>
-        </View>
-      )}
+                {/* Date + Stats */}
+                <View style={styles.statsRow}>
+                  <View style={styles.dateBadge}>
+                    <Ionicons name="calendar-outline" size={13} color="#64748b"/>
+                    <Text style={styles.dateText}>{date}</Text>
+                  </View>
+                  <View style={styles.countBadges}>
+                    <View style={[styles.countBadge,{backgroundColor:"rgba(52,211,153,0.15)"}]}>
+                      <Text style={[styles.countNum,{color:"#34d399"}]}>{presentCount}</Text>
+                      <Text style={styles.countLabel}>Present</Text>
+                    </View>
+                    <View style={[styles.countBadge,{backgroundColor:"rgba(248,113,113,0.15)"}]}>
+                      <Text style={[styles.countNum,{color:"#f87171"}]}>{absentCount}</Text>
+                      <Text style={styles.countLabel}>Absent</Text>
+                    </View>
+                    <View style={[styles.countBadge,{backgroundColor:"rgba(100,116,139,0.15)"}]}>
+                      <Text style={[styles.countNum,{color:"#64748b"}]}>{students.length}</Text>
+                      <Text style={styles.countLabel}>Total</Text>
+                    </View>
+                  </View>
+                </View>
 
-      {studentsLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={color} />
-          <Text style={styles.loadingText}>Loading students...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={students}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="people-outline" size={40} color="#374151" />
-              </View>
-              <Text style={styles.emptyTitle}>No Students Found</Text>
-              <Text style={styles.emptyText}>No students enrolled in this subject</Text>
-            </View>
-          )}
-          renderItem={({ item }) => (
-            <StudentRow
-              item={item}
-              status={attendance[item._id]}
-              onToggle={submitted ? () => {} : toggleAttendance}
-            />
-          )}
-          ListFooterComponent={() =>
-            students.length > 0 && (
-              submitted ? (
-                <View style={styles.successBox}>
-                  <Ionicons name="checkmark-circle" size={28} color="#34d399" />
-                  <Text style={styles.successText}>Attendance submitted!</Text>
-                  <Pressable style={styles.backBtn} onPress={() => { setStep("classes"); setSelectedClass(null); }}>
-                    <Text style={styles.backBtnText}>← Back to Classes</Text>
+                {/* Mark all buttons */}
+                <View style={styles.markAllRow}>
+                  <Pressable style={styles.markAllPresent} onPress={()=>markAll("present")}>
+                    <Ionicons name="checkmark-done" size={14} color="#34d399"/>
+                    <Text style={[styles.markAllText,{color:"#34d399"}]}>All Present</Text>
+                  </Pressable>
+                  <Pressable style={styles.markAllAbsent} onPress={()=>markAll("absent")}>
+                    <Ionicons name="close" size={14} color="#f87171"/>
+                    <Text style={[styles.markAllText,{color:"#f87171"}]}>All Absent</Text>
                   </Pressable>
                 </View>
-              ) : (
+
+                {students.length === 0 && (
+                  <View style={[styles.emptyIcon,{alignSelf:"center",marginTop:40}]}>
+                    <Ionicons name="people-outline" size={40} color="#374151"/>
+                    <Text style={[styles.emptyTitle,{marginTop:12}]}>No Students Found</Text>
+                    <Text style={styles.emptySubtitle}>No students in {section} Sem {selectedSubject.semester}</Text>
+                  </View>
+                )}
+
+                {students.length > 0 && (
+                  <Text style={styles.sectionLabel}>STUDENTS ({students.length})</Text>
+                )}
+              </>
+            )}
+            renderItem={({item}) => (
+              <StudentRow
+                item={item}
+                status={attendance[item._id]}
+                onToggle={toggleAttendance}
+              />
+            )}
+            ListFooterComponent={() =>
+              students.length > 0 ? (
                 <Pressable
-                  style={[styles.submitBtn, submitting && { opacity: 0.7 }]}
+                  style={[styles.submitBtn, submitting&&{opacity:0.6}]}
                   onPress={handleSubmit}
                   disabled={submitting}
                 >
                   <LinearGradient
-                    colors={["#10b981","#059669"]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    colors={alreadyMarked ? ["#f59e0b","#d97706"] : ["#34d399","#059669"]}
+                    start={{x:0,y:0}} end={{x:1,y:0}}
                     style={styles.submitGrad}
                   >
                     {submitting
-                      ? <ActivityIndicator color="#fff" />
+                      ? <ActivityIndicator color="#fff"/>
                       : <>
-                          <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
-                          <Text style={styles.submitText}>Submit Attendance</Text>
+                          <Ionicons name={alreadyMarked?"refresh":"checkmark-circle"} size={18} color="#fff"/>
+                          <Text style={styles.submitText}>
+                            {alreadyMarked ? "Update Attendance" : "Submit Attendance"}
+                          </Text>
                         </>
                     }
                   </LinearGradient>
                 </Pressable>
-              )
-            )
-          }
-        />
-      )}
+              ) : null
+            }
+          />
+        )
+      }
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#080d17" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
-  loadingText: { color: "#64748b", fontSize: 13 },
-
-  header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingTop: 52, paddingBottom: 14,
-  },
-  menuBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { color: "#fff", fontSize: 17, fontWeight: "700" },
-  headerSub: { color: "#64748b", fontSize: 11, marginTop: 2 },
-
-  todayBanner: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "rgba(0,198,255,0.08)",
-    marginHorizontal: 16, marginTop: 12,
-    padding: 12, borderRadius: 12,
-    borderWidth: 1, borderColor: "rgba(0,198,255,0.15)",
-  },
-  todayText: { color: "#00c6ff", fontSize: 13, fontWeight: "600" },
-
-  list: { padding: 16, paddingBottom: 30 },
-
-  classCountBadge: { marginBottom: 12 },
-  classCountText: { color: "#374151", fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
-
-  // Class Card
-  classCard: {
-    backgroundColor: "#1a2535", borderRadius: 16,
-    marginBottom: 12, flexDirection: "row", alignItems: "center",
-    overflow: "hidden",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.04)",
-  },
-  classAccent: { width: 4, alignSelf: "stretch" },
-  classBody: { flex: 1, padding: 14 },
-  classTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
-  classSubject: { color: "#fff", fontSize: 15, fontWeight: "700", flex: 1 },
-  classBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginLeft: 8 },
-  classBadgeText: { fontSize: 10, fontWeight: "700" },
-  classMeta: { gap: 5 },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  metaText: { color: "#64748b", fontSize: 12 },
-  classArrow: { paddingRight: 14 },
-
-  // Stats Bar
-  statsBar: {
-    flexDirection: "row", justifyContent: "space-around",
-    marginHorizontal: 16, marginTop: 12,
-    backgroundColor: "#1a2535", borderRadius: 14, padding: 12,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.04)",
-  },
-  statChip: { alignItems: "center", padding: 8, borderRadius: 10, minWidth: 60 },
-  statChipNum: { fontSize: 20, fontWeight: "800" },
-  statChipLabel: { color: "#64748b", fontSize: 10, marginTop: 2, fontWeight: "600" },
-
-  // Mark All
-  markAllRow: {
-    flexDirection: "row", gap: 10,
-    marginHorizontal: 16, marginTop: 12,
-  },
-  markAllPresent: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 10, borderRadius: 12,
-    backgroundColor: "rgba(52,211,153,0.1)",
-    borderWidth: 1, borderColor: "rgba(52,211,153,0.2)",
-  },
-  markAllPresentText: { color: "#34d399", fontSize: 13, fontWeight: "700" },
-  markAllAbsent: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 10, borderRadius: 12,
-    backgroundColor: "rgba(248,113,113,0.1)",
-    borderWidth: 1, borderColor: "rgba(248,113,113,0.2)",
-  },
-  markAllAbsentText: { color: "#f87171", fontSize: 13, fontWeight: "700" },
-
-  // Student Row
-  studentRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    backgroundColor: "#1a2535", borderRadius: 14, padding: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.04)",
-  },
-  studentLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  studentAvatar: { width: 42, height: 42, borderRadius: 21, justifyContent: "center", alignItems: "center" },
-  studentInitial: { fontSize: 16, fontWeight: "800" },
-  studentName: { color: "#fff", fontSize: 14, fontWeight: "600", maxWidth: width * 0.45 },
-  studentId: { color: "#64748b", fontSize: 11, marginTop: 2 },
-  toggleRow: { flexDirection: "row", gap: 8 },
-  toggleBtn: {
-    width: 38, height: 38, borderRadius: 10,
-    justifyContent: "center", alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
-    flexDirection: "row", gap: 2,
-  },
-  togglePresent: { backgroundColor: "#34d399", borderColor: "#34d399" },
-  toggleAbsent:  { backgroundColor: "#f87171", borderColor: "#f87171" },
-  toggleLabel: { color: "#fff", fontSize: 10, fontWeight: "800" },
-
+  container:{ flex:1,backgroundColor:"#080d17" },
+  center:{ flex:1,justifyContent:"center",alignItems:"center",paddingHorizontal:32 },
+  header:{ flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:16,paddingTop:52,paddingBottom:14 },
+  menuBtn:{ width:40,height:40,borderRadius:12,backgroundColor:"rgba(255,255,255,0.08)",justifyContent:"center",alignItems:"center" },
+  headerCenter:{ flex:1,alignItems:"center" },
+  headerTitle:{ color:"#fff",fontSize:17,fontWeight:"700" },
+  headerSub:{ color:"#64748b",fontSize:11,marginTop:2 },
+  // Step card
+  stepCard:{ flexDirection:"row",alignItems:"center",gap:14,backgroundColor:"#1a2535",borderRadius:16,padding:16,marginBottom:16,borderWidth:1,borderColor:"rgba(245,158,11,0.2)" },
+  stepDot:{ width:36,height:36,borderRadius:18,backgroundColor:"rgba(245,158,11,0.2)",justifyContent:"center",alignItems:"center" },
+  stepNum:{ color:"#f59e0b",fontSize:16,fontWeight:"800" },
+  stepTitle:{ color:"#fff",fontSize:14,fontWeight:"700" },
+  stepSub:{ color:"#64748b",fontSize:12,marginTop:2 },
+  // Subject card
+  subjectCard:{ borderRadius:16,marginBottom:10,overflow:"hidden",borderWidth:1,borderColor:"rgba(255,255,255,0.04)" },
+  subjectGrad:{ flexDirection:"row",alignItems:"center",padding:14,gap:12,borderRadius:16 },
+  subjectIconBox:{ width:44,height:44,borderRadius:12,justifyContent:"center",alignItems:"center" },
+  subjectName:{ color:"#fff",fontSize:14,fontWeight:"700" },
+  subjectCode:{ color:"#64748b",fontSize:11,marginTop:2 },
+  subjectMeta:{ flexDirection:"row",gap:6,marginTop:6,flexWrap:"wrap" },
+  metaBadge:{ paddingHorizontal:8,paddingVertical:3,borderRadius:8,backgroundColor:"rgba(255,255,255,0.06)" },
+  metaBadgeText:{ fontSize:10,fontWeight:"700",color:"#64748b" },
+  // Subject banner (step 2)
+  subjectBanner:{ flexDirection:"row",alignItems:"center",borderRadius:16,padding:14,marginBottom:12,borderWidth:1,borderColor:"rgba(255,255,255,0.06)" },
+  alreadyBadge:{ flexDirection:"row",alignItems:"center",gap:4,backgroundColor:"rgba(52,211,153,0.15)",paddingHorizontal:8,paddingVertical:4,borderRadius:8 },
+  alreadyBadgeText:{ color:"#34d399",fontSize:10,fontWeight:"700" },
+  // Stats
+  statsRow:{ flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:10 },
+  dateBadge:{ flexDirection:"row",alignItems:"center",gap:6,backgroundColor:"#1a2535",paddingHorizontal:12,paddingVertical:8,borderRadius:10 },
+  dateText:{ color:"#94a3b8",fontSize:12,fontWeight:"600" },
+  countBadges:{ flexDirection:"row",gap:8 },
+  countBadge:{ alignItems:"center",paddingHorizontal:12,paddingVertical:6,borderRadius:10 },
+  countNum:{ fontSize:16,fontWeight:"800" },
+  countLabel:{ color:"#64748b",fontSize:9,marginTop:2,fontWeight:"600" },
+  // Mark all
+  markAllRow:{ flexDirection:"row",gap:10,marginBottom:16 },
+  markAllPresent:{ flex:1,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:6,backgroundColor:"rgba(52,211,153,0.1)",padding:11,borderRadius:12,borderWidth:1,borderColor:"rgba(52,211,153,0.2)" },
+  markAllAbsent:{ flex:1,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:6,backgroundColor:"rgba(248,113,113,0.1)",padding:11,borderRadius:12,borderWidth:1,borderColor:"rgba(248,113,113,0.2)" },
+  markAllText:{ fontSize:13,fontWeight:"700" },
+  sectionLabel:{ color:"#374151",fontSize:10,fontWeight:"800",letterSpacing:1,marginBottom:10 },
+  // Student row
+  studentRow:{ flexDirection:"row",alignItems:"center",backgroundColor:"#1a2535",borderRadius:14,padding:12,marginBottom:8,borderWidth:1,borderColor:"rgba(255,255,255,0.04)" },
+  studentAvatar:{ width:42,height:42,borderRadius:21,justifyContent:"center",alignItems:"center",marginRight:12 },
+  studentAvatarImg:{ width:42,height:42,borderRadius:21 },
+  studentAvatarText:{ fontSize:15,fontWeight:"800" },
+  studentInfo:{ flex:1 },
+  studentName:{ color:"#fff",fontSize:14,fontWeight:"600" },
+  studentId:{ color:"#64748b",fontSize:11,marginTop:2 },
+  attendanceBtns:{ flexDirection:"row",gap:8 },
+  attBtn:{ width:38,height:38,borderRadius:19,justifyContent:"center",alignItems:"center",backgroundColor:"rgba(255,255,255,0.04)" },
+  presentBtn:{ backgroundColor:"rgba(52,211,153,0.12)" },
+  absentBtn:{ backgroundColor:"rgba(248,113,113,0.12)" },
   // Submit
-  submitBtn: { marginTop: 16, borderRadius: 14, overflow: "hidden" },
-  submitGrad: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16, borderRadius: 14 },
-  submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-
-  // Success
-  successBox: { alignItems: "center", padding: 24, gap: 10, marginTop: 16 },
-  successText: { color: "#34d399", fontSize: 16, fontWeight: "700" },
-  backBtn: { marginTop: 8, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)" },
-  backBtnText: { color: "#94a3b8", fontSize: 14, fontWeight: "600" },
-
+  submitBtn:{ marginTop:16,borderRadius:16,overflow:"hidden" },
+  submitGrad:{ flexDirection:"row",alignItems:"center",justifyContent:"center",gap:10,paddingVertical:18,borderRadius:16 },
+  submitText:{ color:"#fff",fontWeight:"800",fontSize:16 },
   // Empty
-  emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
-  emptyIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: "#1a2535", justifyContent: "center", alignItems: "center" },
-  emptyTitle: { color: "#374151", fontSize: 17, fontWeight: "700" },
-  emptyText: { color: "#1f2937", fontSize: 13 },
+  emptyIcon:{ alignItems:"center",gap:8 },
+  emptyTitle:{ color:"#374151",fontSize:16,fontWeight:"700",textAlign:"center" },
+  emptySubtitle:{ color:"#1f2937",fontSize:13,textAlign:"center",marginTop:4,lineHeight:18 },
+  goBtn:{ marginTop:20,backgroundColor:"rgba(245,158,11,0.15)",paddingHorizontal:20,paddingVertical:12,borderRadius:12,borderWidth:1,borderColor:"rgba(245,158,11,0.3)" },
+  goBtnText:{ color:"#f59e0b",fontWeight:"700",fontSize:14 },
 });

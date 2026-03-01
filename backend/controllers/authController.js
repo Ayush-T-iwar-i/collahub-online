@@ -176,6 +176,7 @@ exports.login = async (req, res) => {
         role: user.role, studentId: user.studentId,
         profileImage: user.profileImage, admissionYear: user.admissionYear,
         department: user.department, college: user.college,
+        semester: user.semester, phone: user.phone, gender: user.gender,
       },
     });
 
