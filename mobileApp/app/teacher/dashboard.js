@@ -144,7 +144,7 @@ export default function TeacherDashboard() {
           <Ionicons name="menu" size={24} color="#fff" />
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>CollaHub</Text>
+          <Text style={styles.headerTitle}>COLLAहUB</Text>
           <Text style={styles.headerSub}>Teacher Portal</Text>
         </View>
         <Pressable onPress={() => router.push("/teacher/profile")}>
@@ -167,6 +167,7 @@ export default function TeacherDashboard() {
             <LinearGradient colors={["#f59e0b", "#d97706"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.welcomeCard}>
               <View>
                 <Text style={styles.welcomeHi}>Hello, {teacherData?.name?.split(" ")[0] || "Teacher"} 👨‍🏫</Text>
+                
                 <Text style={styles.welcomeSub}>ID: {teacherData?.teacherId || teacherData?.id || "—"}</Text>
                 <Text style={styles.welcomeSub} numberOfLines={1}>{teacherData?.college || ""}</Text>
               </View>
