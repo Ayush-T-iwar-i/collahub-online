@@ -25,9 +25,8 @@ const RoleButton = ({ title, icon, route, colors, delay, router }) => {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(30);
   useEffect(() => {
-    opacity.value = withDelay(delay, withTiming(1, { duration: 600 }));
     translateY.value = withDelay(delay, withSpring(0, { damping: 15 }));
-  }, []);
+  }, [delay, opacity, translateY]);
   const style = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: translateY.value }] }));
 
   return (
@@ -53,9 +52,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     fade.value = withTiming(1, { duration: 1000 });
-    slide.value = withSpring(0, { damping: 15 });
     bgScale.value = withRepeat(withTiming(1.06, { duration: 14000 }), -1, true);
-  }, []);
+  }, [fade, slide, bgScale]);
 
   const cardStyle = useAnimatedStyle(() => ({ opacity: fade.value, transform: [{ translateY: slide.value }] }));
   const bgStyle = useAnimatedStyle(() => ({ transform: [{ scale: bgScale.value }] }));

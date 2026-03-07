@@ -34,7 +34,7 @@ export default function AdminLogin() {
     translateY.value = withSpring(0, { damping: 15 });
     titleScale.value = withSpring(1, { damping: 12 });
     scale.value      = withRepeat(withTiming(1.08, { duration: 12000 }), -1, true);
-  }, []);
+  }, [opacity, scale, titleScale, translateY]);
 
   const animatedCardStyle  = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: translateY.value }] }));
   const animatedBgStyle    = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));

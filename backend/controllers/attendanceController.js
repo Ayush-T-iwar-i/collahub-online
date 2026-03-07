@@ -1,105 +1,126 @@
-const Subject = require("../models/Subject");
-const User = require("../models/User");
-const mongoose = require("mongoose");
-const Attendance = require("../models/Attendance");
+const Attendance    = require("../models/Attendance");
+const SubjectRequest = require("../models/SubjectRequest");
+const User          = require("../models/User");
 
-// ================= MARK ATTENDANCE =================
+// ── Teacher: Mark/Update Attendance ──
 exports.markAttendance = async (req, res) => {
   try {
-    const { studentId, subjectId, date, status } = req.body;
+    const {
+      subjectId, subjectName, department, semester,
+      admissionYear, date, records,
+    } = req.body;
 
-    const student = await User.findById(studentId);
-    if (!student)
-      return res.status(404).json({ success: false, message: "Student not found" });
+    if (!subjectId || !date || !records?.length) {
+      return res.status(400).json({ success:false, message:"subjectId, date, records required" });
+    }
 
-    const subject = await Subject.findById(subjectId);
-    if (!subject)
-      return res.status(404).json({ success: false, message: "Subject not found" });
+    // Verify teacher owns this subject
+    const subject = await SubjectRequest.findOne({
+      _id:       subjectId,
+      teacherId: req.user.id,
+      status:    "accepted",
+    });
+    if (!subject) {
+      return res.status(403).json({ success:false, message:"Subject not found or not authorized" });
+    }
 
-    const alreadyMarked = await Attendance.findOne({ studentId, subjectId, date });
-    if (alreadyMarked)
-      return res.status(400).json({ success: false, message: "Attendance already marked" });
+    // Delete old records for this date + subject (update case)
+    await Attendance.deleteMany({ subjectId, date, markedBy: req.user.id });
 
-    const attendance = await Attendance.create({
-      studentId,
+    // Insert new records
+    const docs = records.map(r => ({
+      studentId:    r.studentId,
       subjectId,
+      subjectName:  subjectName || subject.subjectName,
+      department:   department  || subject.department,
+      semester:     semester    || subject.semester,
+      admissionYear: admissionYear || subject.admissionYear,
       date,
-      status: status.toLowerCase(), // ✅ always lowercase
-    });
+      status:   r.status,    // "present" | "absent"
+      markedBy: req.user.id,
+      markedByName: req.user.name || "",
+    }));
 
-    res.status(201).json({
-      success: true,
-      message: "Attendance marked successfully",
-      attendance,
-    });
-
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ================= ATTENDANCE PERCENTAGE =================
-exports.getAttendancePercentage = async (req, res) => {
-  try {
-    const { studentId } = req.params;
-
-    const total = await Attendance.countDocuments({ studentId });
-    const present = await Attendance.countDocuments({ studentId, status: "present" }); // ✅ lowercase
-
-    const percentage = total === 0 ? 0 : ((present / total) * 100).toFixed(2);
+    await Attendance.insertMany(docs);
 
     res.json({
       success: true,
-      totalClasses: total,
-      presentClasses: present,
-      percentage: percentage + "%",
+      message: "Attendance marked successfully",
+      total:   docs.length,
+      present: docs.filter(d=>d.status==="present").length,
+      absent:  docs.filter(d=>d.status==="absent").length,
+    });
+  } catch (e) {
+    console.log("MARK ATTENDANCE ERROR:", e.message);
+    res.status(500).json({ success:false, message:"Server error" });
+  }
+};
+
+// ── Teacher: Check if already marked ──
+exports.checkAttendance = async (req, res) => {
+  try {
+    const { subjectId, date } = req.query;
+    const records = await Attendance.find({
+      subjectId, date, markedBy: req.user.id,
+    });
+    res.json({
+      success: true,
+      marked:  records.length > 0,
+      records: records.map(r => ({ studentId: r.studentId, status: r.status })),
+    });
+  } catch (e) {
+    res.status(500).json({ success:false, message:"Server error" });
+  }
+};
+
+// ── Student: Get My Attendance ──
+exports.getMyAttendance = async (req, res) => {
+  try {
+    const records = await Attendance.find({ studentId: req.user.id }).sort("-date");
+
+    // Group by subject
+    const map = {};
+    records.forEach(r => {
+      const key = r.subjectId?.toString() || r.subjectName || "unknown";
+      if (!map[key]) {
+        map[key] = {
+          subjectId:   r.subjectId,
+          subjectName: r.subjectName,
+          department:  r.department,
+          semester:    r.semester,
+          total:       0, present:0, absent:0, records:[],
+        };
+      }
+      map[key].total++;
+      if (r.status==="present") map[key].present++;
+      else map[key].absent++;
+      map[key].records.push({ date:r.date, status:r.status });
     });
 
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const subjects = Object.values(map).map(s=>({
+      ...s,
+      percentage: s.total > 0 ? Math.round((s.present/s.total)*100) : 0,
+    }));
+
+    res.json({ success:true, subjects, totalDays: records.length });
+  } catch (e) {
+    res.status(500).json({ success:false, message:"Server error" });
   }
 };
 
-// ================= GET STUDENT ATTENDANCE =================
-exports.getStudentAttendance = async (req, res) => {
+// ── Admin/Teacher: Get attendance by subject ──
+exports.getBySubject = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { subjectId, date } = req.query;
+    const filter = { subjectId };
+    if (date) filter.date = date;
 
-    const attendance = await Attendance.find({ studentId: id }).populate("subjectId", "name");
+    const records = await Attendance.find(filter)
+      .populate("studentId","name studentId email")
+      .sort("-date");
 
-    res.json({ success: true, attendance });
-
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ================= MONTHLY ATTENDANCE REPORT =================
-exports.getMonthlyReport = async (req, res) => {
-  try {
-    const studentId = req.user.id;
-
-    const report = await Attendance.aggregate([
-      {
-        $match: { studentId: new mongoose.Types.ObjectId(studentId) }
-      },
-      {
-        $group: {
-          _id: { $month: "$date" },
-          totalClasses: { $sum: 1 },
-          present: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "present"] }, 1, 0] // ✅ lowercase fix
-            }
-          }
-        }
-      },
-      { $sort: { "_id": 1 } }
-    ]);
-
-    res.json({ success: true, report });
-
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.json({ success:true, records, total:records.length });
+  } catch (e) {
+    res.status(500).json({ success:false, message:"Server error" });
   }
 };

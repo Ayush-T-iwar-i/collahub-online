@@ -1,41 +1,36 @@
 const express = require("express");
-const router  = express.Router();
+const router = express.Router();
 
 const {
   verifyToken,
   isTeacher,
   isStudent,
-  protect,     // fallback agar protect use ho raha ho
+  isAdmin,
 } = require("../middleware/authMiddleware");
 
 const {
-  getStudentResult,       // student apna result dekhe (assignment based)
-  uploadResult,           // admin semester result upload kare
-  getStudentResultById,   // admin kisi ka bhi result dekhe
-  deleteResult,           // admin result delete kare
-  syncSemesters,          // admin semesters sync kare admission year se
-  getSubjectRanking,      // teacher subject ranking dekhe
-  exportResultPDF,        // student PDF download kare
-  generateCertificate,    // student certificate download kare
+  getStudentResult,
+  uploadResult,
+  getStudentResultById,
+  deleteResult,
+  syncSemesters,
+  getSubjectRanking,
+  exportResultPDF,
+  generateCertificate,
 } = require("../controllers/resultController");
 
-// auth middleware — dono me se jo available ho
-const auth      = verifyToken || protect;
-const authStudent = [auth, isStudent].filter(Boolean);
-const authTeacher = [auth, isTeacher].filter(Boolean);
-
 // ── Student routes ──
-router.get("/my",            ...authStudent, getStudentResult);
-router.get("/export-pdf",    ...authStudent, exportResultPDF);
-router.get("/certificate",   ...authStudent, generateCertificate);
+router.get("/my", verifyToken, isStudent, getStudentResult);
+router.get("/export-pdf", verifyToken, isStudent, exportResultPDF);
+router.get("/certificate", verifyToken, isStudent, generateCertificate);
 
 // ── Admin routes ──
-router.post("/upload",              auth, uploadResult);
-router.post("/sync-semesters",      auth, syncSemesters);
-router.get("/student/:id",          auth, getStudentResultById);
-router.delete("/:studentId/:semester", auth, deleteResult);
+router.post("/upload", verifyToken, isAdmin, uploadResult);
+router.post("/sync-semesters", verifyToken, isAdmin, syncSemesters);
+router.get("/student/:id", verifyToken, getStudentResultById);
+router.delete("/:studentId/:semester", verifyToken, isAdmin, deleteResult);
 
 // ── Teacher routes ──
-router.get("/rank/:subjectId",  ...authTeacher, getSubjectRanking);
+router.get("/rank/:subjectId", verifyToken, isTeacher, getSubjectRanking);
 
 module.exports = router;

@@ -7,211 +7,276 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+import XLSX from "xlsx";
 import API from "../../services/api";
 
 const { height, width } = Dimensions.get("window");
 
-const COLLEGES = [
-  "Nims Institute of Engineering and Technology",
-  "Nims College of Management Studies",
-  "Nims College of Nursing",
-  "Nims College of Pharmacy",
-  "Nims College of Law",
-  "Nims College of Dental",
-];
-const DEPARTMENTS = [
-  "Computer Science Engineering (CSE)",
-  "Information Technology (IT)",
-  "Electronics and Communication Engineering (ECE)",
-  "Electrical Engineering (EE)",
-  "Mechanical Engineering (ME)",
-  "Civil Engineering",
-  "Chemical Engineering",
-  "Artificial Intelligence & Machine Learning",
-  "Data Science Engineering",
-];
-const SEMESTERS = ["1","2","3","4","5","6","7","8"];
-const GENDERS   = ["Male","Female","Other"];
+// ── Constants ──────────────────────────────────────────────────
+const COLLEGE_DEPARTMENTS = {
+  "Nims Institute of Engineering and Technology": [
+    "Computer Science Engineering (CSE)",
+    "Information Technology (IT)",
+    "Electronics and Communication Engineering (ECE)",
+    "Electrical Engineering (EE)",
+    "Mechanical Engineering (ME)",
+    "Civil Engineering",
+    "Chemical Engineering",
+    "Artificial Intelligence & Machine Learning",
+    "Data Science Engineering",
+  ],
+  "Nims College of Management Studies": ["Business Administration", "Finance", "Marketing", "Human Resource"],
+  "Nims College of Nursing": ["B.Sc Nursing", "GNM", "Post Basic Nursing"],
+  "Nims College of Pharmacy": ["B.Pharm", "D.Pharm", "M.Pharm"],
+  "Nims College of Law": ["LLB", "BA LLB", "LLM"],
+  "Nims College of Dental": ["BDS", "MDS"],
+};
+
+const COLLEGES = Object.keys(COLLEGE_DEPARTMENTS);
+const SEMESTERS = ["1", "2", "3", "4", "5", "6", "7", "8"];
+const GENDERS = ["Male", "Female", "Other"];
 
 const COLLEGE_SHORT = {
   "Nims Institute of Engineering and Technology": "NIET",
   "Nims College of Management Studies": "NCMS",
-  "Nims College of Nursing": "Nursing",
-  "Nims College of Pharmacy": "Pharmacy",
-  "Nims College of Law": "Law",
-  "Nims College of Dental": "Dental",
+  "Nims College of Nursing": "NCN",
+  "Nims College of Pharmacy": "NCP",
+  "Nims College of Law": "NCL",
+  "Nims College of Dental": "NCD",
+};
+
+const COLLEGE_COLORS = {
+  NIET: "#00c6ff", NCMS: "#34d399", NCN: "#f87171",
+  NCP: "#a78bfa", NCL: "#f59e0b", NCD: "#fb923c",
+};
+const COLLEGE_ICONS = {
+  NIET: "hardware-chip-outline", NCMS: "briefcase-outline",
+  NCN: "medical-outline", NCP: "flask-outline",
+  NCL: "library-outline", NCD: "medkit-outline",
 };
 
 const DEPT_COLORS = [
-  "#00c6ff","#34d399","#f59e0b","#a78bfa",
-  "#f87171","#fb923c","#60a5fa","#e879f9","#4ade80",
+  "#00c6ff", "#34d399", "#f59e0b", "#a78bfa",
+  "#f87171", "#fb923c", "#60a5fa", "#e879f9", "#4ade80",
 ];
 
+const ALL_DEPARTMENTS = Object.values(COLLEGE_DEPARTMENTS).flat();
+
 const EMPTY_FORM = {
-  name:"", email:"", phone:"", studentId:"",
-  admissionYear:"", college:"", department:"",
-  semester:"", gender:"", password:"",
+  name: "", email: "", phone: "",
+  admissionYear: "", college: "", department: "",
+  semester: "", gender: "", password: "",
 };
 
-// section label: "CSE 2023"
-const getSectionLabel = (admissionYear, department) => {
-  if (!admissionYear || !department) return null;
-  const short = department.match(/\(([^)]+)\)/)?.[1] || department.split(" ")[0];
-  return `${short} ${admissionYear}`;
+// ── Helpers ─────────────────────────────────────────────────────
+const getDeptShort = (dept = "") => {
+  if (!dept) return "";
+  return dept.match(/\(([^)]+)\)/)?.[1] || dept.split(" ").filter(w => w.length > 2)[0]?.toUpperCase() || "DEPT";
 };
 
-// ── Breadcrumb ──
+const getAutoSemester = (admissionYear) => {
+  if (!admissionYear) return "";
+  const diff = new Date().getFullYear() - parseInt(admissionYear);
+  const isOdd = new Date().getMonth() + 1 >= 7;
+  let sem = diff * 2 + (isOdd ? 1 : 2);
+  if (sem < 1) sem = 1;
+  if (sem > 8) sem = 8;
+  return String(sem);
+};
+
+// ── Breadcrumb ───────────────────────────────────────────────────
 const Breadcrumb = ({ college, department, year, onPress }) => (
   <View style={styles.breadcrumb}>
     <Pressable onPress={() => onPress("colleges")}>
-      <Text style={[styles.bcItem, !college && styles.bcActive]}>All Colleges</Text>
+      <Text style={[styles.bcText, !college && styles.bcActive]}>All</Text>
     </Pressable>
-    {college && (
-      <>
-        <Ionicons name="chevron-forward" size={11} color="#374151" />
-        <Pressable onPress={() => onPress("departments")}>
-          <Text style={[styles.bcItem, college && !department && styles.bcActive]}>
-            {COLLEGE_SHORT[college] || college.split(" ")[0]}
-          </Text>
-        </Pressable>
-      </>
-    )}
-    {department && (
-      <>
-        <Ionicons name="chevron-forward" size={11} color="#374151" />
-        <Pressable onPress={() => onPress("years")}>
-          <Text style={[styles.bcItem, department && !year && styles.bcActive]} numberOfLines={1}>
-            {department.match(/\(([^)]+)\)/)?.[1] || department.split(" ")[0]}
-          </Text>
-        </Pressable>
-      </>
-    )}
-    {year && (
-      <>
-        <Ionicons name="chevron-forward" size={11} color="#374151" />
-        <Text style={[styles.bcItem, styles.bcActive]}>{year}</Text>
-      </>
-    )}
+    {college && <>
+      <Ionicons name="chevron-forward" size={10} color="#374151" />
+      <Pressable onPress={() => onPress("departments")}>
+        <Text style={[styles.bcText, college && !department && styles.bcActive]}>
+          {COLLEGE_SHORT[college] || college.split(" ")[0]}
+        </Text>
+      </Pressable>
+    </>}
+    {department && <>
+      <Ionicons name="chevron-forward" size={10} color="#374151" />
+      <Pressable onPress={() => onPress("years")}>
+        <Text style={[styles.bcText, department && !year && styles.bcActive]}>
+          {getDeptShort(department)}
+        </Text>
+      </Pressable>
+    </>}
+    {year && <>
+      <Ionicons name="chevron-forward" size={10} color="#374151" />
+      <Text style={[styles.bcText, styles.bcActive]}>{year}</Text>
+    </>}
   </View>
 );
 
-// ── College Card ──
-const CollegeCard = ({ name, count, onPress }) => (
-  <Pressable style={styles.browseCard} onPress={onPress}>
-    <View style={styles.browseIconWrap}>
-      <Ionicons name="business" size={24} color="#a78bfa" />
-    </View>
-    <View style={styles.browseInfo}>
-      <Text style={styles.browseName} numberOfLines={2}>{name}</Text>
-      <Text style={styles.browseCount}>{count} students</Text>
-    </View>
-    <Ionicons name="chevron-forward" size={18} color="#374151" />
-  </Pressable>
-);
+// ── College Card ─────────────────────────────────────────────────
+const CollegeCard = ({ name, count, onPress }) => {
+  const short = COLLEGE_SHORT[name] || "COL";
+  const color = COLLEGE_COLORS[short] || "#64748b";
+  const icon = COLLEGE_ICONS[short] || "business-outline";
+  return (
+    <Pressable onPress={onPress} style={styles.collegeCard}>
+      <LinearGradient
+        colors={[color + "20", color + "06"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={styles.collegeGrad}>
+        <View style={[styles.collegeIcon, { backgroundColor: color + "22" }]}>
+          <Ionicons name={icon} size={24} color={color} />
+        </View>
+        <View style={styles.collegeInfo}>
+          <Text style={[styles.collegeShort, { color }]}>{short}</Text>
+          <Text style={styles.collegeName} numberOfLines={2}>{name}</Text>
+        </View>
+        <View style={styles.collegeRight}>
+          <Text style={[styles.collegeCount, { color }]}>{count}</Text>
+          <Text style={styles.collegeCountLabel}>students</Text>
+          <Ionicons name="chevron-forward" size={14} color={color} style={{ marginTop: 2 }} />
+        </View>
+      </LinearGradient>
+    </Pressable>
+  );
+};
 
-// ── Department Card ──
+// ── Department Card ───────────────────────────────────────────────
 const DeptCard = ({ name, count, colorIdx, onPress }) => {
   const color = DEPT_COLORS[colorIdx % DEPT_COLORS.length];
-  const shortName = name.match(/\(([^)]+)\)/)?.[1] || name.split(" ")[0];
+  const short = getDeptShort(name);
+  const full = name.split("(")[0].trim();
   return (
-    <Pressable style={styles.deptCard} onPress={onPress}>
-      <View style={[styles.deptAccent, { backgroundColor: color }]} />
-      <View style={[styles.deptIconWrap, { backgroundColor: color + "20" }]}>
-        <Ionicons name="school" size={20} color={color} />
+    <Pressable style={[styles.deptCard, { borderLeftColor: color }]} onPress={onPress}>
+      <View style={[styles.deptShortBox, { backgroundColor: color + "18" }]}>
+        <Text style={[styles.deptShort, { color }]}>{short}</Text>
       </View>
-      <View style={styles.browseInfo}>
-        <Text style={styles.browseName}>{shortName}</Text>
-        <Text style={styles.browseSubName} numberOfLines={1}>{name.split("(")[0].trim()}</Text>
-        <Text style={[styles.browseCount, { color }]}>{count} students</Text>
+      <View style={styles.deptInfo}>
+        <Text style={styles.deptName} numberOfLines={1}>{full}</Text>
+        <Text style={[styles.deptCount, { color }]}>{count} enrolled</Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color="#374151" />
+      <View style={[styles.deptArrow, { backgroundColor: color + "18" }]}>
+        <Ionicons name="arrow-forward" size={14} color={color} />
+      </View>
     </Pressable>
   );
 };
 
-// ── Year / Batch Card ──
-const YearCard = ({ year, count, dept, color, onPress }) => {
-  const deptShort = dept?.match(/\(([^)]+)\)/)?.[1] || dept?.split(" ")[0] || "";
+// ── Year / Batch Card ─────────────────────────────────────────────
+const YearCard = ({ year, count, dept, color, currentSem, autoSem, onPress, onUpdateSem }) => {
+  const short = getDeptShort(dept);
+  const isSame = String(currentSem) === String(autoSem);
   return (
-    <Pressable style={styles.yearCard} onPress={onPress}>
-      <View style={[styles.yearBadgeWrap, { backgroundColor: color + "20" }]}>
-        <Text style={[styles.yearBadgeYear, { color }]}>{year}</Text>
-        <Text style={[styles.yearBadgeDept, { color: color + "cc" }]}>{deptShort}</Text>
-      </View>
-      <View style={styles.browseInfo}>
-        <Text style={styles.browseName}>{deptShort} Batch {year}</Text>
-        <Text style={styles.browseSubName}>Section: {deptShort} {year}</Text>
-        <Text style={[styles.browseCount, { color }]}>{count} students enrolled</Text>
-      </View>
-      <View style={[styles.yearCountBadge, { backgroundColor: color + "15" }]}>
-        <Text style={[styles.yearCountText, { color }]}>{count}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color="#374151" />
-    </Pressable>
-  );
-};
+    <Pressable style={[styles.yearCard, { borderLeftColor: color }]} onPress={onPress}>
+      <LinearGradient
+        colors={[color + "1a", color + "08"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={styles.yearGrad}>
+        {/* Year circle */}
+        <View style={[styles.yearCircle, { backgroundColor: color + "22", borderColor: color + "44" }]}>
+          <Text style={[styles.yearNum, { color }]}>{year}</Text>
+          <Text style={[styles.yearShort, { color: color + "bb" }]}>{short}</Text>
+        </View>
 
-// ── Student Card ──
-const StudentCard = ({ item, colorIdx, onEdit, onDelete }) => {
-  const color    = DEPT_COLORS[colorIdx % DEPT_COLORS.length];
-  const initials = item.name?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase() || "S";
-  const section  = getSectionLabel(item.admissionYear, item.department);
-  return (
-    <View style={styles.card}>
-      <View style={[styles.cardAccent, { backgroundColor: color }]} />
-      <View style={[styles.avatar, { backgroundColor: color + "20" }]}>
-        <Text style={[styles.avatarText, { color }]}>{initials}</Text>
-      </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-        <View style={styles.cardBadgeRow}>
-          <Text style={styles.cardSub}>{item.studentId || "—"}</Text>
-          <View style={[styles.semBadge, { backgroundColor: color + "20" }]}>
-            <Text style={[styles.semBadgeText, { color }]}>Sem {item.semester || "?"}</Text>
+        {/* Info */}
+        <View style={styles.yearInfo}>
+          <Text style={styles.yearTitle}>{short} Batch {year}</Text>
+          <Text style={styles.yearCount}>{count} students</Text>
+          <View style={styles.yearSemRow}>
+            <View style={[styles.semPill, { backgroundColor: color + "20" }]}>
+              <Ionicons name="layers-outline" size={9} color={color} />
+              <Text style={[styles.semPillText, { color }]}>Sem {currentSem || "?"}</Text>
+            </View>
+            {!isSame && (
+              <View style={styles.suggestPill}>
+                <Ionicons name="bulb-outline" size={9} color="#34d399" />
+                <Text style={styles.suggestPillText}>→ Sem {autoSem}</Text>
+              </View>
+            )}
           </View>
-          {section && (
-            <View style={styles.sectionBadge}>
-              <Ionicons name="people" size={9} color="#94a3b8" />
-              <Text style={styles.sectionBadgeText}>{section}</Text>
+        </View>
+
+        {/* Sem update button */}
+        <Pressable
+          style={[styles.semUpdateBtn, { borderColor: color + "55", backgroundColor: color + "12" }]}
+          onPress={e => { e.stopPropagation?.(); onUpdateSem(); }}>
+          <Ionicons name="sync-outline" size={15} color={color} />
+          <Text style={[styles.semUpdateText, { color }]}>Sem</Text>
+        </Pressable>
+
+        <Ionicons name="chevron-forward" size={16} color={color + "88"} style={{ marginLeft: 4 }} />
+      </LinearGradient>
+    </Pressable>
+  );
+};
+
+// ── Student Card ──────────────────────────────────────────────────
+const StudentCard = ({ item, color, onEdit, onDelete }) => {
+  const initials = item.name?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
+  return (
+    <View style={[styles.studentCard, { borderLeftColor: color }]}>
+      <View style={[styles.studentAvatar, { backgroundColor: color + "20" }]}>
+        <Text style={[styles.studentInitials, { color }]}>{initials}</Text>
+      </View>
+      <View style={styles.studentBody}>
+        <Text style={styles.studentName} numberOfLines={1}>{item.name}</Text>
+        <View style={styles.studentIdRow}>
+          <Ionicons name="card-outline" size={11} color="#64748b" />
+          <Text style={styles.studentId}>{item.studentId || "—"}</Text>
+        </View>
+        <View style={styles.studentChips}>
+          <View style={[styles.semChip, { backgroundColor: color + "20" }]}>
+            <Text style={[styles.semChipText, { color }]}>Sem {item.semester || "?"}</Text>
+          </View>
+          {item.gender && (
+            <View style={styles.genderChip}>
+              <Ionicons
+                name={item.gender === "Female" ? "female-outline" : item.gender === "Male" ? "male-outline" : "person-outline"}
+                size={10} color="#64748b" />
             </View>
           )}
+          {item.phone && (
+            <Text style={styles.phoneText} numberOfLines={1}>{item.phone}</Text>
+          )}
         </View>
-        <Text style={styles.cardSub} numberOfLines={1}>{item.email}</Text>
+        <Text style={styles.studentEmail} numberOfLines={1}>{item.email}</Text>
       </View>
-      <View style={styles.cardActions}>
+      <View style={styles.studentActions}>
         <Pressable style={styles.editBtn} onPress={() => onEdit(item)}>
-          <Ionicons name="pencil" size={14} color="#f59e0b" />
+          <Ionicons name="pencil" size={13} color="#f59e0b" />
         </Pressable>
-        <Pressable style={styles.deleteBtn} onPress={() => onDelete(item)}>
-          <Ionicons name="trash" size={14} color="#f87171" />
+        <Pressable style={styles.delBtn} onPress={() => onDelete(item)}>
+          <Ionicons name="trash" size={13} color="#f87171" />
         </Pressable>
       </View>
     </View>
   );
 };
 
-// ── Field ──
-const Field = ({ label, icon, value, onChangeText, keyboardType, secureTextEntry, maxLength }) => (
+// ── Form Field ────────────────────────────────────────────────────
+const Field = ({ label, icon, value, onChangeText, keyboardType, secureTextEntry, maxLength, editable = true, accent = "#00c6ff", hint }) => (
   <View style={styles.fieldWrap}>
     <Text style={styles.fieldLabel}>{label}</Text>
-    <View style={styles.fieldRow}>
-      <Ionicons name={icon} size={15} color="#64748b" style={{ marginRight: 8 }} />
+    <View style={[styles.fieldRow, value && { borderColor: accent + "44" }, !editable && { opacity: 0.5 }]}>
+      <Ionicons name={icon} size={15} color={value ? accent : "#64748b"} style={{ marginRight: 8 }} />
       <TextInput style={styles.fieldInput} value={value} onChangeText={onChangeText}
-        placeholderTextColor="#374151" placeholder={label}
+        placeholderTextColor="#374151" placeholder={hint || label}
         keyboardType={keyboardType || "default"} secureTextEntry={secureTextEntry}
-        autoCapitalize="none" maxLength={maxLength} />
+        autoCapitalize="none" maxLength={maxLength} editable={editable} />
     </View>
   </View>
 );
 
-// ── Picker ──
-const Picker = ({ label, icon, value, options, onSelect }) => {
+// ── Picker ────────────────────────────────────────────────────────
+const PickerField = ({ label, icon, value, options, onSelect, accent = "#00c6ff" }) => {
   const [open, setOpen] = useState(false);
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <Pressable style={styles.fieldRow} onPress={() => setOpen(true)}>
-        <Ionicons name={icon} size={15} color="#64748b" style={{ marginRight: 8 }} />
+      <Pressable style={[styles.fieldRow, value && { borderColor: accent + "44" }]} onPress={() => setOpen(true)}>
+        <Ionicons name={icon} size={15} color={value ? accent : "#64748b"} style={{ marginRight: 8 }} />
         <Text style={[styles.fieldInput, { color: value ? "#fff" : "#374151", paddingVertical: 14 }]} numberOfLines={1}>
           {value || `Select ${label}`}
         </Text>
@@ -220,15 +285,15 @@ const Picker = ({ label, icon, value, options, onSelect }) => {
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setOpen(false)}>
           <View style={styles.pickerSheet}>
-            <View style={styles.modalHandle} />
+            <View style={styles.handle} />
             <Text style={styles.pickerTitle}>{label}</Text>
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
               {options.map(opt => (
                 <Pressable key={opt}
-                  style={[styles.pickerOption, value === opt && styles.pickerOptionActive]}
+                  style={[styles.pickerRow, value === opt && { backgroundColor: accent + "18", borderColor: accent + "40", borderWidth: 1 }]}
                   onPress={() => { onSelect(opt); setOpen(false); }}>
-                  <Text style={[styles.pickerOptionText, value === opt && { color: "#00c6ff" }]} numberOfLines={2}>{opt}</Text>
-                  {value === opt && <Ionicons name="checkmark-circle" size={15} color="#00c6ff" />}
+                  <Text style={[styles.pickerRowText, value === opt && { color: accent }]} numberOfLines={2}>{opt}</Text>
+                  {value === opt && <Ionicons name="checkmark-circle" size={16} color={accent} />}
                 </Pressable>
               ))}
             </ScrollView>
@@ -239,155 +304,319 @@ const Picker = ({ label, icon, value, options, onSelect }) => {
   );
 };
 
-// ════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// MAIN SCREEN
+// ═══════════════════════════════════════════════════
 export default function ManageStudents() {
   const router = useRouter();
+
   const [allStudents, setAllStudents] = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [refreshing, setRefreshing]   = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // view: "colleges" | "departments" | "years" | "students"
-  const [view, setView]           = useState("colleges");
+  // Navigation state
+  const [view, setView] = useState("colleges");
   const [selCollege, setSelCollege] = useState(null);
-  const [selDept, setSelDept]     = useState(null);
-  const [selYear, setSelYear]     = useState(null);
-  const [search, setSearch]       = useState("");
+  const [selDept, setSelDept] = useState(null);
+  const [selYear, setSelYear] = useState(null);
+  const [search, setSearch] = useState("");
 
-  const [modalVisible, setModalVisible]     = useState(false);
+  // Form state
+  const [formModal, setFormModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
-  const [form, setForm]                     = useState(EMPTY_FORM);
-  const [saving, setSaving]                 = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+
+  // Batch semester update
+  const [batchModal, setBatchModal] = useState(false);
+  const [batchInfo, setBatchInfo] = useState(null);
+  const [batchTarget, setBatchTarget] = useState(null);
+  const [updatingSem, setUpdatingSem] = useState(false);
+
+  // Excel import
+  const [importModal, setImportModal] = useState(false);
+  const [importStatus, setImportStatus] = useState({ total: 0, done: 0, errors: [] });
+  const [importing, setImporting] = useState(false);
 
   useFocusEffect(useCallback(() => { loadStudents(); }, []));
 
   const loadStudents = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      if (isRefresh) setRefreshing(true); else setLoading(true);
       const res = await API.get("/students/all");
       setAllStudents(res.data?.students || res.data || []);
     } catch { Alert.alert("Error", "Could not load students"); }
     finally { setLoading(false); setRefreshing(false); }
   };
 
-  // ── Derived data ──
+  // ── Excel Import ──────────────────────────────────────────────
+  const pickAndImport = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel", "text/csv", "*/*"],
+        copyToCacheDirectory: true,
+      });
+      if (res.type !== "success") return;
+
+      setImporting(true);
+      setImportStatus({ total: 0, done: 0, errors: [] });
+      setImportModal(true);
+
+      const b64 = await FileSystem.readAsStringAsync(res.uri, { encoding: "base64" });
+      const wb = XLSX.read(b64, { type: "base64" });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+
+      if (!rows.length) {
+        setImporting(false);
+        return Alert.alert("Empty file", "No rows found");
+      }
+
+      // Normalize header keys
+      const normalized = rows.map(r => {
+        const obj = {};
+        Object.keys(r).forEach(k => { obj[k.trim().toLowerCase()] = r[k]; });
+        return obj;
+      });
+
+      // Map to student payload
+      const mapped = normalized.map((r, i) => ({
+        __row: i + 2,
+        name: String(r.name || r["student name"] || r["full name"] || "").trim(),
+        email: String(r.email || r["e-mail"] || "").trim(),
+        phone: String(r.phone || r.mobile || r.contact || r["phone number"] || "").trim(),
+        password: String(r.password || r.pass || "") || "changeme123",
+        college: String(r.college || "").trim(),
+        department: String(r.department || r.dept || "").trim(),
+        admissionYear: String(r["admission year"] || r["admissionyear"] || r.year || "").trim(),
+        semester: String(r.semester || r.sem || "").trim(),
+        gender: String(r.gender || "").trim(),
+      }));
+
+      // Validate
+      const valid = [], errors = [];
+      mapped.forEach(m => {
+        const miss = [];
+        if (!m.name) miss.push("name");
+        if (!m.email) miss.push("email");
+        if (!m.college) miss.push("college");
+        if (!m.department) miss.push("department");
+        if (!m.admissionYear) miss.push("admissionYear");
+        if (miss.length) errors.push({ row: m.__row, error: `Missing: ${miss.join(", ")}` });
+        else valid.push(m);
+      });
+
+      if (!valid.length) {
+        setImporting(false);
+        return Alert.alert("No valid rows", `${errors.length} errors found`);
+      }
+
+      Alert.alert(
+        "Confirm Import",
+        `✅ Valid: ${valid.length}\n❌ Invalid: ${errors.length}\n\nImport karo?`,
+        [
+          { text: "Cancel", onPress: () => { setImporting(false); setImportModal(false); } },
+          { text: "Import", onPress: () => runImport(valid, errors) },
+        ]
+      );
+    } catch (e) {
+      setImporting(false);
+      setImportModal(false);
+      Alert.alert("Error", "Could not read file");
+    }
+  };
+
+  const runImport = async (validRows, initialErrors) => {
+    const errors = [...(initialErrors || [])];
+    let done = 0;
+    setImportStatus({ total: validRows.length, done: 0, errors });
+    for (const row of validRows) {
+      try {
+        await API.post("/admin/add-student", {
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          password: row.password || "changeme123",
+          college: row.college,
+          department: row.department,
+          admissionYear: row.admissionYear,
+          semester: row.semester || "",
+          gender: row.gender || "",
+        });
+        done++;
+        setImportStatus(p => ({ ...p, done }));
+      } catch (e) {
+        errors.push({ row: row.__row, error: e.response?.data?.message || "Failed" });
+        setImportStatus(p => ({ ...p, errors: [...errors] }));
+      }
+    }
+    setImporting(false);
+    await loadStudents();
+    Alert.alert("Done!", `Imported: ${done} / ${validRows.length}\nFailed: ${errors.length}`);
+  };
+
+  // ── Data computations ─────────────────────────────────────────
   const collegeData = COLLEGES.map(c => ({
     name: c,
     count: allStudents.filter(s => s.college === c).length,
   }));
 
   const deptData = selCollege
-    ? DEPARTMENTS.map((d, i) => ({
-        name: d, colorIdx: i,
-        count: allStudents.filter(s => s.college === selCollege && s.department === d).length,
-      })).filter(d => d.count > 0)
+    ? (COLLEGE_DEPARTMENTS[selCollege] || []).map((d, i) => ({
+      name: d, colorIdx: i,
+      count: allStudents.filter(s => s.college === selCollege && s.department === d).length,
+    })).filter(d => d.count > 0)
     : [];
 
-  // Unique years for selected college+dept
   const yearData = (selCollege && selDept)
-    ? [...new Set(
-        allStudents
-          .filter(s => s.college === selCollege && s.department === selDept && s.admissionYear)
-          .map(s => s.admissionYear)
-      )].sort()
-      .map(year => ({
-        year,
-        count: allStudents.filter(
+    ? [...new Set(allStudents
+      .filter(s => s.college === selCollege && s.department === selDept && s.admissionYear)
+      .map(s => s.admissionYear)
+    )].sort()
+      .map(year => {
+        const batch = allStudents.filter(
           s => s.college === selCollege && s.department === selDept && s.admissionYear === year
-        ).length,
-      }))
+        );
+        return {
+          year, count: batch.length,
+          currentSem: batch[0]?.semester ? String(batch[0].semester) : getAutoSemester(year),
+          autoSem: getAutoSemester(year),
+        };
+      })
     : [];
 
   const studentData = (() => {
     let list = allStudents;
     if (selCollege) list = list.filter(s => s.college === selCollege);
-    if (selDept)    list = list.filter(s => s.department === selDept);
-    if (selYear)    list = list.filter(s => s.admissionYear === selYear);
+    if (selDept) list = list.filter(s => s.department === selDept);
+    if (selYear) list = list.filter(s => s.admissionYear === selYear);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(s =>
         s.name?.toLowerCase().includes(q) ||
         s.studentId?.toLowerCase().includes(q) ||
-        s.email?.toLowerCase().includes(q)
+        s.email?.toLowerCase().includes(q) ||
+        s.phone?.includes(q)
       );
     }
     return list;
   })();
 
-  const deptColorIdx = selDept ? DEPARTMENTS.indexOf(selDept) : 0;
-  const deptColor    = DEPT_COLORS[deptColorIdx % DEPT_COLORS.length];
+  const deptColorIdx = selDept ? (ALL_DEPARTMENTS.indexOf(selDept) % DEPT_COLORS.length) : 0;
+  const deptColor = DEPT_COLORS[deptColorIdx];
 
-  // ── Navigation ──
+  // ── Navigation ────────────────────────────────────────────────
   const navTo = (target) => {
-    if (target === "colleges")    { setSelCollege(null); setSelDept(null); setSelYear(null); }
+    if (target === "colleges") { setSelCollege(null); setSelDept(null); setSelYear(null); }
     if (target === "departments") { setSelDept(null); setSelYear(null); }
-    if (target === "years")       { setSelYear(null); }
+    if (target === "years") { setSelYear(null); }
     setView(target); setSearch("");
   };
 
   const goBack = () => {
-    if (view === "students")    return navTo("years");
-    if (view === "years")       return navTo("departments");
+    if (view === "students") return navTo("years");
+    if (view === "years") return navTo("departments");
     if (view === "departments") return navTo("colleges");
     router.back();
   };
 
-  // ── Form ──
+  // ── Batch Semester Update ─────────────────────────────────────
+  const openBatchModal = (yearObj) => {
+    setBatchInfo(yearObj);
+    setBatchTarget(null);
+    setBatchModal(true);
+  };
+
+  const confirmBatchUpdate = async () => {
+    if (!batchTarget) return Alert.alert("", "Semester select karo");
+    try {
+      setUpdatingSem(true);
+      const res = await API.put("/admin/update-batch-semester", {
+        college: selCollege,
+        department: selDept,
+        admissionYear: batchInfo.year,
+        newSemester: Number(batchTarget),
+      });
+      setBatchModal(false);
+      await loadStudents();
+      Alert.alert("✅ Updated", `${res.data.updatedCount || "All"} students → Sem ${batchTarget}`);
+    } catch (e) {
+      Alert.alert("Error", e.response?.data?.message || "Failed");
+    } finally { setUpdatingSem(false); }
+  };
+
+  // ── Add / Edit / Delete ───────────────────────────────────────
   const openAdd = () => {
     setEditingStudent(null);
-    setForm({ ...EMPTY_FORM, college: selCollege||"", department: selDept||"", admissionYear: selYear||"" });
-    setModalVisible(true);
+    setForm({ ...EMPTY_FORM, college: selCollege || "", department: selDept || "", admissionYear: selYear || "" });
+    setFormModal(true);
   };
+
   const openEdit = (s) => {
     setEditingStudent(s);
     setForm({
-      name:s.name||"", email:s.email||"", phone:s.phone||"", studentId:s.studentId||"",
-      admissionYear:s.admissionYear||"", college:s.college||"", department:s.department||"",
-      semester:String(s.semester||""), gender:s.gender||"", password:"",
+      name: s.name || "", email: s.email || "", phone: s.phone || "",
+      admissionYear: s.admissionYear || "", college: s.college || "",
+      department: s.department || "", semester: String(s.semester || ""),
+      gender: s.gender || "", password: "",
     });
-    setModalVisible(true);
+    setFormModal(true);
   };
+
   const handleDelete = (s) => {
-    Alert.alert("Delete Student", `Delete ${s.name}?`, [
-      { text:"Cancel", style:"cancel" },
-      { text:"Delete", style:"destructive", onPress: async () => {
-        try { await API.delete(`/students/${s._id}`); loadStudents(); }
-        catch(e) { Alert.alert("Error", e.response?.data?.message||"Could not delete"); }
-      }},
+    Alert.alert("Delete Student", `"${s.name}" ko delete karo?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive", onPress: async () => {
+          try {
+            await API.delete(`/students/${s._id}`);
+            setAllStudents(p => p.filter(st => st._id !== s._id));
+          } catch (e) { Alert.alert("Error", e.response?.data?.message || "Failed"); }
+        }
+      },
     ]);
   };
+
   const handleSave = async () => {
-    if (!form.name.trim())      return Alert.alert("Error","Name is required");
-    if (!form.email.trim())     return Alert.alert("Error","Email is required");
-    if (!form.studentId.trim()) return Alert.alert("Error","Student ID is required");
-    if (!form.college)          return Alert.alert("Error","College is required");
-    if (!form.department)       return Alert.alert("Error","Department is required");
-    if (!form.semester)         return Alert.alert("Error","Semester is required");
-    if (!editingStudent && !form.password) return Alert.alert("Error","Password is required");
+    if (!form.name.trim()) return Alert.alert("", "Name required");
+    if (!form.email.trim()) return Alert.alert("", "Email required");
+    if (!form.college) return Alert.alert("", "College required");
+    if (!form.department) return Alert.alert("", "Department required");
+    if (!form.admissionYear) return Alert.alert("", "Admission Year required");
+    if (!editingStudent && !form.password) return Alert.alert("", "Password required");
     try {
       setSaving(true);
       const payload = { ...form };
       if (editingStudent && !payload.password) delete payload.password;
-      if (editingStudent) await API.put(`/students/${editingStudent._id}`, payload);
-      else await API.post("/admin/add-student", payload);
-      setModalVisible(false); loadStudents();
-      Alert.alert("Success ✅", editingStudent ? "Student updated!" : "Student added!");
-    } catch(e) { Alert.alert("Error", e.response?.data?.message||"Could not save student"); }
-    finally { setSaving(false); }
+
+      if (editingStudent) {
+        await API.put(`/students/${editingStudent._id}`, payload);
+        Alert.alert("✅ Updated", "Student info saved!");
+      } else {
+        const res = await API.post("/admin/add-student", payload);
+        const newId = res.data?.student?.studentId;
+        Alert.alert("✅ Student Added!", `Student ID:\n${newId || "Generated automatically"}`);
+      }
+      setFormModal(false);
+      await loadStudents();
+    } catch (e) {
+      Alert.alert("Error", e.response?.data?.message || "Could not save");
+    } finally { setSaving(false); }
   };
+
   const f = k => v => setForm(p => ({ ...p, [k]: v }));
 
-  // ── Header labels ──
-  const headerTitles = {
-    colleges:    "Manage Students",
-    departments: COLLEGE_SHORT[selCollege] || selCollege?.split(" ")[0] || "",
-    years:       selDept?.match(/\(([^)]+)\)/)?.[1] || selDept?.split(" ")[0] || "",
-    students:    `${selDept?.match(/\(([^)]+)\)/)?.[1]||""} ${selYear||""}`.trim(),
-  };
-  const headerSubs = {
-    colleges:    `${allStudents.length} total students`,
-    departments: `${allStudents.filter(s=>s.college===selCollege).length} students`,
-    years:       `${allStudents.filter(s=>s.college===selCollege&&s.department===selDept).length} students`,
-    students:    `${studentData.length} students`,
+  // ── Preview: what ID will be generated ───────────────────────
+  const idPreview = form.admissionYear?.length === 4 && form.department
+    ? `${form.admissionYear}-${getDeptShort(form.department)}-???`
+    : null;
+
+  // ── Header strings ─────────────────────────────────────────────
+  const HEADER = {
+    colleges: { title: "Manage Students", sub: `${allStudents.length} total students` },
+    departments: { title: COLLEGE_SHORT[selCollege] || selCollege || "College", sub: `${allStudents.filter(s => s.college === selCollege).length} students` },
+    years: { title: getDeptShort(selDept) || "Department", sub: `${allStudents.filter(s => s.college === selCollege && s.department === selDept).length} students` },
+    students: { title: ((getDeptShort(selDept) || "") + " " + (selYear || "")).trim() || "Students", sub: `${studentData.length} students` },
   };
 
   return (
@@ -395,148 +624,161 @@ export default function ManageStudents() {
       <StatusBar barStyle="light-content" backgroundColor="#080d17" />
 
       {/* ── Header ── */}
-      <LinearGradient colors={["#080d17","#0f1923"]} style={styles.header}>
-        <Pressable onPress={goBack} style={styles.backBtn}>
+      <LinearGradient colors={["#080d17", "#0f1923"]} style={styles.header}>
+        <Pressable onPress={goBack} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{headerTitles[view]}</Text>
-          <Text style={styles.headerSub}>{headerSubs[view]}</Text>
+        <View style={styles.headerMid}>
+          <Text style={styles.headerTitle} numberOfLines={1}>{HEADER[view].title}</Text>
+          <Text style={styles.headerSub}>{HEADER[view].sub}</Text>
         </View>
-        <Pressable style={styles.addBtn} onPress={openAdd}>
-          <Ionicons name="person-add" size={19} color="#fff" />
-        </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable style={styles.importBtn} onPress={pickAndImport}>
+            <Ionicons name="download-outline" size={18} color="#a78bfa" />
+          </Pressable>
+          <Pressable style={styles.addBtn} onPress={openAdd}>
+            <Ionicons name="person-add" size={18} color="#fff" />
+          </Pressable>
+        </View>
       </LinearGradient>
 
       {/* ── Breadcrumb ── */}
-      <Breadcrumb
-        college={selCollege} department={selDept} year={selYear}
-        onPress={navTo}
-      />
+      <Breadcrumb college={selCollege} department={selDept} year={selYear} onPress={navTo} />
 
-      {/* ── Search (students only) ── */}
+      {/* ── Search (students view) ── */}
       {view === "students" && (
         <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={15} color="#64748b" />
-          <TextInput style={styles.searchInput} placeholder="Search students..."
-            placeholderTextColor="#374151" value={search} onChangeText={setSearch} />
+          <Ionicons name="search-outline" size={14} color="#64748b" />
+          <TextInput style={styles.searchInput}
+            placeholder="Name, ID, email ya phone..." placeholderTextColor="#374151"
+            value={search} onChangeText={setSearch} />
           {search.length > 0 && (
             <Pressable onPress={() => setSearch("")}>
-              <Ionicons name="close-circle" size={15} color="#64748b" />
+              <Ionicons name="close-circle" size={14} color="#64748b" />
             </Pressable>
           )}
         </View>
       )}
 
+      {/* ── Updating banner ── */}
+      {updatingSem && (
+        <View style={styles.updatingBar}>
+          <ActivityIndicator size="small" color="#a78bfa" />
+          <Text style={styles.updatingText}>Semesters are being updated..</Text>
+        </View>
+      )}
+
+      {/* ── Main Content ── */}
       {loading ? (
         <View style={styles.center}><ActivityIndicator size="large" color="#00c6ff" /></View>
       ) : (
         <>
-          {/* ── COLLEGES ── */}
+          {/* COLLEGES */}
           {view === "colleges" && (
-            <FlatList data={collegeData} keyExtractor={i=>i.name}
+            <FlatList
+              data={collegeData} keyExtractor={i => i.name}
               contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>loadStudents(true)} tintColor="#00c6ff" />}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadStudents(true)} tintColor="#00c6ff" />}
               ListHeaderComponent={() => (
                 <View style={styles.statsRow}>
-                  <View style={styles.statBox}>
-                    <Text style={styles.statNum}>{allStudents.length}</Text>
-                    <Text style={styles.statLabel}>Total</Text>
-                  </View>
-                  <View style={styles.statBox}>
-                    <Text style={[styles.statNum,{color:"#34d399"}]}>
-                      {allStudents.filter(s=>Number(s.semester)<=4).length}
-                    </Text>
-                    <Text style={styles.statLabel}>Junior</Text>
-                  </View>
-                  <View style={styles.statBox}>
-                    <Text style={[styles.statNum,{color:"#f59e0b"}]}>
-                      {allStudents.filter(s=>Number(s.semester)>4).length}
-                    </Text>
-                    <Text style={styles.statLabel}>Senior</Text>
-                  </View>
+                  {[
+                    { label: "Total", val: allStudents.length, color: "#00c6ff" },
+                    { label: "Junior", val: allStudents.filter(s => Number(s.semester) <= 4).length, color: "#34d399" },
+                    { label: "Senior", val: allStudents.filter(s => Number(s.semester) > 4).length, color: "#f59e0b" },
+                    { label: "Coll.", val: COLLEGES.length, color: "#a78bfa" },
+                  ].map(s => (
+                    <View key={s.label} style={[styles.statCard, { borderTopColor: s.color }]}>
+                      <Text style={[styles.statNum, { color: s.color }]}>{s.val}</Text>
+                      <Text style={styles.statLabel}>{s.label}</Text>
+                    </View>
+                  ))}
                 </View>
               )}
-              renderItem={({item}) => (
+              renderItem={({ item }) => (
                 <CollegeCard name={item.name} count={item.count}
                   onPress={() => { setSelCollege(item.name); setView("departments"); }} />
               )}
             />
           )}
 
-          {/* ── DEPARTMENTS ── */}
+          {/* DEPARTMENTS */}
           {view === "departments" && (
-            <FlatList data={deptData} keyExtractor={i=>i.name}
+            <FlatList
+              data={deptData} keyExtractor={i => i.name}
               contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}
               ListEmptyComponent={() => (
-                <View style={styles.emptyState}>
-                  <View style={styles.emptyIcon}><Ionicons name="school-outline" size={40} color="#374151" /></View>
-                  <Text style={styles.emptyTitle}>No Departments Found</Text>
-                  <Text style={styles.emptySubtitle}>Add students to see departments</Text>
+                <View style={styles.empty}>
+                  <View style={styles.emptyIcon}><Ionicons name="school-outline" size={38} color="#374151" /></View>
+                  <Text style={styles.emptyTitle}>No Departments</Text>
+                  <Text style={styles.emptySub}>There are currently no students in this college.</Text>
                 </View>
               )}
-              renderItem={({item}) => (
+              renderItem={({ item }) => (
                 <DeptCard name={item.name} count={item.count} colorIdx={item.colorIdx}
                   onPress={() => { setSelDept(item.name); setView("years"); }} />
               )}
             />
           )}
 
-          {/* ── YEARS / BATCHES ── */}
+          {/* YEARS */}
           {view === "years" && (
-            <FlatList data={yearData} keyExtractor={i=>i.year}
+            <FlatList
+              data={yearData} keyExtractor={i => i.year}
               contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}
               ListHeaderComponent={() => (
-                <View style={[styles.infoBanner, { borderLeftColor: deptColor }]}>
-                  <Ionicons name="information-circle-outline" size={15} color={deptColor} />
-                  <Text style={[styles.infoBannerText, { color: deptColor }]}>
-                    Select batch year to view students of that section
+                <View style={[styles.tipBanner, { borderLeftColor: deptColor }]}>
+                  <Ionicons name="information-circle-outline" size={14} color={deptColor} />
+                  <Text style={[styles.tipText, { color: deptColor }]}>
+                    &quot;Update semester of entire batch at once using &quot;Sem&quot; button
                   </Text>
                 </View>
               )}
               ListEmptyComponent={() => (
-                <View style={styles.emptyState}>
-                  <View style={styles.emptyIcon}><Ionicons name="calendar-outline" size={40} color="#374151" /></View>
-                  <Text style={styles.emptyTitle}>No Batches Found</Text>
-                  <Text style={styles.emptySubtitle}>Students need Admission Year to appear here</Text>
-                  <Pressable style={styles.emptyAddBtn} onPress={openAdd}>
-                    <Ionicons name="person-add-outline" size={15} color="#00c6ff" />
-                    <Text style={styles.emptyAddText}>Add Student</Text>
+                <View style={styles.empty}>
+                  <View style={styles.emptyIcon}><Ionicons name="calendar-outline" size={38} color="#374151" /></View>
+                  <Text style={styles.emptyTitle}>No Batches</Text>
+                  <Text style={styles.emptySub}>Set admission year for students</Text>
+                  <Pressable style={styles.emptyBtn} onPress={openAdd}>
+                    <Ionicons name="person-add-outline" size={14} color="#00c6ff" />
+                    <Text style={styles.emptyBtnText}>Add Student</Text>
                   </Pressable>
                 </View>
               )}
-              renderItem={({item}) => (
-                <YearCard year={item.year} count={item.count} dept={selDept} color={deptColor}
-                  onPress={() => { setSelYear(item.year); setView("students"); }} />
+              renderItem={({ item }) => (
+                <YearCard year={item.year} count={item.count} dept={selDept}
+                  color={deptColor} currentSem={item.currentSem} autoSem={item.autoSem}
+                  onPress={() => { setSelYear(item.year); setView("students"); }}
+                  onUpdateSem={() => openBatchModal(item)} />
               )}
             />
           )}
 
-          {/* ── STUDENTS ── */}
+          {/* STUDENTS */}
           {view === "students" && (
-            <FlatList data={studentData} keyExtractor={i=>i._id||i.studentId}
+            <FlatList
+              data={studentData} keyExtractor={i => i._id || i.studentId}
               contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>loadStudents(true)} tintColor="#00c6ff" />}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadStudents(true)} tintColor="#00c6ff" />}
               ListHeaderComponent={() => (
-                <View style={[styles.infoBanner, { borderLeftColor: deptColor }]}>
-                  <Ionicons name="people" size={14} color={deptColor} />
-                  <Text style={[styles.infoBannerText, { color: deptColor }]}>
-                    Section: {selDept?.match(/\(([^)]+)\)/)?.[1] || ""} {selYear}
+                <View style={[styles.tipBanner, { borderLeftColor: deptColor }]}>
+                  <Ionicons name="people" size={13} color={deptColor} />
+                  <Text style={[styles.tipText, { color: deptColor }]}>
+                    {getDeptShort(selDept)} · Batch {selYear} · {studentData.length} students
                   </Text>
                 </View>
               )}
               ListEmptyComponent={() => (
-                <View style={styles.emptyState}>
-                  <View style={styles.emptyIcon}><Ionicons name="people-outline" size={40} color="#374151" /></View>
-                  <Text style={styles.emptyTitle}>No Students Found</Text>
-                  <Pressable style={styles.emptyAddBtn} onPress={openAdd}>
-                    <Ionicons name="person-add-outline" size={15} color="#00c6ff" />
-                    <Text style={styles.emptyAddText}>Add Student</Text>
+                <View style={styles.empty}>
+                  <View style={styles.emptyIcon}><Ionicons name="people-outline" size={38} color="#374151" /></View>
+                  <Text style={styles.emptyTitle}>No Students</Text>
+                  <Pressable style={styles.emptyBtn} onPress={openAdd}>
+                    <Ionicons name="person-add-outline" size={14} color="#00c6ff" />
+                    <Text style={styles.emptyBtnText}>Add Student</Text>
                   </Pressable>
                 </View>
               )}
-              renderItem={({item}) => (
-                <StudentCard item={item} colorIdx={deptColorIdx}
+              renderItem={({ item }) => (
+                <StudentCard item={item} color={deptColor}
                   onEdit={openEdit} onDelete={handleDelete} />
               )}
             />
@@ -544,54 +786,202 @@ export default function ManageStudents() {
         </>
       )}
 
-      {/* ── FORM MODAL ── */}
-      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={()=>setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.formSheet}>
-            <View style={styles.modalHandle} />
-            <View style={styles.formHeader}>
-              <View style={styles.formHeaderIcon}>
-                <Ionicons name={editingStudent?"pencil":"person-add"} size={18} color="#00c6ff" />
+      {/* ══ ADD / EDIT MODAL ══ */}
+      <Modal visible={formModal} transparent animationType="slide" onRequestClose={() => setFormModal(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            <View style={styles.handle} />
+            <View style={styles.sheetHeader}>
+              <View style={[styles.sheetIcon, { backgroundColor: editingStudent ? "rgba(245,158,11,0.15)" : "rgba(0,198,255,0.15)" }]}>
+                <Ionicons name={editingStudent ? "pencil" : "person-add"} size={17}
+                  color={editingStudent ? "#f59e0b" : "#00c6ff"} />
               </View>
-              <Text style={styles.formTitle}>{editingStudent?"Edit Student":"Add New Student"}</Text>
-              <Pressable onPress={()=>setModalVisible(false)}>
-                <Ionicons name="close" size={22} color="#64748b" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetTitle}>{editingStudent ? "Edit Student" : "Add New Student"}</Text>
+                {editingStudent && <Text style={styles.sheetSub}>{editingStudent.studentId}</Text>}
+              </View>
+              <Pressable onPress={() => setFormModal(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={18} color="#64748b" />
               </Pressable>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <Text style={styles.sectionLabel}>BASIC INFO</Text>
-              <Field label="Full Name"      icon="person-outline"   value={form.name}          onChangeText={f("name")} />
-              <Field label="Email"          icon="mail-outline"     value={form.email}         onChangeText={f("email")}         keyboardType="email-address" />
-              <Field label="Phone"          icon="call-outline"     value={form.phone}         onChangeText={f("phone")}         keyboardType="phone-pad" />
-              <Field label="Student ID"     icon="card-outline"     value={form.studentId}     onChangeText={f("studentId")} />
-              <Field label="Admission Year" icon="calendar-outline" value={form.admissionYear} onChangeText={f("admissionYear")} keyboardType="numeric" maxLength={4} />
-              <Text style={styles.sectionLabel}>ACADEMIC INFO</Text>
-              <Picker label="College"    icon="business-outline" value={form.college}    options={COLLEGES}    onSelect={f("college")} />
-              <Picker label="Department" icon="school-outline"   value={form.department} options={DEPARTMENTS} onSelect={f("department")} />
-              <Picker label="Semester"   icon="layers-outline"   value={form.semester}   options={SEMESTERS}   onSelect={f("semester")} />
-              <Picker label="Gender"     icon="people-outline"   value={form.gender}     options={GENDERS}     onSelect={f("gender")} />
-              <Text style={styles.sectionLabel}>{editingStudent?"CHANGE PASSWORD (optional)":"ACCOUNT"}</Text>
-              <Field label="Password" icon="lock-closed-outline" value={form.password} onChangeText={f("password")} secureTextEntry />
-              {/* Section preview */}
-              {form.department && form.admissionYear ? (
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 40 }}>
+
+              {/* ✅ ID Preview — only for new student */}
+              {!editingStudent && idPreview && (
+                <View style={styles.idPreview}>
+                  <Ionicons name="card" size={14} color="#f59e0b" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.idPreviewLabel}>Auto-generated Student ID</Text>
+                    <Text style={styles.idPreviewVal}>{idPreview}</Text>
+                  </View>
+                  <View style={styles.autoBadge}>
+                    <Text style={styles.autoBadgeText}>AUTO</Text>
+                  </View>
+                </View>
+              )}
+
+              <Text style={styles.sectionHead}>👤 BASIC INFO</Text>
+              <Field label="Full Name" icon="person-outline" value={form.name} onChangeText={f("name")} accent="#00c6ff" />
+              <Field label="Email" icon="mail-outline" value={form.email} onChangeText={f("email")} keyboardType="email-address" accent="#00c6ff" />
+              <Field label="Phone" icon="call-outline" value={form.phone} onChangeText={f("phone")} keyboardType="phone-pad" accent="#34d399" />
+              <Field label="Admission Year" icon="calendar-outline" value={form.admissionYear} onChangeText={f("admissionYear")} keyboardType="numeric" maxLength={4} hint="e.g. 2023" accent="#f59e0b" />
+
+              <Text style={styles.sectionHead}>🏫 ACADEMIC</Text>
+              <PickerField label="College" icon="business-outline" value={form.college}
+                options={COLLEGES}
+                onSelect={v => { f("college")(v); f("department")(""); }}
+                accent="#a78bfa" />
+              <PickerField label="Department" icon="school-outline" value={form.department}
+                options={form.college ? (COLLEGE_DEPARTMENTS[form.college] || []) : ALL_DEPARTMENTS}
+                onSelect={f("department")} accent="#a78bfa" />
+              <PickerField label="Semester" icon="layers-outline" value={form.semester}
+                options={SEMESTERS} onSelect={f("semester")} accent="#34d399" />
+              <PickerField label="Gender" icon="people-outline" value={form.gender}
+                options={GENDERS} onSelect={f("gender")} accent="#f87171" />
+
+              <Text style={styles.sectionHead}>{editingStudent ? "🔐 CHANGE PASSWORD" : "🔐 ACCOUNT"}</Text>
+              <Field label="Password" icon="lock-closed-outline" value={form.password}
+                onChangeText={f("password")} secureTextEntry accent="#f87171" />
+
+              {/* Section label preview */}
+              {form.department && form.admissionYear && (
                 <View style={styles.sectionPreview}>
-                  <Ionicons name="people" size={14} color="#00c6ff" />
+                  <Ionicons name="people" size={13} color="#00c6ff" />
                   <Text style={styles.sectionPreviewText}>
-                    Section: {getSectionLabel(form.admissionYear, form.department)}
+                    Section: {getDeptShort(form.department)} {form.admissionYear}
                   </Text>
                 </View>
-              ) : null}
-              <Pressable style={[styles.saveBtn, saving&&{opacity:0.7}]} onPress={handleSave} disabled={saving}>
+              )}
+
+              <Pressable style={[styles.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
                 <LinearGradient
-                  colors={editingStudent?["#f59e0b","#d97706"]:["#10b981","#059669"]}
-                  start={{x:0,y:0}} end={{x:1,y:0}} style={styles.saveBtnGrad}>
+                  colors={editingStudent ? ["#f59e0b", "#d97706"] : ["#10b981", "#059669"]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGrad}>
                   {saving ? <ActivityIndicator color="#fff" /> :
-                    <><Ionicons name={editingStudent?"save-outline":"person-add-outline"} size={17} color="#fff" />
-                    <Text style={styles.saveBtnText}>{editingStudent?"Save Changes":"Add Student"}</Text></>}
+                    <><Ionicons name={editingStudent ? "save-outline" : "person-add-outline"} size={16} color="#fff" />
+                      <Text style={styles.saveBtnText}>{editingStudent ? "Save Changes" : "Add Student"}</Text></>}
                 </LinearGradient>
               </Pressable>
-              <View style={{height:40}} />
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ══ BATCH SEMESTER MODAL ══ */}
+      <Modal visible={batchModal} transparent animationType="slide" onRequestClose={() => setBatchModal(false)}>
+        <View style={styles.overlay}>
+          <View style={[styles.sheet, { maxHeight: height * 0.65 }]}>
+            <View style={styles.handle} />
+            <View style={styles.sheetHeader}>
+              <View style={[styles.sheetIcon, { backgroundColor: "rgba(167,139,250,0.15)" }]}>
+                <Ionicons name="sync-outline" size={17} color="#a78bfa" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetTitle}>Update Batch Semester</Text>
+                <Text style={styles.sheetSub}>
+                  {getDeptShort(selDept)} · Batch {batchInfo?.year} · {batchInfo?.count} students
+                </Text>
+              </View>
+              <Pressable onPress={() => setBatchModal(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={18} color="#64748b" />
+              </Pressable>
+            </View>
+
+            <View style={{ paddingHorizontal: 20, paddingBottom: 30 }}>
+              {/* Current vs Suggested */}
+              <View style={styles.semCompare}>
+                <View style={styles.semCompareBox}>
+                  <Text style={styles.semCompareLabel}>Current</Text>
+                  <Text style={[styles.semCompareVal, { color: "#94a3b8" }]}>Sem {batchInfo?.currentSem || "?"}</Text>
+                </View>
+                <View style={[styles.semCompareArrow]}>
+                  <Ionicons name="arrow-forward" size={20} color="#374151" />
+                </View>
+                <View style={styles.semCompareBox}>
+                  <Text style={styles.semCompareLabel}>Suggested</Text>
+                  <Text style={[styles.semCompareVal, { color: "#34d399" }]}>Sem {batchInfo?.autoSem}</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.sectionHead, { marginTop: 4 }]}>TARGET SEMESTER</Text>
+              <View style={styles.semGrid}>
+                {SEMESTERS.map(s => {
+                  const sel = batchTarget === s;
+                  const sug = s === batchInfo?.autoSem;
+                  return (
+                    <Pressable key={s} style={[styles.semBox, sel && styles.semBoxActive, sug && !sel && styles.semBoxSuggested]}
+                      onPress={() => setBatchTarget(s)}>
+                      <Text style={[styles.semBoxNum, sel && { color: "#a78bfa" }]}>{s}</Text>
+                      <Text style={styles.semBoxLabel}>Sem</Text>
+                      {sug && <View style={styles.sugDot} />}
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Pressable
+                style={[styles.saveBtn, { marginTop: 16 }, (!batchTarget || updatingSem) && { opacity: 0.5 }]}
+                onPress={confirmBatchUpdate} disabled={!batchTarget || updatingSem}>
+                <LinearGradient colors={["#7c3aed", "#a78bfa"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGrad}>
+                  {updatingSem ? <ActivityIndicator color="#fff" /> :
+                    <><Ionicons name="sync-outline" size={16} color="#fff" />
+                      <Text style={styles.saveBtnText}>
+                        {batchInfo?.count} Students → Sem {batchTarget || "?"}
+                      </Text></>}
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ══ IMPORT PROGRESS MODAL ══ */}
+      <Modal visible={importModal} transparent animationType="fade" onRequestClose={() => setImportModal(false)}>
+        <View style={styles.overlay}>
+          <View style={[styles.sheet, { padding: 24, maxHeight: height * 0.65 }]}>
+            <View style={styles.handle} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <View style={[styles.sheetIcon, { backgroundColor: "rgba(167,139,250,0.15)" }]}>
+                <Ionicons name="cloud-upload-outline" size={17} color="#a78bfa" />
+              </View>
+              <Text style={styles.sheetTitle}>Excel Import</Text>
+            </View>
+
+            {/* Progress bar */}
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, {
+                width: importStatus.total
+                  ? `${Math.round(importStatus.done / importStatus.total * 100)}%`
+                  : "0%"
+              }]} />
+            </View>
+            <Text style={styles.progressText}>
+              {importing ? `${importStatus.done} / ${importStatus.total} imported...` : "Import complete!"}
+            </Text>
+
+            {/* Errors */}
+            {importStatus.errors.length > 0 && (
+              <ScrollView style={styles.errorScroll} showsVerticalScrollIndicator={false}>
+                <Text style={styles.errorHeading}>⚠️ {importStatus.errors.length} error(s):</Text>
+                {importStatus.errors.slice(0, 8).map((e, i) => (
+                  <Text key={i} style={styles.errorRow}>Row {e.row}: {e.error}</Text>
+                ))}
+                {importStatus.errors.length > 8 && (
+                  <Text style={styles.errorRow}>...aur {importStatus.errors.length - 8} errors</Text>
+                )}
+              </ScrollView>
+            )}
+
+            {!importing && (
+              <Pressable style={[styles.saveBtn, { marginTop: 16 }]} onPress={() => setImportModal(false)}>
+                <LinearGradient colors={["#10b981", "#059669"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveBtnGrad}>
+                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Text style={styles.saveBtnText}>Done</Text>
+                </LinearGradient>
+              </Pressable>
+            )}
           </View>
         </View>
       </Modal>
@@ -599,84 +989,167 @@ export default function ManageStudents() {
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container:{ flex:1,backgroundColor:"#080d17" },
-  center:{ flex:1,justifyContent:"center",alignItems:"center" },
-  header:{ flexDirection:"row",alignItems:"center",paddingHorizontal:16,paddingTop:52,paddingBottom:14,justifyContent:"space-between" },
-  backBtn:{ width:40,height:40,borderRadius:12,backgroundColor:"rgba(255,255,255,0.08)",justifyContent:"center",alignItems:"center" },
-  headerCenter:{ flex:1,alignItems:"center" },
-  headerTitle:{ color:"#fff",fontSize:18,fontWeight:"800" },
-  headerSub:{ color:"#64748b",fontSize:11,marginTop:2 },
-  addBtn:{ width:40,height:40,borderRadius:12,backgroundColor:"rgba(0,198,255,0.2)",justifyContent:"center",alignItems:"center",borderWidth:1,borderColor:"rgba(0,198,255,0.3)" },
-  breadcrumb:{ flexDirection:"row",alignItems:"center",gap:6,paddingHorizontal:16,paddingVertical:10,borderBottomWidth:1,borderBottomColor:"rgba(255,255,255,0.04)",flexWrap:"wrap" },
-  bcItem:{ color:"#374151",fontSize:12,fontWeight:"600" },
-  bcActive:{ color:"#00c6ff" },
-  searchBar:{ flexDirection:"row",alignItems:"center",gap:8,backgroundColor:"#1a2535",marginHorizontal:16,marginTop:10,borderRadius:14,paddingHorizontal:14,paddingVertical:2,borderWidth:1,borderColor:"rgba(255,255,255,0.06)" },
-  searchInput:{ flex:1,color:"#fff",fontSize:14,paddingVertical:12 },
-  statsRow:{ flexDirection:"row",marginBottom:16,gap:10 },
-  statBox:{ flex:1,backgroundColor:"#1a2535",borderRadius:12,padding:12,alignItems:"center",borderWidth:1,borderColor:"rgba(255,255,255,0.04)" },
-  statNum:{ color:"#00c6ff",fontSize:22,fontWeight:"800" },
-  statLabel:{ color:"#64748b",fontSize:10,marginTop:2,fontWeight:"600" },
-  list:{ padding:16,paddingBottom:30 },
-  browseCard:{ flexDirection:"row",alignItems:"center",backgroundColor:"#1a2535",borderRadius:16,padding:16,marginBottom:10,borderWidth:1,borderColor:"rgba(255,255,255,0.04)",gap:14 },
-  browseIconWrap:{ width:48,height:48,borderRadius:14,backgroundColor:"rgba(167,139,250,0.15)",justifyContent:"center",alignItems:"center" },
-  browseInfo:{ flex:1 },
-  browseName:{ color:"#fff",fontSize:14,fontWeight:"700" },
-  browseSubName:{ color:"#64748b",fontSize:11,marginTop:2 },
-  browseCount:{ color:"#64748b",fontSize:12,marginTop:4,fontWeight:"600" },
-  deptCard:{ flexDirection:"row",alignItems:"center",backgroundColor:"#1a2535",borderRadius:16,marginBottom:10,overflow:"hidden",borderWidth:1,borderColor:"rgba(255,255,255,0.04)",gap:14 },
-  deptAccent:{ width:3,alignSelf:"stretch" },
-  deptIconWrap:{ width:44,height:44,borderRadius:12,justifyContent:"center",alignItems:"center",marginLeft:8 },
+  container: { flex: 1, backgroundColor: "#080d17" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  // Header
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 52, paddingBottom: 14, gap: 10 },
+  headerBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
+  headerMid: { flex: 1, alignItems: "center" },
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  headerSub: { color: "#64748b", fontSize: 11, marginTop: 2 },
+  headerRight: { flexDirection: "row", gap: 8 },
+  importBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(167,139,250,0.12)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(167,139,250,0.25)" },
+  addBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(0,198,255,0.18)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(0,198,255,0.3)" },
+
+  // Breadcrumb
+  breadcrumb: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.04)", flexWrap: "wrap" },
+  bcText: { color: "#374151", fontSize: 12, fontWeight: "600" },
+  bcActive: { color: "#00c6ff" },
+
+  // Search
+  searchBar: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#1a2535", marginHorizontal: 16, marginTop: 10, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 2, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  searchInput: { flex: 1, color: "#fff", fontSize: 14, paddingVertical: 12 },
+
+  // Updating banner
+  updatingBar: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(167,139,250,0.1)", marginHorizontal: 16, marginTop: 8, padding: 10, borderRadius: 10 },
+  updatingText: { color: "#a78bfa", fontSize: 12, fontWeight: "600" },
+
+  list: { padding: 16, paddingBottom: 30 },
+
+  // Stats
+  statsRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
+  statCard: { flex: 1, backgroundColor: "#1a2535", borderRadius: 14, padding: 12, alignItems: "center", borderTopWidth: 2 },
+  statNum: { fontSize: 22, fontWeight: "800", color: "#fff" },
+  statLabel: { color: "#64748b", fontSize: 9, fontWeight: "700", marginTop: 2 },
+
+  // College card
+  collegeCard: { borderRadius: 16, marginBottom: 10, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.05)" },
+  collegeGrad: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
+  collegeIcon: { width: 52, height: 52, borderRadius: 16, justifyContent: "center", alignItems: "center" },
+  collegeInfo: { flex: 1 },
+  collegeShort: { fontSize: 20, fontWeight: "900", letterSpacing: 0.5 },
+  collegeName: { color: "#64748b", fontSize: 11, marginTop: 3, lineHeight: 16 },
+  collegeRight: { alignItems: "center", gap: 2 },
+  collegeCount: { fontSize: 18, fontWeight: "800" },
+  collegeCountLabel: { color: "#374151", fontSize: 10 },
+
+  // Dept card
+  deptCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#1a2535", borderRadius: 14, marginBottom: 8, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.04)", borderLeftWidth: 3, gap: 12 },
+  deptShortBox: { width: 58, height: 58, justifyContent: "center", alignItems: "center" },
+  deptShort: { fontSize: 14, fontWeight: "900", letterSpacing: 0.5 },
+  deptInfo: { flex: 1, paddingVertical: 14 },
+  deptName: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  deptCount: { fontSize: 11, fontWeight: "600", marginTop: 3 },
+  deptArrow: { width: 38, height: 38, borderRadius: 10, justifyContent: "center", alignItems: "center", marginRight: 12 },
+
   // Year card
-  yearCard:{ flexDirection:"row",alignItems:"center",backgroundColor:"#1a2535",borderRadius:16,padding:14,marginBottom:10,borderWidth:1,borderColor:"rgba(255,255,255,0.04)",gap:12 },
-  yearBadgeWrap:{ width:58,height:58,borderRadius:14,justifyContent:"center",alignItems:"center" },
-  yearBadgeYear:{ fontSize:18,fontWeight:"800" },
-  yearBadgeDept:{ fontSize:10,fontWeight:"600" },
-  yearCountBadge:{ paddingHorizontal:12,paddingVertical:8,borderRadius:10 },
-  yearCountText:{ fontSize:16,fontWeight:"800" },
-  infoBanner:{ flexDirection:"row",alignItems:"center",gap:8,backgroundColor:"rgba(255,255,255,0.03)",borderRadius:12,padding:12,marginBottom:14,borderLeftWidth:3 },
-  infoBannerText:{ fontSize:12,fontWeight:"600",flex:1 },
+  yearCard: { borderRadius: 16, marginBottom: 10, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.05)", borderLeftWidth: 3 },
+  yearGrad: { flexDirection: "row", alignItems: "center", padding: 14, gap: 12 },
+  yearCircle: { width: 58, height: 58, borderRadius: 16, justifyContent: "center", alignItems: "center", borderWidth: 1.5 },
+  yearNum: { fontSize: 16, fontWeight: "900" },
+  yearShort: { fontSize: 9, fontWeight: "700" },
+  yearInfo: { flex: 1 },
+  yearTitle: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  yearCount: { color: "#64748b", fontSize: 11, marginTop: 2 },
+  yearSemRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" },
+  semPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  semPillText: { fontSize: 10, fontWeight: "800" },
+  suggestPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(52,211,153,0.12)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  suggestPillText: { color: "#34d399", fontSize: 10, fontWeight: "700" },
+  semUpdateBtn: { paddingHorizontal: 10, paddingVertical: 10, borderRadius: 10, borderWidth: 1, alignItems: "center", gap: 3 },
+  semUpdateText: { fontSize: 9, fontWeight: "800" },
+
   // Student card
-  card:{ flexDirection:"row",alignItems:"center",backgroundColor:"#1a2535",borderRadius:14,marginBottom:8,overflow:"hidden",borderWidth:1,borderColor:"rgba(255,255,255,0.04)" },
-  cardAccent:{ width:3,alignSelf:"stretch" },
-  avatar:{ width:44,height:44,borderRadius:22,justifyContent:"center",alignItems:"center",margin:12 },
-  avatarText:{ fontSize:16,fontWeight:"800" },
-  cardBody:{ flex:1,paddingVertical:10 },
-  cardName:{ color:"#fff",fontSize:14,fontWeight:"700" },
-  cardBadgeRow:{ flexDirection:"row",alignItems:"center",gap:6,marginTop:4,marginBottom:2,flexWrap:"wrap" },
-  cardSub:{ color:"#64748b",fontSize:11 },
-  semBadge:{ paddingHorizontal:7,paddingVertical:2,borderRadius:6 },
-  semBadgeText:{ fontSize:10,fontWeight:"700" },
-  sectionBadge:{ flexDirection:"row",alignItems:"center",gap:3,backgroundColor:"rgba(255,255,255,0.06)",paddingHorizontal:7,paddingVertical:2,borderRadius:6 },
-  sectionBadgeText:{ color:"#94a3b8",fontSize:10,fontWeight:"600" },
-  cardActions:{ flexDirection:"row",gap:6,paddingRight:12 },
-  editBtn:{ width:34,height:34,borderRadius:10,backgroundColor:"rgba(245,158,11,0.12)",justifyContent:"center",alignItems:"center" },
-  deleteBtn:{ width:34,height:34,borderRadius:10,backgroundColor:"rgba(248,113,113,0.12)",justifyContent:"center",alignItems:"center" },
-  emptyState:{ alignItems:"center",paddingTop:60,gap:12 },
-  emptyIcon:{ width:80,height:80,borderRadius:40,backgroundColor:"#1a2535",justifyContent:"center",alignItems:"center" },
-  emptyTitle:{ color:"#374151",fontSize:16,fontWeight:"700" },
-  emptySubtitle:{ color:"#1f2937",fontSize:13 },
-  emptyAddBtn:{ flexDirection:"row",alignItems:"center",gap:8,backgroundColor:"rgba(0,198,255,0.1)",paddingHorizontal:20,paddingVertical:12,borderRadius:12,borderWidth:1,borderColor:"rgba(0,198,255,0.2)" },
-  emptyAddText:{ color:"#00c6ff",fontWeight:"700" },
-  modalOverlay:{ flex:1,backgroundColor:"rgba(0,0,0,0.75)",justifyContent:"flex-end" },
-  formSheet:{ backgroundColor:"#0f1923",borderTopLeftRadius:28,borderTopRightRadius:28,maxHeight:height*0.92,borderWidth:1,borderColor:"rgba(255,255,255,0.06)" },
-  modalHandle:{ width:40,height:4,borderRadius:2,backgroundColor:"rgba(255,255,255,0.12)",alignSelf:"center",marginTop:12,marginBottom:4 },
-  formHeader:{ flexDirection:"row",alignItems:"center",gap:12,padding:20,paddingBottom:8 },
-  formHeaderIcon:{ width:40,height:40,borderRadius:12,backgroundColor:"rgba(0,198,255,0.12)",justifyContent:"center",alignItems:"center" },
-  formTitle:{ flex:1,color:"#fff",fontSize:17,fontWeight:"800" },
-  sectionLabel:{ color:"#374151",fontSize:10,fontWeight:"800",letterSpacing:1,marginHorizontal:20,marginTop:16,marginBottom:8 },
-  sectionPreview:{ flexDirection:"row",alignItems:"center",gap:8,marginHorizontal:20,marginTop:8,backgroundColor:"rgba(0,198,255,0.08)",padding:12,borderRadius:10,borderWidth:1,borderColor:"rgba(0,198,255,0.2)" },
-  sectionPreviewText:{ color:"#00c6ff",fontSize:13,fontWeight:"600" },
-  fieldWrap:{ marginHorizontal:20,marginBottom:10 },
-  fieldLabel:{ color:"#64748b",fontSize:11,fontWeight:"600",marginBottom:6 },
-  fieldRow:{ flexDirection:"row",alignItems:"center",backgroundColor:"rgba(255,255,255,0.06)",borderRadius:12,paddingHorizontal:12,borderWidth:1,borderColor:"rgba(255,255,255,0.08)",minHeight:50 },
-  fieldInput:{ flex:1,color:"#fff",fontSize:14,paddingVertical:14 },
-  pickerSheet:{ backgroundColor:"#0f1923",borderTopLeftRadius:24,borderTopRightRadius:24,padding:20,maxHeight:height*0.6,borderWidth:1,borderColor:"rgba(255,255,255,0.06)" },
-  pickerTitle:{ color:"#fff",fontSize:16,fontWeight:"700",marginBottom:12 },
-  pickerOption:{ flexDirection:"row",alignItems:"center",justifyContent:"space-between",padding:14,borderRadius:12,marginBottom:6,backgroundColor:"rgba(255,255,255,0.04)" },
-  pickerOptionActive:{ backgroundColor:"rgba(0,198,255,0.1)",borderWidth:1,borderColor:"rgba(0,198,255,0.25)" },
-  pickerOptionText:{ color:"#94a3b8",fontSize:13,flex:1 },
-  saveBtn:{ marginHorizontal:20,marginTop:20,borderRadius:14,overflow:"hidden" },
-  saveBtnGrad:{ flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8,paddingVertical:16,borderRadius:14 },
-  saveBtnText:{ color:"#fff",fontWeight:"700",fontSize:16 },
+  studentCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#1a2535", borderRadius: 14, marginBottom: 8, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.04)", borderLeftWidth: 3 },
+  studentAvatar: { width: 46, height: 46, borderRadius: 23, justifyContent: "center", alignItems: "center", margin: 12 },
+  studentInitials: { fontSize: 16, fontWeight: "800" },
+  studentBody: { flex: 1, paddingVertical: 10 },
+  studentName: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  studentIdRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
+  studentId: { color: "#64748b", fontSize: 11, fontWeight: "600" },
+  studentChips: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, flexWrap: "wrap" },
+  semChip: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  semChipText: { fontSize: 10, fontWeight: "700" },
+  genderChip: { width: 22, height: 22, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
+  phoneText: { color: "#374151", fontSize: 10 },
+  studentEmail: { color: "#374151", fontSize: 11, marginTop: 3 },
+  studentActions: { flexDirection: "row", gap: 6, paddingRight: 12 },
+  editBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: "rgba(245,158,11,0.12)", justifyContent: "center", alignItems: "center" },
+  delBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: "rgba(248,113,113,0.12)", justifyContent: "center", alignItems: "center" },
+
+  // Tip banner
+  tipBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 12, marginBottom: 14, borderLeftWidth: 3 },
+  tipText: { flex: 1, fontSize: 12, fontWeight: "600" },
+
+  // Empty
+  empty: { alignItems: "center", paddingTop: 60, gap: 12 },
+  emptyIcon: { width: 78, height: 78, borderRadius: 39, backgroundColor: "#1a2535", justifyContent: "center", alignItems: "center" },
+  emptyTitle: { color: "#374151", fontSize: 15, fontWeight: "700" },
+  emptySub: { color: "#1f2937", fontSize: 12 },
+  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(0,198,255,0.1)", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: "rgba(0,198,255,0.2)" },
+  emptyBtnText: { color: "#00c6ff", fontWeight: "700" },
+
+  // Modal base
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.78)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: "#0f1923", borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: height * 0.93, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.12)", alignSelf: "center", marginTop: 12, marginBottom: 4 },
+  sheetHeader: { flexDirection: "row", alignItems: "center", gap: 12, padding: 20, paddingBottom: 8 },
+  sheetIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  sheetTitle: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  sheetSub: { color: "#64748b", fontSize: 11, marginTop: 2 },
+  closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
+
+  // ID Preview box
+  idPreview: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(245,158,11,0.1)", marginHorizontal: 20, marginTop: 12, marginBottom: 4, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: "rgba(245,158,11,0.25)" },
+  idPreviewLabel: { color: "#94a3b8", fontSize: 10, fontWeight: "600" },
+  idPreviewVal: { color: "#f59e0b", fontSize: 16, fontWeight: "900", letterSpacing: 1, marginTop: 2 },
+  autoBadge: { backgroundColor: "rgba(245,158,11,0.2)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  autoBadgeText: { color: "#f59e0b", fontSize: 9, fontWeight: "800", letterSpacing: 1 },
+
+  sectionHead: { color: "#374151", fontSize: 10, fontWeight: "800", letterSpacing: 1, marginHorizontal: 20, marginTop: 16, marginBottom: 8 },
+  sectionPreview: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 20, marginTop: 8, backgroundColor: "rgba(0,198,255,0.08)", padding: 12, borderRadius: 10, borderWidth: 1, borderColor: "rgba(0,198,255,0.2)" },
+  sectionPreviewText: { color: "#00c6ff", fontSize: 13, fontWeight: "600" },
+
+  // Form fields
+  fieldWrap: { marginHorizontal: 20, marginBottom: 10 },
+  fieldLabel: { color: "#64748b", fontSize: 11, fontWeight: "600", marginBottom: 6 },
+  fieldRow: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", minHeight: 50 },
+  fieldInput: { flex: 1, color: "#fff", fontSize: 14, paddingVertical: 14 },
+
+  // Picker
+  pickerSheet: { backgroundColor: "#0f1923", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: height * 0.6, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  pickerTitle: { color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 12 },
+  pickerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14, borderRadius: 12, marginBottom: 6, backgroundColor: "rgba(255,255,255,0.04)" },
+  pickerRowText: { color: "#94a3b8", fontSize: 13, flex: 1 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+
+  // Batch modal
+  semCompare: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 14, padding: 16, marginTop: 12, marginBottom: 4 },
+  semCompareBox: { alignItems: "center" },
+  semCompareLabel: { color: "#374151", fontSize: 10, fontWeight: "700" },
+  semCompareVal: { color: "#fff", fontSize: 22, fontWeight: "800", marginTop: 4 },
+  semCompareArrow: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.04)", justifyContent: "center", alignItems: "center" },
+  semGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 8 },
+  semBox: { width: (width - 72) / 4, aspectRatio: 1, backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 14, justifyContent: "center", alignItems: "center", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.08)" },
+  semBoxActive: { backgroundColor: "rgba(167,139,250,0.2)", borderColor: "#a78bfa" },
+  semBoxSuggested: { borderColor: "rgba(52,211,153,0.45)" },
+  semBoxNum: { color: "#fff", fontSize: 20, fontWeight: "800" },
+  semBoxLabel: { color: "#374151", fontSize: 9, marginTop: 1 },
+  sugDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#34d399", position: "absolute", top: 8, right: 8 },
+
+  // Save button
+  saveBtn: { marginHorizontal: 20, borderRadius: 14, overflow: "hidden" },
+  saveBtnGrad: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
+  saveBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+  // Import modal
+  progressTrack: { height: 10, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 6, overflow: "hidden", marginBottom: 10 },
+  progressFill: { height: 10, backgroundColor: "#a78bfa", borderRadius: 6 },
+  progressText: { color: "#94a3b8", fontSize: 12, marginBottom: 10, fontWeight: "600" },
+  errorScroll: { maxHeight: 140, marginBottom: 8 },
+  errorHeading: { color: "#f87171", fontSize: 12, fontWeight: "700", marginBottom: 6 },
+  errorRow: { color: "#f87171", fontSize: 11, marginBottom: 4, opacity: 0.8 },
 });

@@ -2,13 +2,14 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API = axios.create({
-  baseURL: "http://192.168.12.152:5000",  // ✅ Real device IP
+  baseURL: "http://10.0.2.2:5000",
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// 🔐 Request interceptor — attach access token
+// ── Request interceptor: attach token ──
 API.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem("accessToken");
@@ -20,35 +21,74 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 🔄 Response interceptor — auto refresh token on 401
+// ── Response interceptor: auto refresh token ──
+let isRefreshing = false;
+let failedQueue  = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
+
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("refresh-token") &&
+      !originalRequest.url?.includes("login")
+    ) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return API(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing            = true;
+
       try {
         const refreshToken = await AsyncStorage.getItem("refreshToken");
         if (!refreshToken) throw new Error("No refresh token");
 
-        const res = await axios.post("http://192.168.12.152:5000/auth/refresh-token", {
-          refreshToken,
-        });
+        const res = await axios.post(
+          `${API.defaults.baseURL}/auth/refresh-token`,
+          { token: refreshToken }
+        );
 
-        const newAccessToken = res.data.accessToken;
-        await AsyncStorage.setItem("accessToken", newAccessToken);
+        const newToken = res.data.accessToken;
+        await AsyncStorage.setItem("accessToken", newToken);
 
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        API.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+        processQueue(null, newToken);
+
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return API(originalRequest);
+
       } catch (refreshError) {
-        // Refresh token bhi expire — logout
+        processQueue(refreshError, null);
+
+        // ✅ Sab clear karo — logout
         await AsyncStorage.multiRemove([
           "accessToken", "refreshToken",
           "studentData", "teacherData", "adminData",
-          "adminLoggedIn",
+          "studentLoggedIn", "teacherLoggedIn", "adminLoggedIn",
         ]);
+
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

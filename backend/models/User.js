@@ -3,53 +3,61 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema(
   {
     // ===== COMMON FIELDS =====
-    name: String,
-    email: { type: String, unique: true },
-    password: String,
-    phone: String,
-    role: { type: String, enum: ["student", "teacher", "admin"] },
+    name:         String,
+    email:        { type: String, unique: true },
+    password:     String,
+    phone:        String,
+    role:         { type: String, enum: ["student", "teacher", "admin"] },
     profileImage: String,
     refreshToken: String,
 
-    // ===== OTP (for email verify / forgot password) =====
-    otp: String,
-    otpExpire: Date,
+    // ===== OTP =====
+    otp:             String,
+    otpExpire:       Date,
     isEmailVerified: { type: Boolean, default: false },
 
-    // ===== STUDENT FIELDS =====
+    // ===== COMMON ACADEMIC FIELDS =====
+    department: String,
+    college:    String,
+
+    // ===== STUDENT ONLY FIELDS =====
     studentId:     { type: String, sparse: true },
-    department:    String,
     gender:        String,
     admissionYear: String,
-    college:       String,
-    semester:      { type: Number, default: 1 }, // ✅ ADDED
-    isPromoted:    { type: Boolean, default: false }, // last result mein pass hua?
 
-    // ===== RESULT HISTORY =====
-    // Array of results — ek per semester
+    semester:   {
+      type:    Number,
+      default: undefined,   // ✅ null by default — teacher ko 1 nahi milega
+    },
+    isPromoted: {
+      type:    Boolean,
+      default: undefined,   // ✅ null by default — sirf student ke liye
+    },
+
+    // ===== RESULT HISTORY (Student Only) =====
     results: [
       {
-        semester:     Number,
-        year:         Number,         // e.g. 2024
-        sgpa:         Number,         // e.g. 8.5
-        cgpa:         Number,
-        status:       { type: String, enum: ["pass", "fail", "pending"], default: "pending" },
-        subjects:     [
+        semester: Number,
+        year:     Number,
+        sgpa:     Number,
+        cgpa:     Number,
+        status:   { type: String, enum: ["pass","fail","pending"], default: "pending" },
+        subjects: [
           {
             name:     String,
             code:     String,
             marks:    Number,
             maxMarks: Number,
             grade:    String,
-            status:   { type: String, enum: ["pass", "fail"] },
+            status:   { type: String, enum: ["pass","fail"] },
           }
         ],
-        uploadedAt:   { type: Date, default: Date.now },
-        uploadedBy:   String,         // admin/teacher name
+        uploadedAt: { type: Date, default: Date.now },
+        uploadedBy: String,
       }
     ],
 
-    // ===== TEACHER FIELDS =====
+    // ===== TEACHER ONLY FIELDS =====
     teacherId:  { type: String, sparse: true },
     university: String,
     age:        Number,

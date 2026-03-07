@@ -1,39 +1,24 @@
 const express = require("express");
-const router = express.Router();
-
-const { verifyToken, isTeacher } = require("../middleware/authMiddleware");
+const router  = express.Router();
+const { verifyToken, isAdmin, isTeacher } = require("../middleware/authMiddleware");
 const {
-  createAssignment,
-  getAssignments,
-  getAssignmentById,
-  deleteAssignment,
+  getTeachersByDept,
+  assignSubject,
+  getAllAssignments,
+  getTeacherAssignments,
+  unassignSubject,
+  getTeacherTimetable,
 } = require("../controllers/assignmentController");
 
-// ================= CREATE ASSIGNMENT =================
-router.post("/", verifyToken, isTeacher, createAssignment);
+// ── Admin Routes ──
+router.get ("/teachers-by-dept",           verifyToken, isAdmin,   getTeachersByDept);
+router.post("/assign",                     verifyToken, isAdmin,   assignSubject);
+router.get ("/all",                        verifyToken, isAdmin,   getAllAssignments);
+router.delete("/:id",                      verifyToken, isAdmin,   unassignSubject);
 
-// ================= GET ALL ASSIGNMENTS =================
-router.get("/", verifyToken, getAssignments);
+// ── Teacher Routes ──
+router.get ("/my",                         verifyToken, isTeacher, getTeacherAssignments);
+router.get ("/timetable/my",               verifyToken, isTeacher, getTeacherTimetable);
+router.get ("/timetable/:teacherId",       verifyToken, isAdmin,   getTeacherTimetable);
 
-// ================= GET ASSIGNMENT BY ID =================
-router.get("/:id", verifyToken, getAssignmentById);
-
-// ================= UPDATE ASSIGNMENT =================
-router.put("/:id", verifyToken, isTeacher, async (req, res) => {
-  try {
-    const Assignment = require("../models/Assignment");
-    const updated = await Assignment.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    res.json({ success: true, updated });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ================= DELETE ASSIGNMENT =================
-router.delete("/:id", verifyToken, isTeacher, deleteAssignment);
-
-module.exports = router; // ✅ moved to end
+module.exports = router;

@@ -40,6 +40,55 @@ const StatCard = ({ icon, label, value, color }) => (
   </View>
 );
 
+// ─── Quick Card ───
+const QuickCard = ({ icon, label, color, onPress, badge }) => (
+  <Pressable onPress={onPress} style={styles.quickCard}>
+    <LinearGradient colors={[color + "33", color + "11"]} style={styles.quickGrad}>
+      <View style={[styles.quickIcon, { backgroundColor: color + "22" }]}>
+        <Ionicons name={icon} size={24} color={color} />
+        {badge > 0 && (
+          <View style={[styles.quickBadge, { backgroundColor: color }]}>
+            <Text style={styles.quickBadgeText}>{badge}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={[styles.quickLabel, { color }]} numberOfLines={1}>{label}</Text>
+    </LinearGradient>
+  </Pressable>
+);
+
+// ─── ✅ Assignment Card ───
+const AssignmentCard = ({ item, color, onPress }) => (
+  <Pressable style={[styles.assignCard, { borderLeftColor: color }]} onPress={onPress}>
+    <View style={[styles.assignIcon, { backgroundColor: color + "20" }]}>
+      <Ionicons name="document-text" size={18} color={color} />
+    </View>
+    <View style={styles.assignBody}>
+      <Text style={styles.assignTitle} numberOfLines={2}>{item.title}</Text>
+      <Text style={styles.assignSubject} numberOfLines={1}>
+        📚 {item.subjectName || item.subject || "—"}
+      </Text>
+      <View style={styles.assignMeta}>
+        <View style={[styles.assignChip, { backgroundColor: color + "15" }]}>
+          <Ionicons name="person-outline" size={9} color={color} />
+          <Text style={[styles.assignChipText, { color }]}>
+            {item.teacherName || "Teacher"}
+          </Text>
+        </View>
+        {item.dueDate && (
+          <View style={styles.dueDateChip}>
+            <Ionicons name="time-outline" size={9} color="#f87171" />
+            <Text style={styles.dueDateText}>
+              Due: {new Date(item.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+    <Ionicons name="chevron-forward" size={14} color="#374151" />
+  </Pressable>
+);
+
 // ─── Comment Modal ───
 const CommentModal = ({ post, visible, onClose, onCommentAdded }) => {
   const [comments, setComments] = useState([]);
@@ -135,7 +184,6 @@ const CommentModal = ({ post, visible, onClose, onCommentAdded }) => {
 
 // ─── Post Card ───
 const PostCard = ({ item, onLike, onCommentPress }) => {
-  // Support both new Post model AND old notice model
   const authorName = item.authorName || item.author?.name || "Unknown";
   const authorRole = item.authorRole || item.author?.role || "admin";
   const caption = item.caption || item.content || "";
@@ -148,7 +196,6 @@ const PostCard = ({ item, onLike, onCommentPress }) => {
 
   return (
     <View style={styles.postCard}>
-      {/* Author row */}
       <View style={styles.postHeader}>
         <View style={[styles.postAvatar, { backgroundColor: roleColor + "22" }]}>
           <Text style={[styles.postAvatarText, { color: roleColor }]}>{initials}</Text>
@@ -188,12 +235,9 @@ const PostCard = ({ item, onLike, onCommentPress }) => {
       {!item.mediaType && !!item.image && (
         <Image source={{ uri: item.image }} style={styles.postImage} resizeMode="cover" />
       )}
-      {/* Like + Comment */}
       <View style={styles.postFooter}>
         <Pressable style={styles.footerBtn} onPress={() => onLike(item)}>
-          <Ionicons
-            name={isLiked ? "heart" : "heart-outline"} size={21}
-            color={isLiked ? "#f87171" : "#64748b"} />
+          <Ionicons name={isLiked ? "heart" : "heart-outline"} size={21} color={isLiked ? "#f87171" : "#64748b"} />
           <Text style={[styles.footerCount, isLiked && { color: "#f87171" }]}>{likeCount}</Text>
         </Pressable>
         <Pressable style={styles.footerBtn} onPress={() => onCommentPress(item)}>
@@ -222,6 +266,8 @@ const TabItem = ({ tab, active, onPress }) => (
   </Pressable>
 );
 
+const ASSIGN_COLORS = ["#fb923c", "#a78bfa", "#34d399", "#f87171", "#60a5fa", "#f59e0b", "#e879f9", "#00c6ff"];
+
 // ════════════════════════════════════════════
 export default function StudentDashboard() {
   const navigation = useNavigation();
@@ -232,18 +278,24 @@ export default function StudentDashboard() {
   const [image, setImage] = useState(null);
   const [stats, setStats] = useState(null);
   const [posts, setPosts] = useState([]);
+
+  // ✅ Assignments from teachers
+  const [assignments, setAssignments] = useState([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [commentPost, setCommentPost] = useState(null);
   const [commentVisible, setCommentVisible] = useState(false);
   const backPressCount = useRef(0);
 
-  useFocusEffect(useCallback(() => { loadAll(); }, []));
+  useFocusEffect(useCallback(() => { loadAll(); }, [router]));
 
   const loadAll = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     const token = await AsyncStorage.getItem("studentLoggedIn");
     if (!token) { router.replace("/(auth)/student-login"); return; }
+
     const raw = await AsyncStorage.getItem("studentData");
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -251,11 +303,18 @@ export default function StudentDashboard() {
       const img = await AsyncStorage.getItem(`profileImage_${parsed.studentId}`);
       if (img) setImage(img);
     }
+
     try { const r = await API.get("/dashboard/student"); if (r.data) setStats(r.data); } catch { }
+    try { const r = await API.get("/api/posts"); setPosts(r.data?.posts || r.data || []); } catch { }
+
+    // ✅ Teacher ke assignments fetch karo
     try {
-      const r = await API.get("/api/posts");
-      setPosts(r.data?.posts || r.data || []);
-    } catch { }
+      setAssignLoading(true);
+      const r = await API.get("/assignments/my");
+      setAssignments(r.data?.assignments || r.data || []);
+    } catch { setAssignments([]); }
+    finally { setAssignLoading(false); }
+
     setCheckingAuth(false);
     setRefreshing(false);
   };
@@ -293,12 +352,21 @@ export default function StudentDashboard() {
     router.replace("/");
   };
 
-  // Section: "CSE 2023"
   const sectionLabel = (() => {
     if (!studentData?.admissionYear || !studentData?.department) return null;
     const short = studentData.department.match(/\(([^)]+)\)/)?.[1] || studentData.department.split(" ")[0];
     return `${short} ${studentData.admissionYear}`;
   })();
+
+  // ✅ Quick links — My Subjects goes to my-subjects page
+  const quickLinks = [
+    { icon: "book", label: "My Subjects", color: "#00c6ff", route: "/student/my-subjects" },
+    { icon: "calendar", label: "Attendance", color: "#34d399", route: "/student/attendance" },
+    { icon: "document-text", label: "Assignments", color: "#fb923c", route: "/student/assignments" },
+    { icon: "bar-chart", label: "Results", color: "#a78bfa", route: "/student/result" },
+    { icon: "time", label: "Timetable", color: "#f59e0b", route: "/student/timetable" },
+    { icon: "person", label: "Profile", color: "#60a5fa", route: "/student/profile" },
+  ];
 
   if (checkingAuth) return (
     <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#00c6ff" /></View>
@@ -308,7 +376,6 @@ export default function StudentDashboard() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f1923" />
 
-      {/* Sticky Header */}
       <LinearGradient colors={["#0f1923", "#1a2a3a"]} style={styles.header}>
         <Pressable onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
           <Ionicons name="menu" size={24} color="#fff" />
@@ -327,13 +394,13 @@ export default function StudentDashboard() {
         </Pressable>
       </LinearGradient>
 
-      {/* Feed */}
       <FlatList
         data={posts}
         keyExtractor={(item, i) => item._id || i.toString()}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.feedContainer}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAll(true)} tintColor="#00c6ff" />}
+
         ListHeaderComponent={() => (
           <>
             {/* Welcome */}
@@ -343,7 +410,6 @@ export default function StudentDashboard() {
                 <Text style={styles.welcomeHi}>Hello, {studentData?.name?.split(" ")[0] || "Student"} 👋</Text>
                 <Text style={styles.welcomeSub}>ID: {studentData?.studentId || "—"}</Text>
                 <Text style={styles.welcomeSub} numberOfLines={1}>{studentData?.college || ""}</Text>
-                {/* Semester + Section */}
                 <View style={styles.badgesRow}>
                   {studentData?.semester && (
                     <View style={styles.semBadge}>
@@ -371,16 +437,69 @@ export default function StudentDashboard() {
               <StatCard icon="trophy" label="Total Marks" value={stats?.totalMarks} color="#a855f7" />
             </View>
 
-            <View style={styles.feedHeaderRow}>
+            {/* Quick Links */}
+            <Text style={styles.sectionTitle}>Quick Access</Text>
+            <View style={styles.quickGrid}>
+              {quickLinks.map((q, i) => (
+                <QuickCard key={i} icon={q.icon} label={q.label} color={q.color}
+                  badge={q.badge} onPress={() => router.push(q.route)} />
+              ))}
+            </View>
+
+            {/* ✅ Assignments from Teachers */}
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionTitle}>Assignments</Text>
+                <Text style={styles.sectionSubtitle}>Teacher ke diye assignments</Text>
+              </View>
+              <Pressable onPress={() => router.push("/student/assignments")} style={styles.seeAllBtn}>
+                <Text style={styles.seeAllText}>See All</Text>
+                <Ionicons name="chevron-forward" size={12} color="#fb923c" />
+              </Pressable>
+            </View>
+
+            {assignLoading ? (
+              <View style={styles.subLoadingBox}>
+                <ActivityIndicator color="#fb923c" size="small" />
+                <Text style={styles.subLoadingText}>Loading assignments...</Text>
+              </View>
+            ) : assignments.length === 0 ? (
+              <View style={styles.subEmptyBox}>
+                <Ionicons name="document-text-outline" size={28} color="#374151" />
+                <Text style={styles.subEmptyTitle}>No Assignments Yet</Text>
+                <Text style={styles.subEmptyText}>Teacher ne abhi koi assignment nahi diya</Text>
+              </View>
+            ) : (
+              <View style={styles.assignList}>
+                {assignments.slice(0, 3).map((a, i) => (
+                  <AssignmentCard
+                    key={a._id || i}
+                    item={a}
+                    color={ASSIGN_COLORS[i % ASSIGN_COLORS.length]}
+                    onPress={() => router.push("/student/assignments")}
+                  />
+                ))}
+                {assignments.length > 3 && (
+                  <Pressable style={styles.moreBtn} onPress={() => router.push("/student/assignments")}>
+                    <Text style={styles.moreBtnText}>+{assignments.length - 3} more assignments</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#fb923c" />
+                  </Pressable>
+                )}
+              </View>
+            )}
+
+            {/* Feed */}
+            <View style={[styles.sectionHeaderRow, { marginTop: 20 }]}>
               <Text style={styles.sectionTitle}>Feed</Text>
               {posts.length > 0 && (
-                <View style={styles.feedCount}>
-                  <Text style={styles.feedCountText}>{posts.length} posts</Text>
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>{posts.length}</Text>
                 </View>
               )}
             </View>
           </>
         )}
+
         ListEmptyComponent={() => (
           <View style={styles.emptyFeed}>
             <View style={styles.emptyIconWrap}>
@@ -390,10 +509,12 @@ export default function StudentDashboard() {
             <Text style={styles.emptyText}>Posts from teachers & admins will appear here</Text>
           </View>
         )}
+
         renderItem={({ item }) => (
           <PostCard item={item} onLike={handleLike}
             onCommentPress={(p) => { setCommentPost(p); setCommentVisible(true); }} />
         )}
+
         ListFooterComponent={() =>
           posts.length > 0 ? (
             <Pressable style={styles.logoutBtn} onPress={handleLogout}>
@@ -413,7 +534,6 @@ export default function StudentDashboard() {
         ))}
       </View>
 
-      {/* Comment Modal */}
       <CommentModal post={commentPost} visible={commentVisible}
         onClose={() => setCommentVisible(false)}
         onCommentAdded={() => {
@@ -444,15 +564,47 @@ const styles = StyleSheet.create({
   semBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
   sectionBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.2)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   sectionBadgeText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
-  sectionTitle: { color: "#cbd5e1", fontSize: 14, fontWeight: "700", marginBottom: 12, letterSpacing: 0.5 },
+  sectionTitle: { color: "#cbd5e1", fontSize: 14, fontWeight: "700", marginBottom: 4, letterSpacing: 0.5 },
+  sectionSubtitle: { color: "#374151", fontSize: 10, marginBottom: 10 },
+  sectionHeaderRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 },
+  seeAllBtn: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 4 },
+  seeAllText: { color: "#fb923c", fontSize: 11, fontWeight: "700" },
+  countBadge: { backgroundColor: "rgba(0,198,255,0.1)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginTop: 4 },
+  countBadgeText: { color: "#00c6ff", fontSize: 11, fontWeight: "700" },
   statsRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 },
   statCard: { width: (width - 52) / 2, backgroundColor: "#1a2535", borderRadius: 14, padding: 14, borderLeftWidth: 3 },
   statIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center", marginBottom: 8 },
   statValue: { color: "#fff", fontSize: 22, fontWeight: "800" },
   statLabel: { color: "#64748b", fontSize: 11, marginTop: 2 },
-  feedHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  feedCount: { backgroundColor: "rgba(0,198,255,0.1)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  feedCountText: { color: "#00c6ff", fontSize: 11, fontWeight: "700" },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 },
+  quickCard: { width: (width - 52) / 2, borderRadius: 14, overflow: "hidden" },
+  quickGrad: { padding: 16, alignItems: "center", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", gap: 8, minHeight: 90 },
+  quickIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: "center", alignItems: "center", position: "relative" },
+  quickLabel: { fontSize: 12, fontWeight: "700", textAlign: "center" },
+  quickBadge: { position: "absolute", top: -4, right: -4, width: 18, height: 18, borderRadius: 9, justifyContent: "center", alignItems: "center" },
+  quickBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+
+  // ✅ Assignment List
+  assignList: { gap: 8, marginBottom: 16 },
+  assignCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#1a2535", borderRadius: 14, padding: 14, borderLeftWidth: 3, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", gap: 10 },
+  assignIcon: { width: 38, height: 38, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  assignBody: { flex: 1 },
+  assignTitle: { color: "#fff", fontSize: 13, fontWeight: "700", marginBottom: 4 },
+  assignSubject: { color: "#64748b", fontSize: 11, marginBottom: 6 },
+  assignMeta: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  assignChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  assignChipText: { fontSize: 9, fontWeight: "700" },
+  dueDateChip: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(248,113,113,0.1)", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  dueDateText: { color: "#f87171", fontSize: 9, fontWeight: "700" },
+  moreBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 12, backgroundColor: "rgba(251,146,60,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(251,146,60,0.15)" },
+  moreBtnText: { color: "#fb923c", fontSize: 12, fontWeight: "700" },
+
+  subLoadingBox: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(251,146,60,0.06)", padding: 14, borderRadius: 14, marginBottom: 16 },
+  subLoadingText: { color: "#64748b", fontSize: 13 },
+  subEmptyBox: { alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.03)", padding: 20, borderRadius: 14, marginBottom: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.04)" },
+  subEmptyTitle: { color: "#374151", fontSize: 13, fontWeight: "700" },
+  subEmptyText: { color: "#1f2937", fontSize: 11, textAlign: "center" },
+
   postCard: { backgroundColor: "#1a2535", borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.04)" },
   postHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 10 },
   postAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },

@@ -25,8 +25,8 @@ const timeAgo = (date) => {
   return `${Math.floor(h/24)}d ago`;
 };
 
-// ─── Stat Card — CLICKABLE ───
-const StatCard = ({ icon, label, value, color, onPress }) => (
+// ─── Stat Card ───
+const StatCard = ({ icon, label, value, color, onPress, badge }) => (
   <Pressable
     style={[styles.statCard, { borderLeftColor: color }]}
     onPress={onPress}
@@ -37,6 +37,11 @@ const StatCard = ({ icon, label, value, color, onPress }) => (
     </View>
     <Text style={[styles.statValue, { color }]}>{value ?? "—"}</Text>
     <Text style={styles.statLabel}>{label}</Text>
+    {badge > 0 && (
+      <View style={[styles.statBadge, { backgroundColor: color }]}>
+        <Text style={styles.statBadgeText}>{badge}</Text>
+      </View>
+    )}
     {onPress && (
       <View style={styles.statArrow}>
         <Ionicons name="chevron-forward" size={11} color={color+"80"} />
@@ -46,7 +51,7 @@ const StatCard = ({ icon, label, value, color, onPress }) => (
 );
 
 // ─── Menu Card ───
-const MenuCard = ({ icon, label, subtitle, color, onPress }) => (
+const MenuCard = ({ icon, label, subtitle, color, onPress, badge }) => (
   <Pressable style={styles.menuCard} onPress={onPress}>
     <LinearGradient colors={[color+"22", color+"08"]} style={styles.menuGrad}>
       <View style={[styles.menuIcon, { backgroundColor: color+"20" }]}>
@@ -56,6 +61,11 @@ const MenuCard = ({ icon, label, subtitle, color, onPress }) => (
         <Text style={styles.menuLabel}>{label}</Text>
         <Text style={styles.menuSub}>{subtitle}</Text>
       </View>
+      {badge > 0 && (
+        <View style={[styles.menuBadge, { backgroundColor: color }]}>
+          <Text style={styles.menuBadgeText}>{badge}</Text>
+        </View>
+      )}
       <Ionicons name="chevron-forward" size={18} color={color+"80"} />
     </LinearGradient>
   </Pressable>
@@ -69,7 +79,6 @@ const PostFeedCard = ({ item, onLike, onPress }) => {
 
   return (
     <Pressable style={styles.postCard} onPress={onPress}>
-      {/* Author row */}
       <View style={styles.postAuthorRow}>
         <View style={[styles.postAvatar,{backgroundColor:roleColor+"22"}]}>
           <Text style={[styles.postAvatarText,{color:roleColor}]}>{initials}</Text>
@@ -88,12 +97,10 @@ const PostFeedCard = ({ item, onLike, onPress }) => {
         </View>
       </View>
 
-      {/* Content */}
       {!!(item.caption||item.content) && (
         <Text style={styles.postCaption} numberOfLines={3}>{item.caption||item.content}</Text>
       )}
 
-      {/* Media */}
       {item.mediaType==="image" && !!item.mediaUrl && (
         <Image source={{uri:item.mediaUrl}} style={styles.postImage} resizeMode="cover" />
       )}
@@ -110,7 +117,6 @@ const PostFeedCard = ({ item, onLike, onPress }) => {
         </View>
       )}
 
-      {/* Actions */}
       <View style={styles.postActions}>
         <Pressable style={styles.actionBtn} onPress={()=>onLike(item)}>
           <Ionicons name={item.isLiked?"heart":"heart-outline"} size={18}
@@ -139,7 +145,7 @@ export default function AdminDashboard() {
   const [syncing, setSyncing]           = useState(false);
   const backPressCount = useRef(0);
 
-  useFocusEffect(useCallback(() => { loadAll(); }, []));
+  useFocusEffect(useCallback(() => { loadAll(); }, [router]));
 
   const loadAll = async (isRefresh=false) => {
     if (isRefresh) setRefreshing(true);
@@ -156,7 +162,6 @@ export default function AdminDashboard() {
     setRefreshing(false);
   };
 
-  // Double back to exit
   useFocusEffect(useCallback(() => {
     const handler = BackHandler.addEventListener("hardwareBackPress", () => {
       if (backPressCount.current === 0) {
@@ -184,7 +189,7 @@ export default function AdminDashboard() {
         `✅ ${res.data?.updated || 0} students' semesters updated!`,
         ToastAndroid.LONG
       );
-      loadAll(); // refresh stats
+      loadAll();
     } catch (e) {
       ToastAndroid.show("❌ Sync failed: " + (e.response?.data?.message || e.message), ToastAndroid.LONG);
     } finally {
@@ -206,21 +211,24 @@ export default function AdminDashboard() {
     </View>
   );
 
+  const pendingRequests = stats?.pendingRequests || 0;
+
   const menuItems = [
-    { icon:"people",   label:"Manage Students",  subtitle:`${stats?.totalStudents||0} students`,  color:"#00c6ff", route:"/admin/manage-students" },
-    { icon:"person",   label:"Manage Teachers",  subtitle:`${stats?.totalTeachers||0} teachers`,  color:"#f59e0b", route:"/admin/manage-teachers" },
-    { icon:"book",     label:"Manage Subjects",  subtitle:`${stats?.totalSubjects||0} subjects`,  color:"#34d399", route:"/admin/manage-subjects" },
-    { icon:"time",     label:"Manage Timetable", subtitle:"Schedule classes",                      color:"#a78bfa", route:"/admin/manage-timetable" },
-    { icon:"calendar", label:"View Attendance",  subtitle:"All attendance records",                color:"#f87171", route:"/admin/view-attendance" },
-    { icon:"megaphone",label:"Post Notice",       subtitle:"Create announcements",                  color:"#fb923c", route:"/admin/post-notice" },
+    { icon:"people",        label:"Manage Students",   subtitle:`${stats?.totalStudents||0} students`,                    color:"#00c6ff", route:"/admin/manage-students",   badge:0              },
+    { icon:"person",        label:"Manage Teachers",   subtitle:`${stats?.totalTeachers||0} teachers`,                    color:"#f59e0b", route:"/admin/manage-teachers",   badge:0              },
+    { icon:"book",          label:"Manage Subjects",   subtitle:`${stats?.totalSubjects||0} subjects`,                    color:"#34d399", route:"/admin/manage-subjects",   badge:0              },
+    { icon:"time",          label:"Manage Timetable",  subtitle:"Schedule classes",                                       color:"#a78bfa", route:"/admin/manage-timetable",  badge:0              },
+    { icon:"calendar",      label:"View Attendance",   subtitle:"All attendance records",                                 color:"#f87171", route:"/admin/view-attendance",   badge:0              },
+    { icon:"megaphone",     label:"Post Notice",       subtitle:"Create announcements",                                   color:"#fb923c", route:"/admin/post-notice",       badge:0              },
+    // ✅ SUBJECT REQUESTS BUTTON
+    { icon:"document-text", label:"Subject Requests",  subtitle: pendingRequests > 0 ? `${pendingRequests} pending approval` : "Manage teacher requests", color:"#f59e0b", route:"/admin/subject-requests", badge: pendingRequests },
   ];
 
-  // Single flat data: sections rendered via ListHeaderComponent + renderItem for posts
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#080d17" />
 
-      {/* ═══ STICKY HEADER — stays fixed, never scrolls ═══ */}
+      {/* STICKY HEADER */}
       <LinearGradient colors={["#080d17","#120020"]} style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.adminBadge}>
@@ -228,7 +236,7 @@ export default function AdminDashboard() {
           </View>
           <View>
             <Text style={styles.headerTitle}>Admin Panel</Text>
-            <Text style={styles.headerSub}>CollaHub</Text>
+            <Text style={styles.headerSub}>COLLAहUB</Text>
           </View>
         </View>
         <Pressable onPress={handleLogout} style={styles.logoutBtn}>
@@ -236,15 +244,14 @@ export default function AdminDashboard() {
         </Pressable>
       </LinearGradient>
 
-      {/* ═══ SCROLLABLE BODY — everything below header scrolls ═══ */}
+      {/* SCROLLABLE BODY */}
       <FlatList
         data={posts}
-        keyExtractor={(_,i)=>_.id||i.toString()}
+        keyExtractor={(_,i)=>_._id||i.toString()}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.feedContainer}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>loadAll(true)} tintColor="#a78bfa" />}
 
-        // ─── All static content above posts ───
         ListHeaderComponent={() => (
           <>
             {/* Welcome Card */}
@@ -252,7 +259,7 @@ export default function AdminDashboard() {
               start={{x:0,y:0}} end={{x:1,y:1}} style={styles.welcomeCard}>
               <View style={{flex:1}}>
                 <Text style={styles.welcomeHi}>Hello, {adminData?.name?.split(" ")[0]||"Admin"} 👋</Text>
-                <Text style={styles.welcomeSub}>Administrator • CollaHub</Text>
+                <Text style={styles.welcomeSub}>Administrator • COLLAहUB</Text>
                 <View style={styles.adminRoleBadge}>
                   <Ionicons name="shield-checkmark" size={11} color="#a78bfa" />
                   <Text style={styles.adminRoleBadgeText}>ADMIN ACCESS</Text>
@@ -261,19 +268,23 @@ export default function AdminDashboard() {
               <Ionicons name="settings" size={52} color="rgba(255,255,255,0.12)" />
             </LinearGradient>
 
-            {/* ─── Clickable Overview Stats ─── */}
+            {/* Overview Stats */}
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={styles.statsGrid}>
-              <StatCard icon="people"  label="Students" value={stats?.totalStudents} color="#00c6ff"
+              <StatCard icon="people"        label="Students"  value={stats?.totalStudents}    color="#00c6ff"
                 onPress={() => router.push("/admin/manage-students")} />
-              <StatCard icon="person"  label="Teachers" value={stats?.totalTeachers} color="#f59e0b"
+              <StatCard icon="person"        label="Teachers"  value={stats?.totalTeachers}    color="#f59e0b"
                 onPress={() => router.push("/admin/manage-teachers")} />
-              <StatCard icon="book"    label="Subjects" value={stats?.totalSubjects} color="#34d399"
+              <StatCard icon="book"          label="Subjects"  value={stats?.totalSubjects}    color="#34d399"
                 onPress={() => router.push("/admin/manage-subjects")} />
-              <StatCard icon="school"  label="Colleges" value={stats?.totalColleges} color="#a78bfa" />
+              <StatCard icon="school"        label="Colleges"  value={stats?.totalColleges}    color="#a78bfa" />
+              {/* ✅ PENDING REQUESTS STAT */}
+              <StatCard icon="document-text" label="Pending Requests" value={pendingRequests}  color="#f59e0b"
+                badge={pendingRequests}
+                onPress={() => router.push("/admin/subject-requests")} />
             </View>
 
-            {/* ─── Sync Semesters Banner ─── */}
+            {/* Sync Semesters Banner */}
             <Pressable
               style={[styles.syncBanner, syncing && { opacity: 0.6 }]}
               onPress={handleSyncSemesters}
@@ -299,13 +310,13 @@ export default function AdminDashboard() {
               </LinearGradient>
             </Pressable>
 
-            {/* ─── Management Cards ─── */}
+            {/* Management Cards */}
             <Text style={styles.sectionTitle}>Management</Text>
             {menuItems.map(item => (
               <MenuCard key={item.label} {...item} onPress={() => router.push(item.route)} />
             ))}
 
-            {/* ─── Posts section header ─── */}
+            {/* Posts section header */}
             {posts.length > 0 && (
               <View style={styles.postsSectionHeader}>
                 <Text style={styles.sectionTitle}>All Posts</Text>
@@ -317,7 +328,6 @@ export default function AdminDashboard() {
           </>
         )}
 
-        // ─── Empty state for posts ───
         ListEmptyComponent={() => (
           <View style={styles.emptyPosts}>
             <Ionicons name="newspaper-outline" size={30} color="#374151" />
@@ -328,7 +338,6 @@ export default function AdminDashboard() {
           </View>
         )}
 
-        // ─── Each post card ───
         renderItem={({item}) => (
           <PostFeedCard item={item} onLike={handleLike}
             onPress={() => router.push("/admin/post-notice")} />
@@ -344,7 +353,6 @@ const styles = StyleSheet.create({
   container:{ flex:1,backgroundColor:"#080d17" },
   loaderContainer:{ flex:1,justifyContent:"center",alignItems:"center",backgroundColor:"#080d17" },
 
-  // Sticky header — outside FlatList, always on top
   header:{ flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:16,paddingTop:52,paddingBottom:14 },
   headerLeft:{ flexDirection:"row",alignItems:"center",gap:12 },
   adminBadge:{ width:40,height:40,borderRadius:12,backgroundColor:"rgba(124,58,237,0.2)",justifyContent:"center",alignItems:"center",borderWidth:1,borderColor:"rgba(167,139,250,0.3)" },
@@ -352,10 +360,8 @@ const styles = StyleSheet.create({
   headerSub:{ color:"#64748b",fontSize:11,marginTop:2 },
   logoutBtn:{ width:40,height:40,borderRadius:12,backgroundColor:"rgba(248,113,113,0.1)",justifyContent:"center",alignItems:"center" },
 
-  // Feed
   feedContainer:{ paddingHorizontal:16,paddingBottom:30 },
 
-  // Welcome
   welcomeCard:{ borderRadius:20,padding:22,marginTop:14,marginBottom:22,flexDirection:"row",justifyContent:"space-between",alignItems:"center" },
   welcomeHi:{ color:"#fff",fontSize:20,fontWeight:"800",marginBottom:4 },
   welcomeSub:{ color:"rgba(255,255,255,0.7)",fontSize:12,marginBottom:10 },
@@ -364,13 +370,15 @@ const styles = StyleSheet.create({
 
   sectionTitle:{ color:"#64748b",fontSize:12,fontWeight:"700",letterSpacing:0.8,marginBottom:12,marginTop:4,textTransform:"uppercase" },
 
-  // Stats grid — 2 columns
+  // Stats
   statsGrid:{ flexDirection:"row",flexWrap:"wrap",gap:10,marginBottom:24 },
   statCard:{ width:(width-52)/2,backgroundColor:"#1a2535",borderRadius:14,padding:14,borderLeftWidth:3,position:"relative" },
   statIcon:{ width:36,height:36,borderRadius:10,justifyContent:"center",alignItems:"center",marginBottom:8 },
   statValue:{ fontSize:22,fontWeight:"800" },
   statLabel:{ color:"#64748b",fontSize:11,marginTop:2 },
   statArrow:{ position:"absolute",bottom:12,right:12 },
+  statBadge:{ position:"absolute",top:8,right:8,minWidth:18,height:18,borderRadius:9,justifyContent:"center",alignItems:"center",paddingHorizontal:4 },
+  statBadgeText:{ color:"#000",fontSize:9,fontWeight:"800" },
 
   // Menu
   menuCard:{ borderRadius:16,overflow:"hidden",marginBottom:10,borderWidth:1,borderColor:"rgba(255,255,255,0.05)" },
@@ -379,12 +387,12 @@ const styles = StyleSheet.create({
   menuInfo:{ flex:1 },
   menuLabel:{ color:"#fff",fontSize:15,fontWeight:"700" },
   menuSub:{ color:"#64748b",fontSize:12,marginTop:2 },
+  menuBadge:{ minWidth:22,height:22,borderRadius:11,justifyContent:"center",alignItems:"center",paddingHorizontal:6,marginRight:8 },
+  menuBadgeText:{ color:"#000",fontSize:10,fontWeight:"800" },
 
-  // Posts header row
+  // Posts
   postsSectionHeader:{ flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginTop:20,marginBottom:12 },
   seeAllText:{ color:"#a78bfa",fontSize:12,fontWeight:"700" },
-
-  // Post card
   postCard:{ backgroundColor:"#1a2535",borderRadius:18,marginBottom:12,borderWidth:1,borderColor:"rgba(255,255,255,0.05)",overflow:"hidden" },
   postAuthorRow:{ flexDirection:"row",alignItems:"center",padding:14,paddingBottom:10,gap:10 },
   postAvatar:{ width:40,height:40,borderRadius:20,justifyContent:"center",alignItems:"center" },
@@ -405,13 +413,13 @@ const styles = StyleSheet.create({
   actionBtn:{ flexDirection:"row",alignItems:"center",gap:5 },
   actionCount:{ color:"#64748b",fontSize:13,fontWeight:"600" },
 
-  // Sync banner
+  // Sync
   syncBanner:{ borderRadius:14,overflow:"hidden",marginBottom:20,borderWidth:1,borderColor:"rgba(52,211,153,0.2)" },
   syncBannerGrad:{ flexDirection:"row",alignItems:"center",gap:12,padding:14,borderRadius:14 },
   syncBannerTitle:{ color:"#34d399",fontSize:13,fontWeight:"700" },
   syncBannerSub:{ color:"#64748b",fontSize:11,marginTop:2 },
 
-  // Empty posts
+  // Empty
   emptyPosts:{ alignItems:"center",paddingVertical:30,gap:10 },
   emptyPostsText:{ color:"#374151",fontSize:13 },
   emptyPostBtn:{ backgroundColor:"rgba(251,146,60,0.08)",paddingHorizontal:16,paddingVertical:8,borderRadius:10,borderWidth:1,borderColor:"rgba(251,146,60,0.2)" },

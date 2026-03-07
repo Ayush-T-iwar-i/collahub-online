@@ -7,21 +7,17 @@
     "scheme": "mobileapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       }
     },
-
     "web": {
       "output": "static"
     },
-
     "plugins": [
       "expo-router",
       [
@@ -33,9 +29,9 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-video"
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

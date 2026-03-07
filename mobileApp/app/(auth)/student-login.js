@@ -34,7 +34,7 @@ export default function StudentLogin() {
     translateY.value = withSpring(0, { damping: 15 });
     titleScale.value = withSpring(1, { damping: 12 });
     scale.value      = withRepeat(withTiming(1.08, { duration: 12000 }), -1, true);
-  }, []);
+  }, [opacity, scale, titleScale, translateY]);
 
   const animatedCardStyle  = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: translateY.value }] }));
   const animatedBgStyle    = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -146,7 +146,7 @@ export default function StudentLogin() {
           {/* ✅ push — taaki register se back aane pe login mile */}
           <Pressable onPress={() => router.push("/student/register")} style={styles.registerBtn}>
             <Text style={styles.registerText}>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Text style={styles.registerLink}>Sign Up</Text>
             </Text>
           </Pressable>

@@ -1,39 +1,57 @@
 const express = require("express");
-const router = express.Router();
-const Subject = require("../models/Subject"); // ✅ import missing tha
+const router  = express.Router();
+const Subject = require("../models/Subject");
 
 const {
   createSubject,
   getSubjects,
+  getSubjectsForTeacher,
+  getSubjectsForStudent,
   getSubjectById,
+  updateSubject,
   deleteSubject,
 } = require("../controllers/subjectController");
-const { verifyToken, isAdmin } = require("../middleware/authMiddleware");
 
-// ================= CREATE =================
+const {
+  verifyToken,
+  isAdmin,
+  isTeacher,
+} = require("../middleware/authMiddleware");
+
+// ═══════════════════════════════════════════
+// ⚠️  IMPORTANT: Specific routes MUST come
+//     before /:id to avoid conflicts
+// ═══════════════════════════════════════════
+
+// ── ADMIN: Create subject ──
+// POST /subjects/create
 router.post("/create", verifyToken, isAdmin, createSubject);
 
-// ================= GET ALL =================
-router.get("/all", verifyToken, getSubjects);
+// ── ADMIN: Get all subjects (with optional filters) ──
+// GET /subjects
+// GET /subjects?college=NIET&department=CSE&semester=2
+router.get("/", verifyToken, getSubjects);
 
-// ================= GET BY ID =================
-router.get("/:id", verifyToken, getSubjectById);
+// ── TEACHER: Subjects matching college + department ──
+// GET /subjects/for-teacher
+// ✅ 2-field match — teacher ke college + department se filter
+router.get("/for-teacher", verifyToken, isTeacher, getSubjectsForTeacher);
 
-// ================= UPDATE =================
-router.put("/:id", verifyToken, isAdmin, async (req, res) => {
-  try {
-    const updated = await Subject.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    res.json({ success: true, updated });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+// ── STUDENT: Subjects matching college + department + semester ──
+// GET /subjects/for-student
+// ✅ 3-field match — student ke college + dept + semester se filter
+router.get("/for-student", verifyToken, getSubjectsForStudent);
 
-// ================= DELETE =================
+// ── ADMIN: Update subject ──
+// PUT /subjects/:id
+router.put("/:id", verifyToken, isAdmin, updateSubject);
+
+// ── ADMIN: Delete subject ──
+// DELETE /subjects/:id
 router.delete("/:id", verifyToken, isAdmin, deleteSubject);
 
-module.exports = router; // ✅ moved to end
+// ── GET by ID (must be last) ──
+// GET /subjects/:id
+router.get("/:id", verifyToken, getSubjectById);
+
+module.exports = router;

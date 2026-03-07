@@ -1,0 +1,18 @@
+﻿error TS6053: File 'controllers/*.js' not found.
+  The file is in the program because:
+    Root file specified for compilation
+error TS6053: File 'middleware/*.js' not found.
+  The file is in the program because:
+    Root file specified for compilation
+error TS6053: File 'models/*.js' not found.
+  The file is in the program because:
+    Root file specified for compilation
+error TS6053: File 'routes/*.js' not found.
+  The file is in the program because:
+    Root file specified for compilation
+error TS6053: File 'utils/*.js' not found.
+  The file is in the program because:
+    Root file specified for compilation
+error TS6053: File 'validators/*.js' not found.
+  The file is in the program because:
+    Root file specified for compilation

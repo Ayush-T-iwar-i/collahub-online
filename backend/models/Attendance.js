@@ -7,13 +7,14 @@ const attendanceSchema = new mongoose.Schema({
   department:   { type: String },
   semester:     { type: Number },
   admissionYear:{ type: String },
-  date:         { type: String, required:true }, // "2025-03-15"
+  date:         { type: String, required:true },
+  day:          { type: String, default: "" },  // ✅ Monday, Tuesday...
+  time:         { type: String, default: "" },  // ✅ 9:00 AM
   status:       { type: String, enum:["present","absent"], required:true },
   markedBy:     { type: mongoose.Schema.Types.ObjectId, ref:"User" },
   markedByName: { type: String },
 }, { timestamps:true });
 
-// Compound index for fast lookup
 attendanceSchema.index({ studentId:1, subjectId:1, date:1 });
 attendanceSchema.index({ subjectId:1, date:1, markedBy:1 });
 

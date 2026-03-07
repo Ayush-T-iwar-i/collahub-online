@@ -272,7 +272,7 @@ export default function CustomDrawer(props) {
         <View style={styles.footer}>
           <View style={styles.footerBadge}>
             <View style={styles.footerDot} />
-            <Text style={styles.footerText}>CollaHub v1.0.0</Text>
+            <Text style={styles.footerText}>COLLAहUB v1.0.0</Text>
           </View>
         </View>
 

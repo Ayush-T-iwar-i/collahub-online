@@ -88,3 +88,6 @@ exports.authorizeRoles = (...roles) => {
     next();
   };
 };
+
+// Alias `protect` to `verifyToken` so routes expecting `protect` work
+exports.protect = exports.verifyToken;

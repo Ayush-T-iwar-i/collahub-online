@@ -211,7 +211,7 @@ export default function TeacherProfile() {
                     <Ionicons name="checkmark-circle" size={12} color="#34d399" />
                     <Text style={styles.validText}>VALID</Text>
                   </View>
-                  <Text style={[styles.idCardWatermark, { color: "rgba(245,158,11,0.12)" }]}>COLLAHUB</Text>
+                  <Text style={[styles.idCardWatermark, { color: "rgba(245,158,11,0.12)" }]}>  COLLAहUB</Text>
                 </View>
               </View>
             </LinearGradient>

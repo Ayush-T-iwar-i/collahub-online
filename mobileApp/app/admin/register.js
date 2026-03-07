@@ -65,7 +65,7 @@ export default function AdminRegister() {
 
   const opacity    = useSharedValue(0);
   const translateY = useSharedValue(30);
-  useEffect(() => { opacity.value = withTiming(1,{duration:700}); translateY.value = withSpring(0,{damping:14}); }, []);
+  useEffect(() => { opacity.value = withTiming(1,{duration:700}); translateY.value = withSpring(0,{damping:14}); }, [opacity, translateY]);
   const cardStyle = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: translateY.value }] }));
 
   useEffect(() => {

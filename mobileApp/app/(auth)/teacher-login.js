@@ -34,7 +34,7 @@ export default function TeacherLogin() {
     translateY.value = withSpring(0, { damping: 15 });
     titleScale.value = withSpring(1, { damping: 12 });
     scale.value      = withRepeat(withTiming(1.08, { duration: 12000 }), -1, true);
-  }, []);
+  }, [opacity, scale, titleScale, translateY]);
 
   const animatedCardStyle  = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: translateY.value }] }));
   const animatedBgStyle    = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -51,7 +51,7 @@ export default function TeacherLogin() {
     }, [])
   );
 
-  const handleLogin = async () => {
+const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please enter email and password");
       return;
@@ -63,10 +63,17 @@ export default function TeacherLogin() {
         password,
       });
       const data = response.data;
-      if (data.accessToken)  await AsyncStorage.setItem("accessToken", data.accessToken);
-      if (data.refreshToken) await AsyncStorage.setItem("refreshToken", data.refreshToken);
+
+      // ✅ ROLE CHECK ADD KIYA
+      if (data.user?.role !== "teacher") {
+        Alert.alert("Access Denied", "This account is not a teacher account. Please use the correct login.");
+        return;
+      }
+
+      if (data.accessToken)  await AsyncStorage.setItem("accessToken",   data.accessToken);
+      if (data.refreshToken) await AsyncStorage.setItem("refreshToken",  data.refreshToken);
       if (data.user) {
-        await AsyncStorage.setItem("teacherData", JSON.stringify(data.user));
+        await AsyncStorage.setItem("teacherData",  JSON.stringify(data.user));
         await AsyncStorage.setItem("teacherEmail", data.user.email);
       }
       await AsyncStorage.setItem("teacherLoggedIn", "true");
@@ -164,7 +171,7 @@ export default function TeacherLogin() {
           {/* Register */}
           <Pressable onPress={() => router.push("/teacher/register")} style={styles.registerBtn}>
             <Text style={styles.registerText}>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Text style={styles.registerLink}>Sign Up</Text>
             </Text>
           </Pressable>
