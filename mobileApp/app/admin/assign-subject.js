@@ -1,15 +1,15 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View, Text, StyleSheet, Pressable, ScrollView,
   StatusBar, ActivityIndicator, Alert, Modal,
-  Dimensions, TextInput,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import API from "../../services/api";
 
-const { height, width } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
 const COLLEGES = [
   "Nims Institute of Engineering and Technology",
@@ -129,7 +129,7 @@ export default function AssignSubject() {
   // Step 3 — Timetable
   const [selectedSlots, setSelectedSlots] = useState({});
   const [activeDay, setActiveDay] = useState("Monday");
-  const [roomInput, setRoomInput] = useState({});
+  const [roomInput] = useState({});
 
   // Pickers
   const [picker, setPicker] = useState({ visible: false, type: "" });

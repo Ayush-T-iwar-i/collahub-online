@@ -126,22 +126,27 @@ export default function CustomDrawer(props) {
     );
   };
 
-  const imageSource =
-    localImage || student?.profileImage ||
-    "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+  const isValidUri = (uri) => uri && typeof uri === "string" &&
+  (uri.startsWith("http://") || uri.startsWith("https://"));
+
+const imageSource = isValidUri(localImage)
+  ? localImage
+  : isValidUri(student?.profileImage)
+  ? student.profileImage
+  : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
   const mainMenu = [
-    { icon: "home",              label: "Dashboard",     route: "/student/dashboard",     accent: "#00c6ff" },
-    { icon: "person",            label: "Profile",       route: "/student/profile",       accent: "#a78bfa" },
-    { icon: "calendar",          label: "Attendance",    route: "/student/attendance",    accent: "#34d399" },
-    { icon: "book",              label: "Notes",         route: "/student/notes",         accent: "#fbbf24" },
-    { icon: "time",              label: "Timetable",     route: "/student/timetable",     accent: "#f87171" },
+    { icon: "home", label: "Dashboard", route: "/student/dashboard", accent: "#00c6ff" },
+    { icon: "person", label: "Profile", route: "/student/profile", accent: "#a78bfa" },
+    { icon: "calendar", label: "Attendance", route: "/student/attendance", accent: "#34d399" },
+    { icon: "book", label: "Notes", route: "/student/notes", accent: "#fbbf24" },
+    { icon: "time", label: "Timetable", route: "/student/timetable", accent: "#f87171" },
   ];
 
   const academicMenu = [
-    { icon: "bar-chart",         label: "Results",       route: "/student/result",        accent: "#60a5fa" },
-    { icon: "document-text",     label: "Assignments",   route: "/student/assignments",   accent: "#fb923c" },
-    { icon: "notifications",     label: "Notifications", route: "/student/notifications", accent: "#f472b6" },
+    { icon: "bar-chart", label: "Results", route: "/student/result", accent: "#60a5fa" },
+    { icon: "document-text", label: "Assignments", route: "/student/assignments", accent: "#fb923c" },
+    { icon: "notifications", label: "Notifications", route: "/student/notifications", accent: "#f472b6" },
   ];
 
   const headerTranslateY = headerAnim.interpolate({

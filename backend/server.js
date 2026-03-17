@@ -1,4 +1,4 @@
-require("dotenv").config(); // ✅ Sirf ek baar, sabse upar
+require("dotenv").config();
 
 const express      = require("express");
 const cors         = require("cors");
@@ -11,44 +11,48 @@ const logger       = require("./middleware/logger");
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
-// ── Database ──
 connectDB();
 
-// ── Security: Helmet (HTTP headers) ──
-app.use(helmet({ crossOriginResourcePolicy: false })); // allows serving static uploads safely
+// ── CORS must be BEFORE helmet ──
+app.use(cors({
+  origin: "*",
+  methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization","x-refresh-token"],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+}));
 
-// ── Security: Rate Limiting ──
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy:   false,
+}));
 
-// Auth routes pe strict — 10 attempts per 15 min
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max:      10,
-  message:  { success: false, message: "Too many attempts, try again after 15 minutes." },
-  standardHeaders: true,
-  legacyHeaders:   false,
+  windowMs: 15 * 60 * 1000, max: 10,
+  message: { success: false, message: "Too many attempts, try again after 15 minutes." },
+  standardHeaders: true, legacyHeaders: false,
 });
-
-// Baaki sab routes pe general — 100 requests per 15 min
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 500,
+  message: { success: false, message: "Too many requests, please try again later." },
+  standardHeaders: true, legacyHeaders: false,
+});
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max:      100,
-  message:  { success: false, message: "Too many requests, please try again later." },
-  standardHeaders: true,
-  legacyHeaders:   false,
+  windowMs: 15 * 60 * 1000, max: 200,
+  message: { success: false, message: "Too many requests, please try again later." },
+  standardHeaders: true, legacyHeaders: false,
 });
 
-app.use("/auth", authLimiter); // login/register strict limit
-app.use("/otp",  authLimiter); // OTP bhi strict
-app.use(generalLimiter);       // general limit sab routes pe
+app.use("/auth",  authLimiter);
+app.use("/otp",   authLimiter);
+app.use("/admin", adminLimiter);
+app.use(generalLimiter);
 
-// ── Core Middleware ──
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(logger);
 app.use("/uploads", express.static("uploads"));
 
-// ── Routes ──
 app.use("/auth",             require("./routes/authRoutes"));
 app.use("/admin",            require("./routes/adminRoutes"));
 app.use("/students",         require("./routes/studentTeacherRoutes"));
@@ -72,13 +76,13 @@ app.use("/notes",            require("./routes/notesRoutes"));
 app.use("/otp",              require("./routes/otpRoutes"));
 app.use("/announcements",    require("./routes/announcementRoutes"));
 app.use("/api/posts",        require("./routes/postRoutes"));
+app.use("/super-admin",      require("./routes/superAdminRoutes"));
+app.use("/biometric",        require("./routes/biometricRoutes"));
 
-// ── Health Check ──
 app.get("/health", (req, res) => {
   res.json({ success: true, message: "CollaHub API is running 🚀" });
 });
 
-// ── Error Handler (hamesha sabse last mein) ──
 app.use(errorHandler);
 
 app.listen(PORT, () => {

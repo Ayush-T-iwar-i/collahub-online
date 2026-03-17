@@ -1,13 +1,25 @@
 const express = require("express");
-const router = express.Router();
+const router  = express.Router();
+const { verifyToken } = require("../middleware/authMiddleware");
 const {
-  registerStudent,
-  loginStudent,
   getStudentByEmail,
+  getMyProfile,
+  uploadProfileImage,
+  upload,
 } = require("../controllers/studentController");
 
-router.post("/register", registerStudent);
-router.post("/login", loginStudent);
-router.get("/:email", getStudentByEmail);
+// GET /student/me          → fresh profile from DB
+router.get("/me", verifyToken, getMyProfile);
+
+// GET /student/email/:email
+router.get("/email/:email", verifyToken, getStudentByEmail);
+
+// POST /student/upload-profile  → Cloudinary upload
+router.post(
+  "/upload-profile",
+  verifyToken,
+  upload.single("profileImage"),
+  uploadProfileImage
+);
 
 module.exports = router;

@@ -2,56 +2,23 @@ const express = require("express");
 const router = express.Router();
 
 const { verifyToken } = require("../middleware/authMiddleware");
-const Notification = require("../models/Notification");
+const {
+  getMyNotifications,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+} = require("../controllers/notificationController");
 
-// ================= GET MY NOTIFICATIONS =================
-router.get("/my", verifyToken, async (req, res) => {
-  try {
-    const notifications = await Notification.find({
-      userId: req.user.id,
-    }).sort({ createdAt: -1 });
+// GET /notifications — fetch all notifications for current user
+router.get("/", verifyToken, getMyNotifications);
 
-    res.status(200).json({
-      success: true,
-      notifications,
-    });
+// PUT /notifications/read-all — mark all as read (must be BEFORE /:id)
+router.put("/read-all", verifyToken, markAllAsRead);
 
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+// PUT /notifications/:id/read — mark single as read
+router.put("/:id/read", verifyToken, markAsRead);
 
-// ================= MARK AS READ =================
-router.put("/read/:id", verifyToken, async (req, res) => {
-  try {
-    const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id }, // security check
-      { isRead: true }, // ✅ correct field name
-      { new: true }
-    );
-
-    if (!notification) {
-      return res.status(404).json({
-        success: false,
-        message: "Notification not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Notification marked as read",
-      notification,
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+// DELETE /notifications/:id — delete notification
+router.delete("/:id", verifyToken, deleteNotification);
 
 module.exports = router;

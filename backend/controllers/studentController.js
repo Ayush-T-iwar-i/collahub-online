@@ -1,121 +1,80 @@
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const User        = require("../models/User");
+const cloudinary  = require("cloudinary").v2;
+const streamifier = require("streamifier");
+const multer      = require("multer");
 
-/* ================= REGISTER STUDENT ================= */
-const registerStudent = async (req, res) => {
-  try {
-    let {
-      name,
-      email,
-      password,
-      phone,
-      studentId,
-      department,
-      gender,
-      admissionYear,
-      college,
-    } = req.body;
+const upload = multer({ storage: multer.memoryStorage() });
 
-    if (
-      !name ||
-      !email ||
-      !password ||
-      !phone ||
-      !studentId ||
-      !department ||
-      !gender ||
-      !admissionYear ||
-      !college
-    ) {
-      return res.status(400).json({ message: "All fields required" });
-    }
-
-    email = email.toLowerCase().trim();
-    studentId = studentId.toUpperCase().trim();
-
-    const emailExist = await User.findOne({ email });
-    if (emailExist)
-      return res.status(400).json({ message: "Email already exists" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role: "student",
-      phone,
-      studentId,
-      department,
-      gender,
-      admissionYear,
-      college,
-    });
-
-    res.status(201).json({ message: "Student registered successfully" });
-  } catch (error) {
-    console.log("STUDENT REGISTER ERROR:", error.message);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-/* ================= LOGIN STUDENT ================= */
-const loginStudent = async (req, res) => {
-  try {
-    let { email, password } = req.body;
-
-    if (!email || !password)
-      return res.status(400).json({ message: "All fields required" });
-
-    email = email.toLowerCase().trim();
-
-    const user = await User.findOne({ email });
-
-    if (!user || user.role !== "student")
-      return res.status(400).json({ message: "Invalid student credentials" });
-
-    const match = await bcrypt.compare(password, user.password);
-    if (!match)
-      return res.status(400).json({ message: "Invalid student credentials" });
-
-    const accessToken = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "15m" }
-    );
-
-    res.json({
-      message: "Student login successful",
-      accessToken,
-      user,
-    });
-  } catch (error) {
-    console.log("STUDENT LOGIN ERROR:", error.message);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-/* ================= GET STUDENT BY EMAIL ================= */
+// ══════════════════════════════════════════════════════
+// GET STUDENT BY EMAIL  —  GET /student/email/:email
+// ══════════════════════════════════════════════════════
 const getStudentByEmail = async (req, res) => {
   try {
-    const email = req.params.email.toLowerCase().trim();
-
-    const student = await User.findOne({ email }).select(
-      "-password -refreshToken"
-    );
-
-    if (!student)
-      return res.status(404).json({ message: "Student not found" });
-
+    const email   = req.params.email.toLowerCase().trim();
+    const student = await User.findOne({ email }).select("-password -refreshToken");
+    if (!student) return res.status(404).json({ message: "Student not found" });
     res.json(student);
-  } catch (error) {
+  } catch (e) {
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ══════════════════════════════════════════════════════
+// GET MY PROFILE  —  GET /student/me
+// Returns full student profile from DB (fresh data)
+// ══════════════════════════════════════════════════════
+const getMyProfile = async (req, res) => {
+  try {
+    const student = await User.findById(req.user.id).select("-password -refreshToken -otp -otpExpire");
+    if (!student) return res.status(404).json({ message: "Student not found" });
+    res.json({ success: true, student });
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ══════════════════════════════════════════════════════
+// UPLOAD PROFILE IMAGE  —  POST /student/upload-profile
+// Uploads to Cloudinary, returns { profileImage: url }
+// ══════════════════════════════════════════════════════
+const uploadProfileImage = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    const streamUpload = (buffer) =>
+      new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder:           "collahub/profiles",
+            public_id:        `student_${req.user.id}`,
+            overwrite:        true,
+            transformation:   [{ width: 400, height: 400, crop: "fill", gravity: "face" }],
+          },
+          (error, result) => (error ? reject(error) : resolve(result))
+        );
+        streamifier.createReadStream(buffer).pipe(stream);
+      });
+
+    const result = await streamUpload(req.file.buffer);
+
+    // Save URL to DB
+    await User.findByIdAndUpdate(req.user.id, { profileImage: result.secure_url });
+
+    // Return as `profileImage` (frontend expects this key)
+    res.json({
+      success:      true,
+      profileImage: result.secure_url,
+      message:      "Profile image uploaded successfully",
+    });
+  } catch (e) {
+    console.log("UPLOAD ERROR:", e.message);
+    res.status(500).json({ message: "Upload failed", error: e.message });
   }
 };
 
 module.exports = {
-  registerStudent,
-  loginStudent,
   getStudentByEmail,
+  getMyProfile,
+  uploadProfileImage,
+  upload,
 };

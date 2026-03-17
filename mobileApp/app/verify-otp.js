@@ -1,180 +1,205 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  View, StyleSheet, TextInput, Pressable,
-  StatusBar, Alert, ActivityIndicator, Dimensions,
+  View, Text, StyleSheet, TextInput, Pressable,
+  ActivityIndicator, StatusBar, Alert,
 } from "react-native";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
-import { Text } from "react-native-paper";
-import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import API from "../services/api";
 
-const { width } = Dimensions.get("window");
+// Role config — color + icon + where to navigate after login
+const ROLE_CONFIG = {
+  student:       { color: "#00c6ff", icon: "school",           label: "Student",     loggedInKey: "studentLoggedIn",     dataKey: "studentData",     route: "/student/dashboard"      },
+  teacher:       { color: "#f59e0b", icon: "person",           label: "Teacher",     loggedInKey: "teacherLoggedIn",     dataKey: "teacherData",     route: "/teacher/dashboard"      },
+  admin:         { color: "#a78bfa", icon: "shield-checkmark", label: "Admin",       loggedInKey: "adminLoggedIn",       dataKey: "adminData",       route: "/admin/dashboard"        },
+  "super-admin": { color: "#f87171", icon: "star",             label: "Super Admin", loggedInKey: "superAdminLoggedIn",  dataKey: "superAdminData",  route: "/super-admin/dashboard"  },
+};
 
-export default function VerifyOtpScreen() {
+export default function VerifyOtp() {
   const router = useRouter();
-  const { email } = useLocalSearchParams();
-  const inputRefs = useRef([]);
-  const [otp, setOtp] = useState(["","","","","",""]);
-  const [loading, setLoading] = useState(false);
-  const [timer, setTimer] = useState(120);
-  const [expired, setExpired] = useState(false);
+
+  // Get email and role passed from login screen
+  const { email, role } = useLocalSearchParams();
+
+  // Get role config — fallback to student if role missing
+  const config = ROLE_CONFIG[role] || ROLE_CONFIG["student"];
+
+  const [otp,       setOtp]       = useState(["", "", "", "", "", ""]);
+  const [loading,   setLoading]   = useState(false);
   const [resending, setResending] = useState(false);
+  const [timer,     setTimer]     = useState(60);
+  const inputs = useRef([]);
 
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(40);
-
+  // Countdown timer for resend
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 800 });
-    translateY.value = withSpring(0, { damping: 15 });
-    setTimeout(() => inputRefs.current[0]?.focus(), 500);
-  }, []);
-
-  useEffect(() => {
-    if (timer <= 0) { setExpired(true); return; }
-    const t = setInterval(() => setTimer((p) => p - 1), 1000);
-    return () => clearInterval(t);
+    if (timer <= 0) return;
+    const t = setTimeout(() => setTimer(p => p - 1), 1000);
+    return () => clearTimeout(t);
   }, [timer]);
 
-  const cardStyle = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: translateY.value }] }));
+  // Handle OTP box input
+  const handleOtpChange = (val, idx) => {
+    if (!/^\d*$/.test(val)) return;
+    const newOtp = [...otp];
+    newOtp[idx]  = val;
+    setOtp(newOtp);
+    // Auto move to next box
+    if (val && idx < 5) inputs.current[idx + 1]?.focus();
+  };
 
+  // Handle backspace — move to previous box
+  const handleKeyPress = (e, idx) => {
+    if (e.nativeEvent.key === "Backspace" && !otp[idx] && idx > 0) {
+      inputs.current[idx - 1]?.focus();
+    }
+  };
+
+  // Step 2 — Verify OTP → get tokens → go to dashboard
   const handleVerify = async () => {
-    const otpVal = otp.join("");
-    if (otpVal.length !== 6) return Alert.alert("Error","Enter full 6 digit OTP");
-    if (expired) return Alert.alert("Error","OTP expired. Please resend.");
+    const otpStr = otp.join("");
+    if (otpStr.length < 6) {
+      Alert.alert("Error", "6 digit OTP enter karo");
+      return;
+    }
+
+    setLoading(true);
     try {
-      setLoading(true);
-      await API.post("/auth/verify-email-otp", { email, otp: otpVal });
-      Alert.alert("Verified! 🎉","Account verified successfully.", [
-        { text: "Login Now", onPress: () => router.replace("/(auth)/student-login") },
-      ]);
+      const res = await API.post("/auth/login-verify-otp", {
+        email,
+        otp: otpStr,
+      });
+
+      if (res.data.success) {
+        const { accessToken, refreshToken, user, role: userRole } = res.data;
+
+        // Save tokens
+        await AsyncStorage.setItem("accessToken",  accessToken);
+        await AsyncStorage.setItem("refreshToken", refreshToken);
+
+        // Get correct config from actual role returned by backend
+        const finalConfig = ROLE_CONFIG[userRole] || ROLE_CONFIG["student"];
+
+        // Save role-specific data
+        await AsyncStorage.setItem(finalConfig.dataKey,     JSON.stringify(user));
+        await AsyncStorage.setItem(finalConfig.loggedInKey, "true");
+
+        // Navigate to correct dashboard
+        router.replace(finalConfig.route);
+      }
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Invalid OTP");
-    } finally { setLoading(false); }
+      Alert.alert("Error", e.response?.data?.message || "OTP galat hai ya expire ho gaya");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResend = async () => {
-    try {
-      setResending(true);
-      await API.post("/auth/send-email-otp", { email });
-      setTimer(120); setExpired(false); setOtp(["","","","","",""]);
-      setTimeout(() => inputRefs.current[0]?.focus(), 200);
-    } catch (e) { Alert.alert("Error","Could not resend OTP"); }
-    finally { setResending(false); }
+  // Resend — go back to login
+  const handleResend = () => {
+    Alert.alert(
+      "Resend OTP",
+      "Wapas login page pe jao aur dobara login karo — naya OTP aayega",
+      [{ text: "OK", onPress: () => router.back() }]
+    );
   };
-
-  const formatTime = () => `${Math.floor(timer/60)}:${(timer%60).toString().padStart(2,"0")}`;
-  const filled = otp.filter(Boolean).length;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient colors={["#0a0f1e","#050d14"]} style={StyleSheet.absoluteFillObject} />
+      <StatusBar barStyle="light-content" backgroundColor="#080d17" />
 
-      <Animated.View style={[styles.wrapper, cardStyle]}>
-        <BlurView intensity={80} tint="dark" style={styles.card}>
+      {/* Back button */}
+      <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Ionicons name="arrow-back" size={22} color="#fff" />
+      </Pressable>
 
-          {/* Icon */}
-          <View style={styles.iconCircle}>
-            <Ionicons name="mail-open-outline" size={30} color="#00c6ff" />
-          </View>
+      <View style={styles.body}>
 
-          <Text style={styles.title}>Verify Email</Text>
-          <Text style={styles.subtitle}>OTP sent to</Text>
-          <Text style={styles.email}>{email}</Text>
-
-          {/* OTP Boxes */}
-          <View style={styles.otpRow}>
-            {otp.map((digit, index) => (
-              <TextInput
-                key={index}
-                ref={(ref) => (inputRefs.current[index] = ref)}
-                style={[styles.otpBox, digit && styles.otpBoxFilled]}
-                keyboardType="numeric"
-                maxLength={1}
-                value={digit}
-                onChangeText={(text) => {
-                  if (!/^[0-9]?$/.test(text)) return;
-                  const n = [...otp]; n[index] = text; setOtp(n);
-                  if (text && index < 5) inputRefs.current[index+1]?.focus();
-                }}
-                onKeyPress={({ nativeEvent }) => {
-                  if (nativeEvent.key==="Backspace" && !otp[index] && index>0) inputRefs.current[index-1]?.focus();
-                }}
-              />
-            ))}
-          </View>
-
-          {/* Progress dots */}
-          <View style={styles.progressRow}>
-            {otp.map((d,i) => (
-              <View key={i} style={[styles.progressDot, d && styles.progressDotFilled]} />
-            ))}
-          </View>
-
-          {/* Timer */}
-          <Text style={[styles.timerText, expired && { color: "#f87171" }]}>
-            {expired ? "⚠️ OTP Expired" : `Expires in ${formatTime()}`}
+        {/* Role badge — shows which role is logging in */}
+        <View style={[styles.roleBadge, {
+          backgroundColor: config.color + "18",
+          borderColor:     config.color + "40"
+        }]}>
+          <Ionicons name={config.icon} size={16} color={config.color} />
+          <Text style={[styles.roleText, { color: config.color }]}>
+            {config.label}
           </Text>
+        </View>
 
-          {/* Verify Button */}
-          {!expired && (
-            <Pressable style={styles.btn} onPress={handleVerify} disabled={loading || filled < 6}>
-              <LinearGradient
-                colors={filled===6 ? ["#0072ff","#00c6ff"] : ["#1a2535","#1a2535"]}
-                start={{x:0,y:0}} end={{x:1,y:0}} style={styles.btnGrad}
-              >
-                {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <><Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-                     <Text style={styles.btnText}>Verify OTP</Text></>
-                }
-              </LinearGradient>
-            </Pressable>
-          )}
+        <Text style={styles.title}>Check your email</Text>
+        <Text style={styles.sub}>
+          OTP bheja gaya hai{"\n"}
+          <Text style={{ color: "#a78bfa", fontWeight: "700" }}>{email}</Text>
+        </Text>
 
-          {/* Resend */}
-          <Pressable style={styles.resendBtn} onPress={handleResend} disabled={resending || !expired}>
-            {resending
-              ? <ActivityIndicator size="small" color="#00c6ff" />
-              : <Text style={[styles.resendText, !expired && { color: "#374151" }]}>
-                  {expired ? "Resend OTP" : `Resend available after expiry`}
-                </Text>
+        {/* OTP input boxes */}
+        <View style={styles.otpRow}>
+          {otp.map((digit, i) => (
+            <TextInput
+              key={i}
+              ref={r => inputs.current[i] = r}
+              style={[styles.otpBox, digit && { borderColor: config.color }]}
+              value={digit}
+              onChangeText={v => handleOtpChange(v, i)}
+              onKeyPress={e  => handleKeyPress(e, i)}
+              keyboardType="numeric"
+              maxLength={1}
+              selectTextOnFocus
+            />
+          ))}
+        </View>
+
+        {/* Verify Button */}
+        <Pressable
+          style={[styles.verifyBtn, loading && { opacity: 0.7 }]}
+          onPress={handleVerify}
+          disabled={loading}
+        >
+          <LinearGradient
+            colors={[config.color, config.color + "aa"]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={styles.verifyBtnGrad}
+          >
+            {loading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.verifyBtnText}>Verify & Login</Text>
             }
-          </Pressable>
+          </LinearGradient>
+        </Pressable>
 
-          <Pressable onPress={() => router.back()} style={styles.backLink}>
-            <Ionicons name="arrow-back" size={14} color="#64748b" />
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-        </BlurView>
-      </Animated.View>
+        {/* Resend timer */}
+        <View style={styles.resendRow}>
+          {timer > 0
+            ? <Text style={styles.timerText}>Resend in {timer}s</Text>
+            : <Pressable onPress={handleResend} disabled={resending}>
+                <Text style={styles.resendText}>Resend OTP</Text>
+              </Pressable>
+          }
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 },
-  wrapper: { width: width > 500 ? 440 : "100%" },
-  card: { padding: 32, borderRadius: 28, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", overflow: "hidden" },
-  iconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: "rgba(0,198,255,0.12)", borderWidth: 1, borderColor: "rgba(0,198,255,0.25)", justifyContent: "center", alignItems: "center", alignSelf: "center", marginBottom: 16 },
-  title: { fontSize: 24, fontWeight: "800", color: "#fff", textAlign: "center" },
-  subtitle: { color: "#64748b", fontSize: 13, textAlign: "center", marginTop: 8 },
-  email: { color: "#00c6ff", fontSize: 14, fontWeight: "700", textAlign: "center", marginTop: 4, marginBottom: 28 },
-  otpRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
-  otpBox: { width: 44, height: 54, backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 12, textAlign: "center", fontSize: 22, fontWeight: "800", color: "#fff", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.12)" },
-  otpBoxFilled: { borderColor: "#00c6ff", backgroundColor: "rgba(0,198,255,0.08)" },
-  progressRow: { flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 12 },
-  progressDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.1)" },
-  progressDotFilled: { backgroundColor: "#00c6ff" },
-  timerText: { color: "#64748b", fontSize: 12, textAlign: "center", marginBottom: 20 },
-  btn: { borderRadius: 14, overflow: "hidden", marginBottom: 14 },
-  btnGrad: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16, borderRadius: 14 },
-  btnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  resendBtn: { alignItems: "center", paddingVertical: 12 },
-  resendText: { color: "#00c6ff", fontSize: 14, fontWeight: "600" },
-  backLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 },
-  backText: { color: "#64748b", fontSize: 13 },
+  container: { flex: 1, backgroundColor: "#080d17" },
+  backBtn:   { marginTop: 56, marginLeft: 20, width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
+  body:      { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
+
+  roleBadge: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, marginBottom: 24 },
+  roleText:  { fontSize: 13, fontWeight: "700" },
+
+  title: { color: "#fff", fontSize: 26, fontWeight: "800", marginBottom: 10, textAlign: "center" },
+  sub:   { color: "#64748b", fontSize: 14, textAlign: "center", lineHeight: 22, marginBottom: 36 },
+
+  otpRow: { flexDirection: "row", gap: 10, marginBottom: 32 },
+  otpBox: { width: 46, height: 56, borderRadius: 14, backgroundColor: "#1a2535", borderWidth: 2, borderColor: "rgba(255,255,255,0.08)", color: "#fff", fontSize: 22, fontWeight: "800", textAlign: "center" },
+
+  verifyBtn:     { width: "100%", borderRadius: 14, overflow: "hidden", marginBottom: 20 },
+  verifyBtnGrad: { paddingVertical: 16, alignItems: "center", justifyContent: "center" },
+  verifyBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+
+  resendRow:  { flexDirection: "row", alignItems: "center" },
+  timerText:  { color: "#374151", fontSize: 13 },
+  resendText: { color: "#a78bfa", fontSize: 13, fontWeight: "700" },
 });

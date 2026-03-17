@@ -1,354 +1,268 @@
 import React, { useState, useCallback } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, Pressable,
-  StatusBar, ActivityIndicator, RefreshControl,
-  Dimensions, BackHandler,
+  View, Text, StyleSheet, FlatList, Pressable,
+  ActivityIndicator, StatusBar, RefreshControl, ScrollView,
 } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import API from "../../services/api";
 
-const { width } = Dimensions.get("window");
-
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const DAY_SHORT = { Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat" };
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const DAY_COLORS = {
-  Monday: "#00c6ff", Tuesday: "#a78bfa", Wednesday: "#34d399",
-  Thursday: "#f59e0b", Friday: "#f87171", Saturday: "#fb923c",
+  Monday:"#00c6ff", Tuesday:"#a78bfa", Wednesday:"#34d399",
+  Thursday:"#fbbf24", Friday:"#f87171", Saturday:"#fb923c",
 };
 
-const SUBJECT_COLORS = ["#00c6ff", "#a78bfa", "#34d399", "#f59e0b", "#f87171", "#fb923c", "#60a5fa", "#34d399"];
+// ─── Merge timetable data + admin-assigned subjects into one list ───
+// timetableData = object { Monday:[...], Tuesday:[...], ... } from /timetable/my
+// assignedSubs  = array  from teacher profile (assignedSubjects)
+const mergeSchedule = (timetableData, assignedSubs = []) => {
+  const result = {};
+  DAYS.forEach(d => { result[d] = []; });
 
-// ── Time Slot Card ──
-const SlotCard = ({ slot, color }) => (
-  <View style={[styles.slotCard, { borderLeftColor: color }]}>
-    <View style={[styles.slotTimeBox, { backgroundColor: color + "18" }]}>
-      <Ionicons name="time-outline" size={12} color={color} />
-      <Text style={[styles.slotTime, { color }]}>{slot.startTime}</Text>
-      <Text style={styles.slotTimeSep}>—</Text>
-      <Text style={[styles.slotTime, { color }]}>{slot.endTime}</Text>
-    </View>
-    <View style={styles.slotBody}>
-      <Text style={styles.slotSubject} numberOfLines={1}>
-        {slot.subjectId?.name || slot.subjectName || "Subject"}
-      </Text>
-      {(slot.subjectId?.code || slot.subjectCode) && (
-        <View style={[styles.slotCodeBadge, { backgroundColor: color + "15" }]}>
-          <Text style={[styles.slotCodeText, { color }]}>
-            {slot.subjectId?.code || slot.subjectCode}
-          </Text>
-        </View>
-      )}
-      {slot.room && (
-        <View style={styles.slotRoomRow}>
-          <Ionicons name="location-outline" size={11} color="#64748b" />
-          <Text style={styles.slotRoom}>Room {slot.room}</Text>
-        </View>
-      )}
-      {slot.department && (
-        <View style={styles.slotDeptRow}>
-          <Ionicons name="people-outline" size={11} color="#64748b" />
-          <Text style={styles.slotDept} numberOfLines={1}>
-            {slot.department?.match(/\(([^)]+)\)/)?.[1] || slot.department?.split(" ")[0]}
-            {slot.admissionYear ? ` · ${slot.admissionYear}` : ""}
-            {slot.semester ? ` · Sem ${slot.semester}` : ""}
-          </Text>
-        </View>
-      )}
-    </View>
-    {slot.slotNumber && (
-      <View style={styles.slotNumBadge}>
-        <Text style={styles.slotNumText}>#{slot.slotNumber}</Text>
-      </View>
-    )}
-  </View>
-);
-
-// ── Day Section ──
-const DaySection = ({ day, slots, colorMap }) => {
-  const color = DAY_COLORS[day] || "#64748b";
-  if (!slots?.length) return null;
-  return (
-    <View style={styles.daySection}>
-      <View style={styles.daySectionHeader}>
-        <LinearGradient
-          colors={[color + "22", color + "08"]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={styles.dayHeaderGrad}
-        >
-          <View style={[styles.dayDot, { backgroundColor: color }]} />
-          <Text style={[styles.dayName, { color }]}>{day}</Text>
-          <View style={[styles.dayCountBadge, { backgroundColor: color + "25" }]}>
-            <Text style={[styles.dayCount, { color }]}>{slots.length}</Text>
-          </View>
-        </LinearGradient>
-      </View>
-      {slots.map((slot, i) => (
-        <SlotCard key={slot._id || i} slot={slot} color={colorMap[slot.subjectId?._id || slot.subjectName] || SUBJECT_COLORS[i % SUBJECT_COLORS.length]} />
-      ))}
-    </View>
-  );
-};
-
-// ══════════════════════════════════════════
-export default function TeacherTimetable() {
-  const router = useRouter();
-  const navigation = useNavigation();
-
-  const [timetable, setTimetable] = useState({});
-  const [slots, setSlots] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [activeDay, setActiveDay] = useState("All");
-  const [colorMap, setColorMap] = useState({});
-
-  useFocusEffect(useCallback(() => {
-    loadTimetable();
-  }, []));
-
-  // Back handler
-  useFocusEffect(useCallback(() => {
-    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
-      router.replace("/teacher/dashboard");
-      return true;
+  // 1️⃣  Self-added timetable slots
+  DAYS.forEach(day => {
+    (timetableData[day] || []).forEach(slot => {
+      result[day].push({
+        _id:         slot.timetableId || slot._id,
+        subjectName: slot.subjectName || slot.subjectId?.name || "Subject",
+        subjectCode: slot.subjectCode || slot.subjectId?.code || "",
+        startTime:   slot.startTime,
+        endTime:     slot.endTime,
+        room:        slot.room || "",
+        department:  slot.department,
+        semester:    slot.semester,
+        source:      "self",
+      });
     });
-    return () => handler.remove();
-  }, []));
+  });
+
+  // 2️⃣  Admin-assigned subjects
+  assignedSubs.forEach(sub => {
+    (sub.days || []).forEach(day => {
+      if (!result[day]) return;
+      const [startTime, endTime] = (sub.timeSlot || "").split("-");
+      result[day].push({
+        _id:         `admin-${sub._id || Math.random()}`,
+        subjectName: sub.subjectName,
+        subjectCode: sub.subjectCode || "",
+        startTime:   startTime?.trim() || "",
+        endTime:     endTime?.trim()   || "",
+        room:        sub.roomNumber    || "",
+        department:  sub.department,
+        semester:    sub.semester,
+        section:     sub.section,
+        source:      "admin", // so UI can show "assigned by admin" badge
+      });
+    });
+  });
+
+  // Sort each day by startTime
+  DAYS.forEach(day => {
+    result[day].sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
+  });
+
+  return result;
+};
+
+export default function Timetable() {
+  const navigation = useNavigation();
+  const [schedule,    setSchedule]    = useState({});
+  const [assignedSubs,setAssignedSubs]= useState([]);
+  const [selectedDay, setSelectedDay] = useState(
+    DAYS[new Date().getDay() - 1] || "Monday"
+  );
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useFocusEffect(useCallback(() => { loadTimetable(); }, []));
 
   const loadTimetable = async (isRefresh = false) => {
     try {
-      if (isRefresh) setRefreshing(true); else setLoading(true);
-      const res = await API.get("/assignments-admin/timetable/my");
-      const grouped = res.data?.timetable || {};
-      const allSlots = res.data?.slots || [];
+      if (isRefresh) setRefreshing(true);
+      else           setLoading(true);
 
-      setTimetable(grouped);
-      setSlots(allSlots);
+      // Load timetable (self-added) and teacher profile (admin-assigned) in parallel
+      const [ttRes, profileRes] = await Promise.allSettled([
+        API.get("/timetable/my"),
+        API.get("/teacher/profile"),   // has assignedSubjects
+      ]);
 
-      // ── Assign colors to each subject ──
-      const map = {};
-      let ci = 0;
-      allSlots.forEach(s => {
-        const key = s.subjectId?._id || s.subjectName;
-        if (key && !map[key]) {
-          map[key] = SUBJECT_COLORS[ci % SUBJECT_COLORS.length];
-          ci++;
-        }
-      });
-      setColorMap(map);
+      const ttData  = ttRes.status === "fulfilled"      ? (ttRes.value.data?.timetable || {})           : {};
+      const assigned= profileRes.status === "fulfilled" ? (profileRes.value.data?.assignedSubjects || []) : [];
 
-    } catch (e) {
-      console.log("Timetable load error:", e.message);
+      setAssignedSubs(assigned);
+      setSchedule(mergeSchedule(ttData, assigned));
+    } catch (err) {
+      console.log("Timetable load error:", err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  // ── Stats ──
-  const totalClasses = slots.length;
-  const totalDays = Object.keys(timetable).filter(d => timetable[d]?.length > 0).length;
-  const todayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()];
-  const todayClasses = timetable[todayName]?.length || 0;
+  const daySlots = schedule[selectedDay] || [];
+  const dayColor = DAY_COLORS[selectedDay] || "#00c6ff";
 
-  // ── Filter by day ──
-  const filteredDays = activeDay === "All"
-    ? DAYS.filter(d => timetable[d]?.length > 0)
-    : DAYS.filter(d => d === activeDay && timetable[d]?.length > 0);
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#00c6ff" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#080d17" />
+      <StatusBar barStyle="light-content" backgroundColor="#0f1923" />
 
-      {/* Header */}
-      <LinearGradient colors={["#080d17", "#0f1923"]} style={styles.header}>
+      {/* HEADER */}
+      <LinearGradient colors={["#0f1923","#1a2a3a"]} style={styles.header}>
         <Pressable onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
           <Ionicons name="menu" size={24} color="#fff" />
         </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>My Timetable</Text>
-          <Text style={styles.headerSub}>
-            {totalClasses} classes · {totalDays} days/week
-          </Text>
-        </View>
-        <Pressable onPress={() => loadTimetable(true)} style={styles.refreshBtn}>
-          <Ionicons name="refresh-outline" size={22} color="#a78bfa" />
-        </Pressable>
+        <Text style={styles.headerTitle}>My Timetable</Text>
+        <View style={{ width:40 }} />
       </LinearGradient>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadTimetable(true)} tintColor="#a78bfa" />}
-        contentContainerStyle={styles.body}
-      >
-        {/* ── Stats Row ── */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { borderLeftColor: "#00c6ff" }]}>
-            <Text style={[styles.statNum, { color: "#00c6ff" }]}>{totalClasses}</Text>
-            <Text style={styles.statLabel}>Total{"\n"}Classes</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: "#a78bfa" }]}>
-            <Text style={[styles.statNum, { color: "#a78bfa" }]}>{totalDays}</Text>
-            <Text style={styles.statLabel}>Active{"\n"}Days</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: "#34d399" }]}>
-            <Text style={[styles.statNum, { color: "#34d399" }]}>{todayClasses}</Text>
-            <Text style={styles.statLabel}>Today&apos;s{"\n"}Classes</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: "#f59e0b" }]}>
-            <Text style={[styles.statNum, { color: "#f59e0b" }]}>
-              {Object.keys(colorMap).length}
-            </Text>
-            <Text style={styles.statLabel}>Subjects{"\n"}Assigned</Text>
-          </View>
-        </View>
+      {/* TODAY BANNER */}
+      <View style={[styles.todayBanner, { backgroundColor:dayColor+"18", borderColor:dayColor+"33" }]}>
+        <Ionicons name="today-outline" size={16} color={dayColor} />
+        <Text style={[styles.todayText, { color:dayColor }]}>
+          {selectedDay} — {daySlots.length} {daySlots.length === 1 ? "class" : "classes"}
+        </Text>
+      </View>
 
-        {/* ── Today Banner ── */}
-        {todayClasses > 0 && (
-          <Pressable style={styles.todayBanner} onPress={() => setActiveDay(todayName)}>
-            <LinearGradient
-              colors={["rgba(52,211,153,0.15)", "rgba(52,211,153,0.05)"]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.todayBannerGrad}
-            >
-              <View style={styles.todayLeft}>
-                <View style={styles.todayDot} />
-                <View>
-                  <Text style={styles.todayLabel}>TODAY — {todayName.toUpperCase()}</Text>
-                  <Text style={styles.todayCount}>{todayClasses} class{todayClasses > 1 ? "es" : ""} scheduled</Text>
+      {/* DAY TABS */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll} contentContainerStyle={styles.tabs}>
+        {DAYS.map(day => {
+          const isActive = day === selectedDay;
+          const color    = DAY_COLORS[day];
+          const count    = (schedule[day] || []).length;
+          return (
+            <Pressable key={day} onPress={() => setSelectedDay(day)}
+              style={[styles.tab, isActive && { backgroundColor:color, borderColor:color }]}>
+              <Text style={[styles.tabDay, isActive && { color:"#fff" }]}>{day.slice(0,3)}</Text>
+              {count > 0 && (
+                <View style={[styles.tabBadge, { backgroundColor: isActive ? "rgba(255,255,255,0.3)" : color+"33" }]}>
+                  <Text style={[styles.tabBadgeText, { color: isActive ? "#fff" : color }]}>{count}</Text>
                 </View>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#34d399" />
-            </LinearGradient>
-          </Pressable>
-        )}
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
-        {/* ── Day Filter Chips ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={styles.dayFilters} contentContainerStyle={{ gap: 8 }}>
-          <Pressable
-            style={[styles.dayChip, activeDay === "All" && styles.dayChipActive]}
-            onPress={() => setActiveDay("All")}
-          >
-            <Text style={[styles.dayChipText, activeDay === "All" && { color: "#fff" }]}>All Days</Text>
-          </Pressable>
-          {DAYS.map(day => {
-            const count = timetable[day]?.length || 0;
-            const color = DAY_COLORS[day];
-            const isActive = activeDay === day;
-            return (
-              <Pressable key={day}
-                style={[styles.dayChip, isActive && { backgroundColor: color + "22", borderColor: color + "55" }]}
-                onPress={() => setActiveDay(day)}
-              >
-                <Text style={[styles.dayChipText, isActive && { color }]}>{DAY_SHORT[day]}</Text>
-                {count > 0 && (
-                  <View style={[styles.dayChipBadge, { backgroundColor: isActive ? color : "#374151" }]}>
-                    <Text style={styles.dayChipBadgeText}>{count}</Text>
+      {/* SLOTS */}
+      <FlatList
+        data={daySlots}
+        keyExtractor={(item, i) => item._id?.toString() || i.toString()}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => loadTimetable(true)} tintColor="#00c6ff" />
+        }
+        ListEmptyComponent={() => (
+          <View style={styles.emptyState}>
+            <Ionicons name="cafe-outline" size={56} color="#1f2937" />
+            <Text style={styles.emptyTitle}>No Classes</Text>
+            <Text style={styles.emptyText}>Enjoy your free day! 🎉</Text>
+          </View>
+        )}
+        renderItem={({ item, index }) => (
+          <View style={styles.slotRow}>
+            {/* Timeline */}
+            <View style={styles.timeline}>
+              <View style={[styles.timelineDot, { backgroundColor: dayColor }]} />
+              {index < daySlots.length - 1 && <View style={styles.timelineLine} />}
+            </View>
+
+            {/* Card */}
+            <View style={[styles.slotCard, item.source === "admin" && styles.slotCardAdmin]}>
+              {/* Admin badge */}
+              {item.source === "admin" && (
+                <View style={styles.adminBadge}>
+                  <Ionicons name="shield-checkmark" size={10} color="#a78bfa" />
+                  <Text style={styles.adminBadgeText}>Admin Assigned</Text>
+                </View>
+              )}
+
+              <View style={styles.slotHeader}>
+                <Text style={styles.slotSubject} numberOfLines={1}>
+                  {item.subjectName}
+                  {item.subjectCode ? `  (${item.subjectCode})` : ""}
+                </Text>
+                {item.room ? (
+                  <View style={styles.roomBadge}>
+                    <Ionicons name="location-outline" size={11} color="#64748b" />
+                    <Text style={styles.roomText}>{item.room}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.slotMeta}>
+                <View style={styles.metaItem}>
+                  <Ionicons name="time-outline" size={13} color="#64748b" />
+                  <Text style={styles.metaText}>
+                    {item.startTime}{item.endTime ? ` — ${item.endTime}` : ""}
+                  </Text>
+                </View>
+                {item.department && (
+                  <View style={styles.metaItem}>
+                    <Ionicons name="school-outline" size={13} color="#64748b" />
+                    <Text style={styles.metaText}>
+                      {item.department}
+                      {item.semester ? ` • Sem ${item.semester}` : ""}
+                      {item.section  ? ` • Sec ${item.section}`  : ""}
+                    </Text>
                   </View>
                 )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+              </View>
 
-        {/* ── Timetable Content ── */}
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#a78bfa" />
-            <Text style={styles.loadingText}>Loading your timetable...</Text>
-          </View>
-        ) : filteredDays.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="calendar-outline" size={44} color="#374151" />
+              <View style={[styles.durationBar, { backgroundColor: item.source === "admin" ? "#a78bfa" : dayColor }]} />
             </View>
-            <Text style={styles.emptyTitle}>
-              {activeDay === "All" ? "No Classes Scheduled" : `No Classes on ${activeDay}`}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {activeDay === "All"
-                ? "Admin will assign subjects and schedule your classes"
-                : "You have a free day!"}
-            </Text>
           </View>
-        ) : (
-          filteredDays.map(day => (
-            <DaySection
-              key={day}
-              day={day}
-              slots={timetable[day] || []}
-              colorMap={colorMap}
-            />
-          ))
         )}
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#080d17" },
-  center: { alignItems: "center", paddingTop: 60, gap: 12 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 52, paddingBottom: 14 },
-  menuBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "800" },
-  headerSub: { color: "#64748b", fontSize: 11, marginTop: 2 },
-  refreshBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(167,139,250,0.1)", justifyContent: "center", alignItems: "center" },
-
-  body: { padding: 16 },
-
-  statsRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
-  statCard: { flex: 1, backgroundColor: "#1a2535", borderRadius: 12, padding: 10, borderLeftWidth: 3, alignItems: "center" },
-  statNum: { fontSize: 20, fontWeight: "800" },
-  statLabel: { color: "#64748b", fontSize: 9, marginTop: 2, fontWeight: "600", textAlign: "center" },
-
-  todayBanner: { borderRadius: 14, overflow: "hidden", marginBottom: 16, borderWidth: 1, borderColor: "rgba(52,211,153,0.2)" },
-  todayBannerGrad: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14 },
-  todayLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  todayDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#34d399" },
-  todayLabel: { color: "#34d399", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
-  todayCount: { color: "#fff", fontSize: 14, fontWeight: "700", marginTop: 2 },
-
-  dayFilters: { marginBottom: 16 },
-
-  dayChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#1a2535", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", flexDirection: "row", alignItems: "center", gap: 6 },
-  dayChipActive: { backgroundColor: "rgba(255,255,255,0.1)" },
-  dayChipText: { color: "#64748b", fontSize: 12, fontWeight: "700" },
-  dayChipBadge: { width: 16, height: 16, borderRadius: 8, justifyContent: "center", alignItems: "center" },
-  dayChipBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
-
-  daySection: { marginBottom: 20 },
-  daySectionHeader: { marginBottom: 10, borderRadius: 12, overflow: "hidden" },
-  dayHeaderGrad: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12 },
-  dayDot: { width: 8, height: 8, borderRadius: 4 },
-  dayName: { fontSize: 14, fontWeight: "800", flex: 1 },
-  dayCountBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  dayCount: { fontSize: 11, fontWeight: "800" },
-
-  slotCard: { flexDirection: "row", backgroundColor: "#1a2535", borderRadius: 14, marginBottom: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.04)", borderLeftWidth: 3, overflow: "hidden" },
-  slotTimeBox: { padding: 12, alignItems: "center", justifyContent: "center", minWidth: 68, gap: 2 },
-  slotTime: { fontSize: 11, fontWeight: "800" },
-  slotTimeSep: { color: "#374151", fontSize: 10 },
-  slotBody: { flex: 1, padding: 12, paddingLeft: 8 },
-  slotSubject: { color: "#fff", fontSize: 14, fontWeight: "700", marginBottom: 4 },
-  slotCodeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: "flex-start", marginBottom: 4 },
-  slotCodeText: { fontSize: 10, fontWeight: "700" },
-  slotRoomRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
-  slotRoom: { color: "#64748b", fontSize: 11 },
-  slotDeptRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
-  slotDept: { color: "#64748b", fontSize: 11, flex: 1 },
-  slotNumBadge: { padding: 8, justifyContent: "center" },
-  slotNumText: { color: "#374151", fontSize: 9, fontWeight: "700" },
-
-  emptyState: { alignItems: "center", paddingTop: 60, gap: 14 },
-  emptyIcon: { width: 88, height: 88, borderRadius: 44, backgroundColor: "#1a2535", justifyContent: "center", alignItems: "center" },
-  emptyTitle: { color: "#374151", fontSize: 16, fontWeight: "700" },
-  emptySubtitle: { color: "#1f2937", fontSize: 13, textAlign: "center", paddingHorizontal: 20 },
-  loadingText: { color: "#374151", fontSize: 13 },
+  container:       { flex:1, backgroundColor:"#0f1923" },
+  loaderContainer: { flex:1, justifyContent:"center", alignItems:"center", backgroundColor:"#0f1923" },
+  header:          { flexDirection:"row", alignItems:"center", justifyContent:"space-between", paddingHorizontal:16, paddingTop:55, paddingBottom:16 },
+  menuBtn:         { width:40, height:40, borderRadius:12, backgroundColor:"rgba(255,255,255,0.08)", justifyContent:"center", alignItems:"center" },
+  headerTitle:     { color:"#fff", fontSize:18, fontWeight:"700" },
+  todayBanner:     { flexDirection:"row", alignItems:"center", gap:8, marginHorizontal:16, marginTop:12, padding:12, borderRadius:12, borderWidth:1 },
+  todayText:       { fontSize:13, fontWeight:"600" },
+  tabsScroll:      { marginTop:12 },
+  tabs:            { paddingHorizontal:16, gap:8, paddingBottom:4 },
+  tab:             { paddingHorizontal:14, paddingVertical:8, borderRadius:12, alignItems:"center", backgroundColor:"#1a2535", borderWidth:1, borderColor:"rgba(255,255,255,0.06)", flexDirection:"row", gap:6 },
+  tabDay:          { color:"#64748b", fontSize:13, fontWeight:"700" },
+  tabBadge:        { width:18, height:18, borderRadius:9, justifyContent:"center", alignItems:"center" },
+  tabBadgeText:    { fontSize:10, fontWeight:"800" },
+  list:            { padding:16, paddingBottom:30 },
+  slotRow:         { flexDirection:"row", marginBottom:16 },
+  timeline:        { width:24, alignItems:"center" },
+  timelineDot:     { width:12, height:12, borderRadius:6, marginTop:16 },
+  timelineLine:    { width:2, flex:1, backgroundColor:"rgba(255,255,255,0.06)", marginTop:4 },
+  slotCard:        { flex:1, marginLeft:12, backgroundColor:"#1a2535", borderRadius:16, padding:16, overflow:"hidden" },
+  slotCardAdmin:   { borderWidth:1, borderColor:"rgba(167,139,250,0.2)" },
+  adminBadge:      { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(167,139,250,0.12)", paddingHorizontal:8, paddingVertical:3, borderRadius:6, alignSelf:"flex-start", marginBottom:8 },
+  adminBadgeText:  { color:"#a78bfa", fontSize:10, fontWeight:"700" },
+  slotHeader:      { flexDirection:"row", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 },
+  slotSubject:     { color:"#fff", fontSize:15, fontWeight:"700", flex:1 },
+  roomBadge:       { flexDirection:"row", alignItems:"center", gap:3, backgroundColor:"rgba(255,255,255,0.06)", paddingHorizontal:8, paddingVertical:4, borderRadius:8 },
+  roomText:        { color:"#64748b", fontSize:11 },
+  slotMeta:        { gap:6 },
+  metaItem:        { flexDirection:"row", alignItems:"center", gap:6 },
+  metaText:        { color:"#64748b", fontSize:12 },
+  durationBar:     { position:"absolute", left:0, top:0, bottom:0, width:3, borderRadius:2 },
+  emptyState:      { alignItems:"center", paddingTop:60, gap:12 },
+  emptyTitle:      { color:"#374151", fontSize:17, fontWeight:"700" },
+  emptyText:       { color:"#1f2937", fontSize:13 },
 });

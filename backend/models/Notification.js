@@ -8,13 +8,19 @@ const notificationSchema = new mongoose.Schema(
       required: true,
     },
     title: {
-      type: String, // ✅ added — controller title save karta hai
+      type: String,
       default: "Notification",
     },
     message: {
       type: String,
       required: true,
     },
+    type: {
+      type: String,
+      enum: ["assignment", "submission", "grade", "attendance", "general", "post"],
+      default: "general",
+    },
+    refId: { type: mongoose.Schema.Types.ObjectId, default: null },
     isRead: {
       type: Boolean,
       default: false,

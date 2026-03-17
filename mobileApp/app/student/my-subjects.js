@@ -391,8 +391,8 @@ export default function StudentMySubjects() {
                   </Text>
                   <Text style={styles.emptySub}>
                     {activeDay === "All"
-                      ? "Teachers ne abhi apna schedule set nahi kiya hai. Thoda wait karo!"
-                      : "Is din koi class nahi hai. 🎉"
+                      ? "Teachers haven't set their schedules yet. Please wait!"
+                      : "There are no classes on this day. 🎉"
                     }
                   </Text>
                 </View>

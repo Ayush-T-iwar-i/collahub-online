@@ -2,59 +2,39 @@ const User   = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt    = require("jsonwebtoken");
 
-// ══════════════════════════════════════════════════════════
-// ✅ FIXED: Student ID generator — deletion & race-condition safe
-//
-// ❌ OLD BUG (countDocuments):
-//    Students: 2023-CSE-001, 2023-CSE-002  → count=2 → next=003 ✅
-//    Delete 001 → count=1 → next=002 ← DUPLICATE! 💥
-//    Two simultaneous requests → both get count=2 → both get 003 ← DUPLICATE! 💥
-//
-// ✅ FIX (findOne + sort):
-//    Always finds the HIGHEST existing serial and adds 1.
-//    Deletions don't affect it. Much safer under load.
-// ══════════════════════════════════════════════════════════
+// ─── Helpers ──────────────────────────────────────────────
+
 const generateStudentId = async (department, admissionYear) => {
-  const deptMatch = department?.match(/\(([^)]+)\)/);
-  const deptCode  = deptMatch
-    ? deptMatch[1].toUpperCase()
+  const match   = department?.match(/\(([^)]+)\)/);
+  const deptCode = match
+    ? match[1].toUpperCase()
     : department?.split(" ").filter(w => w.length > 2)[0]?.toUpperCase() || "DEPT";
 
-  const year   = admissionYear || new Date().getFullYear();
-  const prefix = `${year}-${deptCode}-`;
+  const prefix = `${admissionYear || new Date().getFullYear()}-${deptCode}-`;
 
-  // Find highest existing ID for this year+dept combination
-  const lastStudent = await User.findOne({
-    role:      "student",
-    studentId: { $regex: `^${prefix}` },
-  })
-    .sort({ studentId: -1 })
-    .select("studentId")
-    .lean();
+  const last = await User.findOne({ role: "student", studentId: { $regex: `^${prefix}` } })
+    .sort({ studentId: -1 }).select("studentId").lean();
 
-  let nextSerial = 1;
-  if (lastStudent?.studentId) {
-    const parts   = lastStudent.studentId.split("-");
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(lastNum)) nextSerial = lastNum + 1;
+  let next = 1;
+  if (last?.studentId) {
+    const parts = last.studentId.split("-");
+    const n     = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(n)) next = n + 1;
   }
-
-  return `${prefix}${String(nextSerial).padStart(3, "0")}`;
+  return `${prefix}${String(next).padStart(3, "0")}`;
 };
 
-// ── Auto Semester from Admission Year ──────────────────────
 const getAutoSemester = (admissionYear) => {
-  const currentYear  = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-  const yearDiff     = currentYear - parseInt(admissionYear);
-  const isOddSem     = currentMonth >= 7;
-  let semester       = yearDiff * 2 + (isOddSem ? 1 : 2);
-  if (semester < 1) semester = 1;
-  if (semester > 8) semester = 8;
-  return semester;
+  const now      = new Date();
+  const diff     = now.getFullYear() - parseInt(admissionYear);
+  const isOddSem = now.getMonth() + 1 >= 7;
+  let sem        = diff * 2 + (isOddSem ? 1 : 2);
+  return Math.min(8, Math.max(1, sem));
 };
 
-/* ═══════════════════════ REGISTER ADMIN ═══════════════════════ */
+// ══════════════════════════════════════════════════════════
+//  AUTH  (kept for legacy — single login flow uses /auth)
+// ══════════════════════════════════════════════════════════
 const registerAdmin = async (req, res) => {
   try {
     let { name, email, password } = req.body;
@@ -62,20 +42,16 @@ const registerAdmin = async (req, res) => {
       return res.status(400).json({ message: "All fields required" });
 
     email = email.toLowerCase().trim();
-    const emailExist = await User.findOne({ email });
-    if (emailExist)
+    if (await User.findOne({ email }))
       return res.status(400).json({ message: "Email already exists" });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await User.create({ name, email, password: hashedPassword, role: "admin" });
+    await User.create({ name, email, password: await bcrypt.hash(password, 10), role: "admin" });
     res.status(201).json({ message: "Admin created successfully" });
-  } catch (error) {
-    console.log("ADMIN REGISTER ERROR:", error.message);
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ═══════════════════════ LOGIN ADMIN ═══════════════════════════ */
 const loginAdmin = async (req, res) => {
   try {
     let { email, password } = req.body;
@@ -84,178 +60,307 @@ const loginAdmin = async (req, res) => {
 
     email = email.toLowerCase().trim();
     const user = await User.findOne({ email });
-    if (!user || user.role !== "admin")
+    if (!user || user.role !== "admin" || !(await bcrypt.compare(password, user.password)))
       return res.status(400).json({ message: "Invalid admin credentials" });
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match)
-      return res.status(400).json({ message: "Invalid admin credentials" });
-
-    const accessToken = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "15m" }
-    );
+    const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "15m" });
     res.json({ message: "Admin login successful", accessToken, user });
-  } catch (error) {
-    console.log("ADMIN LOGIN ERROR:", error.message);
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ═══════════════════════ ADD STUDENT ════════════════════════════
-   POST /admin/add-student
-   ✅ Student ID auto-generated: YEAR-DEPT-NNN (e.g. 2023-CSE-004)
-   ✅ Semester auto-calculated from admissionYear (or manual override)
-═════════════════════════════════════════════════════════════════*/
+// ══════════════════════════════════════════════════════════
+//  STUDENTS
+// ══════════════════════════════════════════════════════════
+
+/* GET /admin/students?department=CSE&admissionYear=2023
+   Returns students of admin's own college only */
+const getStudents = async (req, res) => {
+  try {
+    const admin = await User.findById(req.user.id).select("college").lean();
+    if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+    const { department, admissionYear } = req.query;
+    const filter = { role: "student", college: admin.college };
+    if (department)    filter.department    = department;
+    if (admissionYear) filter.admissionYear = String(admissionYear);
+
+    const students = await User.find(filter)
+      .select("-password -refreshToken -otp -otpExpire -results")
+      .sort({ admissionYear: -1, name: 1 }).lean();
+
+    res.json({ success: true, students, total: students.length });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
+  }
+};
+
+/* POST /admin/add-student */
 const addStudent = async (req, res) => {
   try {
-    let {
-      name, email, password, phone,
-      admissionYear, college, department,
-      gender, semester: manualSemester,
-    } = req.body;
+    let { name, email, password, phone, admissionYear, college, department, gender, semester: manualSem } = req.body;
 
     if (!name || !email || !password || !college || !department || !admissionYear)
-      return res.status(400).json({ message: "All fields required" });
+      return res.status(400).json({ message: "All required fields missing" });
 
     email = email.toLowerCase().trim();
-
-    const emailExist = await User.findOne({ email });
-    if (emailExist)
+    if (await User.findOne({ email }))
       return res.status(400).json({ message: "Email already registered" });
 
-    // ✅ Generate unique Student ID
     const studentId = await generateStudentId(department, admissionYear);
-    console.log("✅ Student ID:", studentId);
+    const semester  = manualSem ? Number(manualSem) : getAutoSemester(admissionYear);
 
-    // ✅ Semester: use manual if provided, else auto-calculate
-    const semester = manualSemester
-      ? Number(manualSemester)
-      : getAutoSemester(admissionYear);
-    console.log("✅ Semester:", semester, "for year:", admissionYear);
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const student = await User.create({
-      name:            name.trim(),
-      email,
-      password:        hashedPassword,
-      phone:           phone || "",
-      studentId,
-      admissionYear:   String(admissionYear),
-      college,
-      department,
-      semester,
-      gender:          gender || "",
-      role:            "student",
-      isEmailVerified: true,
+    const s = await User.create({
+      name: name.trim(), email,
+      password: await bcrypt.hash(password, 10),
+      phone: phone || "", studentId,
+      admissionYear: String(admissionYear),
+      college, department, semester,
+      gender: gender || "",
+      role: "student", isEmailVerified: true,
     });
 
     res.status(201).json({
       message: "Student added successfully",
-      student: {
-        _id:           student._id,
-        name:          student.name,
-        email:         student.email,
-        studentId:     student.studentId,
-        department:    student.department,
-        semester:      student.semester,
-        admissionYear: student.admissionYear,
-        college:       student.college,
-      },
+      student: { _id: s._id, name: s.name, email: s.email, studentId: s.studentId, department: s.department, semester: s.semester, admissionYear: s.admissionYear, college: s.college },
     });
-  } catch (error) {
-    console.log("ADD STUDENT ERROR:", error.message);
-    res.status(500).json({ message: "Server error: " + error.message });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
-/* ═══════════════════════ ADD TEACHER ════════════════════════════ */
-const addTeacher = async (req, res) => {
+/* DELETE /admin/students/:studentId */
+const removeStudent = async (req, res) => {
   try {
-    let { name, email, password, phone, teacherId, college, department } = req.body;
-
-    if (!name || !email || !password)
-      return res.status(400).json({ message: "Name, email and password required" });
-
-    email = email.toLowerCase().trim();
-
-    const emailExist = await User.findOne({ email });
-    if (emailExist)
-      return res.status(400).json({ message: "Email already registered" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const teacher = await User.create({
-      name, email,
-      password:        hashedPassword,
-      phone:           phone       || "",
-      teacherId:       teacherId   || "",
-      college:         college     || "",
-      department:      department  || "",
-      role:            "teacher",
-      isEmailVerified: true,
-    });
-
-    res.status(201).json({
-      message: "Teacher added successfully",
-      teacher: {
-        _id:        teacher._id,
-        name:       teacher.name,
-        email:      teacher.email,
-        teacherId:  teacher.teacherId,
-        department: teacher.department,
-      },
-    });
-  } catch (error) {
-    console.log("ADD TEACHER ERROR:", error.message);
-    res.status(500).json({ message: "Server error: " + error.message });
+    const s = await User.findOneAndDelete({ _id: req.params.studentId, role: "student" });
+    if (!s) return res.status(404).json({ message: "Student not found" });
+    res.json({ message: "Student removed" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
-/* ═══════════════════════ BATCH SEMESTER UPDATE ══════════════════
-   PUT /admin/update-batch-semester
-   Body: { college, department, admissionYear, newSemester? }
-   newSemester omit karein → auto-calculates from admissionYear
-═════════════════════════════════════════════════════════════════*/
+/* PUT /admin/update-batch-semester
+   Body: { admissionYear, college?, department?, newSemester? } */
 const updateBatchSemester = async (req, res) => {
   try {
     const { college, department, admissionYear, newSemester } = req.body;
+    if (!admissionYear) return res.status(400).json({ message: "admissionYear required" });
 
-    if (!admissionYear)
-      return res.status(400).json({ message: "admissionYear required" });
-
-    const targetSemester = newSemester
-      ? Number(newSemester)
-      : getAutoSemester(admissionYear);
-
-    console.log(`✅ Batch Update: ${college} | ${department} | Year:${admissionYear} → Sem ${targetSemester}`);
-
-    const filter = { role: "student", admissionYear: String(admissionYear) };
+    const semester = newSemester ? Number(newSemester) : getAutoSemester(admissionYear);
+    const filter   = { role: "student", admissionYear: String(admissionYear) };
     if (college)    filter.college    = college;
     if (department) filter.department = department;
 
-    const result = await User.updateMany(filter, { $set: { semester: targetSemester } });
+    const result = await User.updateMany(filter, { $set: { semester } });
+    res.json({ success: true, message: `${result.modifiedCount} students updated to Semester ${semester}`, newSemester: semester, updatedCount: result.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
+  }
+};
 
-    console.log(`✅ Updated ${result.modifiedCount} students to Sem ${targetSemester}`);
+/* PUT /admin/assign-section
+   Body: { admissionYear, section, department? }
+   Assigns section A/B/C/D to entire batch */
+const assignSection = async (req, res) => {
+  try {
+    const { department, admissionYear, section } = req.body;
+    if (!admissionYear || !section)
+      return res.status(400).json({ message: "admissionYear and section required" });
 
-    res.json({
-      success:      true,
-      message:      `${result.modifiedCount} students updated to Semester ${targetSemester}`,
-      newSemester:  targetSemester,
-      updatedCount: result.modifiedCount,
+    const admin  = await User.findById(req.user.id).select("college").lean();
+    const filter = { role: "student", college: admin.college, admissionYear: String(admissionYear) };
+    if (department) filter.department = department;
+
+    const result = await User.updateMany(filter, { $set: { section } });
+    res.json({ success: true, message: `${result.modifiedCount} students assigned to Section ${section}`, updatedCount: result.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
+  }
+};
+
+// ══════════════════════════════════════════════════════════
+//  TEACHERS
+// ══════════════════════════════════════════════════════════
+
+/* GET /admin/teachers?department=CSE */
+const getTeachers = async (req, res) => {
+  try {
+    const admin      = await User.findById(req.user.id).select("college").lean();
+    const { department } = req.query;
+    const filter     = { role: "teacher", college: admin.college };
+    if (department) filter.department = department;
+
+    const teachers = await User.find(filter)
+      .select("-password -refreshToken -otp -otpExpire")
+      .sort({ name: 1 }).lean();
+
+    res.json({ success: true, teachers, total: teachers.length });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
+  }
+};
+
+/* POST /admin/add-teacher */
+const addTeacher = async (req, res) => {
+  try {
+    let { name, email, password, phone, teacherId, college, department } = req.body;
+    if (!name || !email || !password)
+      return res.status(400).json({ message: "Name, email, password required" });
+
+    email = email.toLowerCase().trim();
+    if (await User.findOne({ email }))
+      return res.status(400).json({ message: "Email already registered" });
+
+    const t = await User.create({
+      name, email,
+      password: await bcrypt.hash(password, 10),
+      phone: phone || "", teacherId: teacherId || "",
+      college: college || "", department: department || "",
+      role: "teacher", isEmailVerified: true,
     });
-  } catch (error) {
-    console.log("BATCH UPDATE ERROR:", error.message);
-    res.status(500).json({ message: "Server error: " + error.message });
+
+    res.status(201).json({ message: "Teacher added", teacher: { _id: t._id, name: t.name, email: t.email, teacherId: t.teacherId, department: t.department } });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
+  }
+};
+
+// ══════════════════════════════════════════════════════════
+//  SUBJECT ASSIGNMENT  →  Auto-updates teacher timetable
+// ══════════════════════════════════════════════════════════
+
+/* POST /admin/assign-subject
+   Body: { teacherId, subjectName, subjectCode, department,
+           admissionYear, section, semester, days[], timeSlot, roomNumber } */
+const assignSubjectToTeacher = async (req, res) => {
+  try {
+    const { teacherId, subjectName, subjectCode, department, admissionYear, section, semester, days, timeSlot, roomNumber } = req.body;
+
+    if (!teacherId || !subjectName || !department || !days?.length || !timeSlot)
+      return res.status(400).json({ message: "teacherId, subjectName, department, days, timeSlot required" });
+
+    const teacher = await User.findOne({ _id: teacherId, role: "teacher" });
+    if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+
+    const sub = {
+      subjectName,
+      subjectCode:   subjectCode   || "",
+      department,
+      admissionYear: admissionYear || "",
+      section:       section       || "",
+      semester:      semester ? Number(semester) : undefined,
+      days:          Array.isArray(days) ? days : [days],
+      timeSlot,
+      roomNumber:    roomNumber || "",
+      assignedAt:    new Date(),
+    };
+
+    teacher.assignedSubjects = teacher.assignedSubjects || [];
+    teacher.assignedSubjects.push(sub);
+    await teacher.save();
+
+    res.json({ success: true, message: `"${subjectName}" assigned to ${teacher.name}`, subject: sub });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
+  }
+};
+
+/* DELETE /admin/assign-subject/:teacherId/:subjectIndex */
+const removeAssignedSubject = async (req, res) => {
+  try {
+    const idx = parseInt(req.params.subjectIndex);
+    const teacher = await User.findOne({ _id: req.params.teacherId, role: "teacher" });
+    if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+    if (idx < 0 || idx >= (teacher.assignedSubjects?.length || 0))
+      return res.status(400).json({ message: "Invalid subject index" });
+
+    teacher.assignedSubjects.splice(idx, 1);
+    await teacher.save();
+    res.json({ success: true, message: "Subject removed" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
+  }
+};
+
+
+/* ══════════════════════════════════════════════════════
+   POST /admin/bulk-add-students
+   Body: { students: [{name,email,password,phone,
+           admissionYear,department,gender,section}] }
+   One API call instead of 100 — for Excel import
+   ══════════════════════════════════════════════════════ */
+const bulkAddStudents = async (req, res) => {
+  try {
+    const admin = await User.findById(req.user.id).select("college").lean();
+    const college = admin?.college || "";
+    if (!college) return res.status(400).json({ message: "Admin college not found" });
+
+    const { students } = req.body;
+    if (!students || !Array.isArray(students) || students.length === 0)
+      return res.status(400).json({ message: "students array required" });
+
+    const results  = { imported: 0, failed: [] };
+
+    for (let i = 0; i < students.length; i++) {
+      const s = students[i];
+      try {
+        const { name, email, password, phone, admissionYear, department, gender, section, semester: manualSem } = s;
+
+        if (!name || !email || !password || !department || !admissionYear) {
+          results.failed.push({ rowNum: i + 2, email: email || "—", error: "Missing required fields" });
+          continue;
+        }
+
+        const cleanEmail = email.toLowerCase().trim();
+        const exists = await User.findOne({ email: cleanEmail });
+        if (exists) {
+          results.failed.push({ rowNum: i + 2, email: cleanEmail, error: "Email already registered" });
+          continue;
+        }
+
+        const studentId = await generateStudentId(department, admissionYear);
+        const semester  = manualSem ? Number(manualSem) : getAutoSemester(admissionYear);
+
+        await User.create({
+          name: name.trim(),
+          email: cleanEmail,
+          password: await bcrypt.hash(password, 10),
+          phone: phone || "",
+          studentId,
+          admissionYear: String(admissionYear),
+          college,
+          department,
+          semester,
+          gender: gender || "",
+          section: section || "",
+          role: "student",
+          isEmailVerified: true,
+        });
+
+        results.imported++;
+      } catch (err) {
+        results.failed.push({ rowNum: i + 2, email: s.email || "—", error: err.message });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${results.imported} students imported successfully`,
+      imported: results.imported,
+      failed:   results.failed,
+      total:    students.length,
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
 module.exports = {
-  registerAdmin,
-  loginAdmin,
-  addStudent,
-  addTeacher,
-  updateBatchSemester,
+  registerAdmin, loginAdmin,
+  getStudents, addStudent, bulkAddStudents, removeStudent, updateBatchSemester, assignSection,
+  getTeachers, addTeacher,
+  assignSubjectToTeacher, removeAssignedSubject,
 };

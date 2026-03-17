@@ -4,6 +4,25 @@ const User = require("../models/User");
 // ================= VERIFY TOKEN =================
 exports.verifyToken = async (req, res, next) => {
   try {
+    // Check if system is shut down
+    if (global.systemShutdown) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.role === "super-admin") {
+          const user = await User.findById(decoded.id).select("-password");
+          req.user = user;
+          return next(); // Super admin always gets through
+        }
+      }
+      return res.status(503).json({
+        success: false,
+        message: global.shutdownMessage || "System is under maintenance. Please try again later.",
+        shutdown: true,
+      });
+    }
+
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -71,6 +90,17 @@ exports.isTeacherOrAdmin = (req, res, next) => {
     return res.status(403).json({
       success: false,
       message: "Access denied. Teachers or Admins only.",
+    });
+  }
+  next();
+};
+
+// ================= SUPER ADMIN CHECK =================
+exports.isSuperAdmin = (req, res, next) => {
+  if (req.user.role !== "super-admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied. Super Admins only.",
     });
   }
   next();

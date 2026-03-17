@@ -1,8 +1,17 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+
+// ── Platform ke hisaab se URL ──
+const BASE_URL = Platform.select({
+  android: "http://10.0.2.2:5000",    // Android Emulator
+  web:     "http://localhost:5000",    // Browser (npx expo start --web)
+  ios:     "http://localhost:5000",    // iOS Simulator
+  default: "http://192.168.1.x:5000", // Real phone — apna IP lagao
+});
 
 const API = axios.create({
-  baseURL: "http://10.0.2.2:5000",
+  baseURL: BASE_URL,
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
@@ -79,7 +88,7 @@ API.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
 
-        // ✅ Sab clear karo — logout
+        // Sab clear karo — logout
         await AsyncStorage.multiRemove([
           "accessToken", "refreshToken",
           "studentData", "teacherData", "adminData",

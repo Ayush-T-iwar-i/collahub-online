@@ -65,11 +65,24 @@ const teacherDashboard = async (req, res) => {
 /* ================= ADMIN DASHBOARD ================= */
 const adminDashboard = async (req, res) => {
   try {
-    const totalStudents = await User.countDocuments({ role: "student" });
-    const totalTeachers = await User.countDocuments({ role: "teacher" });
-    const totalSubjects = await Subject.countDocuments();
+    // Get admin's college — filter stats to same college only
+    const admin = await User.findById(req.user.id).select("college").lean();
+    const college = admin?.college || "";
+
+    const collegeFilter = college ? { college } : {};
+
+    const totalStudents    = await User.countDocuments({ role: "student",  ...collegeFilter });
+    const totalTeachers    = await User.countDocuments({ role: "teacher",  ...collegeFilter });
+    const totalSubjects    = await Subject.countDocuments(collegeFilter);
     const totalAssignments = await Assignment.countDocuments();
-    const totalAttendance = await Attendance.countDocuments();
+    const totalAttendance  = await Attendance.countDocuments();
+
+    // Pending subject requests for this college's teachers
+    const SubjectRequest = (() => { try { return require("../models/SubjectRequest"); } catch { return null; } })();
+    let pendingRequests = 0;
+    if (SubjectRequest) {
+      pendingRequests = await SubjectRequest.countDocuments({ status: "pending", college });
+    }
 
     res.json({
       success: true,
@@ -78,6 +91,8 @@ const adminDashboard = async (req, res) => {
       totalSubjects,
       totalAssignments,
       totalAttendance,
+      pendingRequests,
+      college,
     });
 
   } catch (error) {

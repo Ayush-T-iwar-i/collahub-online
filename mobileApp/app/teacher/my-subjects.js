@@ -11,42 +11,42 @@ import API from "../../services/api";
 
 const { height } = Dimensions.get("window");
 
-const SEMESTERS = ["1", "2", "3", "4", "5", "6", "7", "8"];
-const SECTIONS = ["All", "A", "B", "C", "D"];
-const YEARS = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const DAY_SHORT = { Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat" };
+const SEMESTERS = ["1","2","3","4","5","6","7","8"];
+const SECTIONS  = ["All","A","B","C","D"];
+const YEARS     = ["2020","2021","2022","2023","2024","2025","2026"];
+const DAYS      = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAY_SHORT = { Monday:"Mon", Tuesday:"Tue", Wednesday:"Wed", Thursday:"Thu", Friday:"Fri", Saturday:"Sat" };
 const DAY_COLORS = {
-  Monday: "#00c6ff", Tuesday: "#a78bfa", Wednesday: "#34d399",
-  Thursday: "#f59e0b", Friday: "#f87171", Saturday: "#fb923c",
+  Monday:"#00c6ff", Tuesday:"#a78bfa", Wednesday:"#34d399",
+  Thursday:"#f59e0b", Friday:"#f87171", Saturday:"#fb923c",
 };
 
 // 8 AM → 6 PM time slots
 const TIME_SLOTS = [];
 for (let h = 8; h <= 17; h++) {
-  const start = `${String(h).padStart(2, "0")}:00`;
-  const end = `${String(h + 1).padStart(2, "0")}:00`;
-  const label = `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? "PM" : "AM"}`;
+  const start = `${String(h).padStart(2,"0")}:00`;
+  const end   = `${String(h+1).padStart(2,"0")}:00`;
+  const label = `${h > 12 ? h-12 : h}:00 ${h >= 12 ? "PM" : "AM"}`;
   TIME_SLOTS.push({ startTime: start, endTime: end, label });
 }
 
 const STATUS_COLORS = {
-  pending: { bg: "rgba(245,158,11,0.15)", border: "#f59e0b", text: "#f59e0b" },
-  accepted: { bg: "rgba(52,211,153,0.15)", border: "#34d399", text: "#34d399" },
-  rejected: { bg: "rgba(248,113,113,0.15)", border: "#f87171", text: "#f87171" },
+  pending:  { bg:"rgba(245,158,11,0.15)",  border:"#f59e0b", text:"#f59e0b" },
+  accepted: { bg:"rgba(52,211,153,0.15)",  border:"#34d399", text:"#34d399" },
+  rejected: { bg:"rgba(248,113,113,0.15)", border:"#f87171", text:"#f87171" },
 };
 
-const TYPE_COLORS = { Theory: "#00c6ff", Lab: "#f59e0b", Both: "#a78bfa" };
-const SEM_COLORS = ["#00c6ff", "#34d399", "#a78bfa", "#f59e0b", "#f87171", "#60a5fa", "#fb923c", "#e879f9"];
+const TYPE_COLORS = { Theory:"#00c6ff", Lab:"#f59e0b", Both:"#a78bfa" };
+const SEM_COLORS  = ["#00c6ff","#34d399","#a78bfa","#f59e0b","#f87171","#60a5fa","#fb923c","#e879f9"];
 
 // ─────────────────────────────────────────────────────────
 // Schedule Modal — Teacher sets his class schedule
 // ─────────────────────────────────────────────────────────
 const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, onSaved }) => {
-  const [activeDay, setActiveDay] = useState("Monday");
+  const [activeDay,     setActiveDay]     = useState("Monday");
   const [selectedSlots, setSelectedSlots] = useState({});
-  const [roomInputs, setRoomInputs] = useState({});
-  const [saving, setSaving] = useState(false);
+  const [roomInputs,    setRoomInputs]    = useState({});
+  const [saving,        setSaving]        = useState(false);
 
   // Pre-fill if existing schedule
   React.useEffect(() => {
@@ -80,33 +80,33 @@ const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, o
 
   const handleSave = async () => {
     if (totalSlots === 0) return Alert.alert("Error", "Kam se kam ek time slot select karo");
-    if (!request) return Alert.alert("Error", "No accepted request found");
+    if (!request)         return Alert.alert("Error", "No accepted request found");
 
     const slots = Object.values(selectedSlots).map((s, i) => ({
-      day: s.day,
+      day:       s.day,
       startTime: s.startTime,
-      endTime: s.endTime,
-      room: roomInputs[`${s.day}_${s.startTime}`] || "",
+      endTime:   s.endTime,
+      room:      roomInputs[`${s.day}_${s.startTime}`] || "",
       slotNumber: i + 1,
     }));
 
     try {
       setSaving(true);
       await API.post("/teacher-schedule", {
-        subjectId: subject._id,
-        subjectName: subject.name,
-        subjectCode: subject.code || "",
-        college: subject.college,
-        department: subject.department,
-        semester: Number(request.semester),
-        admissionYear: request.admissionYear,
-        section: request.section || "All",
+        subjectId:        subject._id,
+        subjectName:      subject.name,
+        subjectCode:      subject.code || "",
+        college:          subject.college,
+        department:       subject.department,
+        semester:         Number(request.semester),
+        admissionYear:    request.admissionYear,
+        section:          request.section || "All",
         subjectRequestId: request._id,
         slots,
       });
       onSaved?.();
       onClose();
-      Alert.alert("✅ Schedule Saved!", `${totalSlots} class slot${totalSlots > 1 ? "s" : ""} set ho gaye!`);
+      Alert.alert("✅ Schedule Saved!", `${totalSlots} class slot${totalSlots>1?"s":""} set ho gaye!`);
     } catch (e) {
       Alert.alert("Error", e.response?.data?.message || "Could not save schedule");
     } finally {
@@ -152,9 +152,9 @@ const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, o
                 </View>
               )}
               {totalSlots > 0 && (
-                <View style={[styles.schedInfoChip, { backgroundColor: "rgba(167,139,250,0.15)", borderColor: "#a78bfa" }]}>
+                <View style={[styles.schedInfoChip, { backgroundColor:"rgba(167,139,250,0.15)", borderColor:"#a78bfa" }]}>
                   <Ionicons name="checkmark-circle" size={11} color="#a78bfa" />
-                  <Text style={[styles.schedInfoText, { color: "#a78bfa" }]}>{totalSlots} slots</Text>
+                  <Text style={[styles.schedInfoText, { color:"#a78bfa" }]}>{totalSlots} slots</Text>
                 </View>
               )}
             </View>
@@ -164,12 +164,12 @@ const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, o
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             style={styles.dayTabsScroll} contentContainerStyle={styles.dayTabsContent}>
             {DAYS.map(day => {
-              const count = Object.keys(selectedSlots).filter(k => k.startsWith(day)).length;
-              const color = DAY_COLORS[day];
+              const count   = Object.keys(selectedSlots).filter(k => k.startsWith(day)).length;
+              const color   = DAY_COLORS[day];
               const isActive = activeDay === day;
               return (
                 <Pressable key={day}
-                  style={[styles.dayTab, isActive && { backgroundColor: color + "20", borderColor: color + "55" }]}
+                  style={[styles.dayTab, isActive && { backgroundColor: color+"20", borderColor: color+"55" }]}
                   onPress={() => setActiveDay(day)}>
                   <Text style={[styles.dayTabText, isActive && { color }]}>{DAY_SHORT[day]}</Text>
                   {count > 0 && (
@@ -196,12 +196,12 @@ const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, o
             {/* Time Slots Grid */}
             <View style={styles.slotsGrid}>
               {TIME_SLOTS.map(slot => {
-                const key = `${activeDay}_${slot.startTime}`;
+                const key      = `${activeDay}_${slot.startTime}`;
                 const selected = !!selectedSlots[key];
-                const color = DAY_COLORS[activeDay];
+                const color    = DAY_COLORS[activeDay];
                 return (
                   <Pressable key={key}
-                    style={[styles.slotChip, selected && { backgroundColor: color + "22", borderColor: color }]}
+                    style={[styles.slotChip, selected && { backgroundColor: color+"22", borderColor: color }]}
                     onPress={() => toggleSlot(activeDay, slot)}>
                     <Ionicons
                       name={selected ? "checkmark-circle" : "time-outline"}
@@ -220,7 +220,7 @@ const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, o
                   .filter(([k]) => k.startsWith(activeDay))
                   .map(([key, slot]) => (
                     <View key={key} style={styles.roomInputRow}>
-                      <View style={[styles.roomTimeTag, { backgroundColor: DAY_COLORS[activeDay] + "18" }]}>
+                      <View style={[styles.roomTimeTag, { backgroundColor: DAY_COLORS[activeDay]+"18" }]}>
                         <Text style={[styles.roomTimeText, { color: DAY_COLORS[activeDay] }]}>{slot.label}</Text>
                       </View>
                       <TextInput
@@ -252,7 +252,7 @@ const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, o
                       <Text style={[styles.summaryDayName, { color: DAY_COLORS[day] }]}>{DAY_SHORT[day]}</Text>
                       <View style={styles.summarySlots}>
                         {daySlots.map(([key, s]) => (
-                          <View key={key} style={[styles.summarySlotBadge, { backgroundColor: DAY_COLORS[day] + "18" }]}>
+                          <View key={key} style={[styles.summarySlotBadge, { backgroundColor: DAY_COLORS[day]+"18" }]}>
                             <Text style={[styles.summarySlotText, { color: DAY_COLORS[day] }]}>{s.label}</Text>
                           </View>
                         ))}
@@ -268,16 +268,16 @@ const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, o
               style={[styles.saveSchedBtn, (saving || totalSlots === 0) && { opacity: 0.5 }]}
               onPress={handleSave}
               disabled={saving || totalSlots === 0}>
-              <LinearGradient colors={["#a78bfa", "#7c3aed"]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.saveSchedGrad}>
+              <LinearGradient colors={["#a78bfa","#7c3aed"]}
+                start={{ x:0,y:0 }} end={{ x:1,y:0 }} style={styles.saveSchedGrad}>
                 {saving
                   ? <ActivityIndicator color="#fff" />
                   : <>
-                    <Ionicons name="save-outline" size={18} color="#fff" />
-                    <Text style={styles.saveSchedText}>
-                      {existingSchedule ? "Update Schedule" : "Save Schedule"}
-                    </Text>
-                  </>
+                      <Ionicons name="save-outline" size={18} color="#fff" />
+                      <Text style={styles.saveSchedText}>
+                        {existingSchedule ? "Update Schedule" : "Save Schedule"}
+                      </Text>
+                    </>
                 }
               </LinearGradient>
             </Pressable>
@@ -292,12 +292,12 @@ const ScheduleModal = ({ visible, subject, request, existingSchedule, onClose, o
 // Subject Card
 // ─────────────────────────────────────────────────────────
 const SubjectCard = ({ item, request, scheduleMap, onRequest, onSetSchedule }) => {
-  const semColor = SEM_COLORS[(Number(item.semester) - 1) % SEM_COLORS.length];
+  const semColor  = SEM_COLORS[(Number(item.semester) - 1) % SEM_COLORS.length];
   const typeColor = TYPE_COLORS[item.type] || "#64748b";
   const deptShort = item.department?.match(/\(([^)]+)\)/)?.[1] || item.department?.split(" ")[0] || "";
 
   const isAccepted = request?.status === "accepted";
-  const isPending = request?.status === "pending";
+  const isPending  = request?.status === "pending";
   const isRejected = request?.status === "rejected";
 
   // Check if schedule exists for this subject
@@ -307,8 +307,8 @@ const SubjectCard = ({ item, request, scheduleMap, onRequest, onSetSchedule }) =
   return (
     <View style={[
       styles.subCard,
-      isAccepted && { borderColor: "rgba(52,211,153,0.4)", backgroundColor: "rgba(52,211,153,0.03)" },
-      isPending && { borderColor: "rgba(245,158,11,0.35)" },
+      isAccepted && { borderColor:"rgba(52,211,153,0.4)", backgroundColor:"rgba(52,211,153,0.03)" },
+      isPending  && { borderColor:"rgba(245,158,11,0.35)" },
     ]}>
       {/* Left Icon */}
       <View style={[styles.subIconWrap, { backgroundColor: semColor + "18" }]}>
@@ -321,15 +321,15 @@ const SubjectCard = ({ item, request, scheduleMap, onRequest, onSetSchedule }) =
 
         <View style={styles.subBadgeRow}>
           {item.code && (
-            <View style={[styles.codeBadge, { backgroundColor: semColor + "18" }]}>
+            <View style={[styles.codeBadge, { backgroundColor: semColor+"18" }]}>
               <Text style={[styles.codeBadgeText, { color: semColor }]}>{item.code}</Text>
             </View>
           )}
-          <View style={[styles.semBadge, { backgroundColor: semColor + "18" }]}>
+          <View style={[styles.semBadge, { backgroundColor: semColor+"18" }]}>
             <Text style={[styles.semBadgeText, { color: semColor }]}>Sem {item.semester}</Text>
           </View>
           {item.type && (
-            <View style={[styles.typeBadge, { backgroundColor: typeColor + "18" }]}>
+            <View style={[styles.typeBadge, { backgroundColor: typeColor+"18" }]}>
               <Text style={[styles.typeBadgeText, { color: typeColor }]}>{item.type}</Text>
             </View>
           )}
@@ -342,7 +342,7 @@ const SubjectCard = ({ item, request, scheduleMap, onRequest, onSetSchedule }) =
             <>
               <Text style={styles.subDot}>·</Text>
               <Ionicons name="star-outline" size={10} color="#a78bfa" />
-              <Text style={[styles.subMetaText, { color: "#a78bfa" }]}>{item.credits} cr</Text>
+              <Text style={[styles.subMetaText, { color:"#a78bfa" }]}>{item.credits} cr</Text>
             </>
           )}
         </View>
@@ -369,7 +369,7 @@ const SubjectCard = ({ item, request, scheduleMap, onRequest, onSetSchedule }) =
           <>
             {/* Schedule button */}
             <Pressable
-              style={[styles.scheduleBtn, hasSchedule && { backgroundColor: "rgba(167,139,250,0.2)", borderColor: "#a78bfa" }]}
+              style={[styles.scheduleBtn, hasSchedule && { backgroundColor:"rgba(167,139,250,0.2)", borderColor:"#a78bfa" }]}
               onPress={() => onSetSchedule(item, request)}>
               <Ionicons name={hasSchedule ? "calendar" : "calendar-outline"} size={13} color="#a78bfa" />
               <Text style={styles.scheduleBtnText}>{hasSchedule ? "Edit" : "Schedule"}</Text>
@@ -414,7 +414,7 @@ const RequestCard = ({ item, onDelete, onAttendance, onSetSchedule, scheduleMap 
   return (
     <View style={[
       styles.reqCard,
-      item.status === "accepted" && { borderColor: "rgba(52,211,153,0.3)", backgroundColor: "rgba(52,211,153,0.03)" },
+      item.status === "accepted" && { borderColor:"rgba(52,211,153,0.3)", backgroundColor:"rgba(52,211,153,0.03)" },
     ]}>
       <View style={[styles.reqAccent, { backgroundColor: sc.border }]} />
       <View style={styles.reqBody}>
@@ -450,12 +450,12 @@ const RequestCard = ({ item, onDelete, onAttendance, onSetSchedule, scheduleMap 
             {hasSchedule ? (
               <View style={styles.schedSetRow}>
                 <Ionicons name="checkmark-circle" size={11} color="#a78bfa" />
-                <Text style={styles.schedSetText}>The schedule is set</Text>
+                <Text style={styles.schedSetText}>Schedule set hai</Text>
               </View>
             ) : (
               <View style={styles.schedNotSetRow}>
                 <Ionicons name="alert-circle-outline" size={11} color="#f59e0b" />
-                <Text style={styles.schedNotSetText}>Schedule not yet set — students will not see the timetable</Text>
+                <Text style={styles.schedNotSetText}>Schedule abhi set nahi — students ko timetable nahi dikhega</Text>
               </View>
             )}
           </View>
@@ -497,29 +497,29 @@ const RequestCard = ({ item, onDelete, onAttendance, onSetSchedule, scheduleMap 
 export default function TeacherMySubjects() {
   const router = useRouter();
 
-  const [tab, setTab] = useState("available");
-  const [subjects, setSubjects] = useState([]);
-  const [myRequests, setMyRequests] = useState([]);
-  const [teacherInfo, setTeacherInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [tab,          setTab]          = useState("available");
+  const [subjects,     setSubjects]     = useState([]);
+  const [myRequests,   setMyRequests]   = useState([]);
+  const [teacherInfo,  setTeacherInfo]  = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [sending,      setSending]      = useState(false);
+  const [refreshing,   setRefreshing]   = useState(false);
 
   // scheduleMap: key = subjectId_admYear_sem → schedule object
-  const [scheduleMap, setScheduleMap] = useState({});
+  const [scheduleMap,  setScheduleMap]  = useState({});
 
   // Request modal state
   const [modalVisible, setModalVisible] = useState(false);
-  const [selSubject, setSelSubject] = useState(null);
-  const [semester, setSemester] = useState("");
-  const [section, setSection] = useState("All");
-  const [admYear, setAdmYear] = useState("");
+  const [selSubject,   setSelSubject]   = useState(null);
+  const [semester,     setSemester]     = useState("");
+  const [section,      setSection]      = useState("All");
+  const [admYear,      setAdmYear]      = useState("");
 
   // Schedule modal state
-  const [schedModal, setSchedModal] = useState(false);
+  const [schedModal,   setSchedModal]   = useState(false);
   const [schedSubject, setSchedSubject] = useState(null);
   const [schedRequest, setSchedRequest] = useState(null);
-  const [existingSched, setExistingSched] = useState(null);
+  const [existingSched,setExistingSched]= useState(null);
 
   useFocusEffect(useCallback(() => { loadAll(); }, []));
 
@@ -529,7 +529,7 @@ export default function TeacherMySubjects() {
       const [subRes, reqRes, schedRes] = await Promise.all([
         API.get("/subjects/for-teacher"),
         API.get("/subject-requests/my"),
-        API.get("/teacher-schedule/my").catch(() => ({ data: { schedules: [] } })),
+        API.get("/subject-requests/teacher-timetable").catch(() => ({ data: { schedules: [] } })),
       ]);
 
       setSubjects(subRes.data?.subjects || []);
@@ -585,11 +585,11 @@ export default function TeacherMySubjects() {
       s.name === request.subjectName ||
       (s.code && request.subjectCode && s.code === request.subjectCode)
     ) || {
-      _id: request.subjectId,
-      name: request.subjectName,
-      code: request.subjectCode,
-      semester: request.semester,
-      college: request.college,
+      _id:        request.subjectId,
+      name:       request.subjectName,
+      code:       request.subjectCode,
+      semester:   request.semester,
+      college:    request.college,
       department: request.department,
     };
 
@@ -602,24 +602,24 @@ export default function TeacherMySubjects() {
 
   // ── Send Request ──
   const handleSendRequest = async () => {
-    if (!semester) return Alert.alert("Error", "Semester select karo");
-    if (!admYear) return Alert.alert("Error", "Batch year required");
+    if (!semester)            return Alert.alert("Error", "Semester select karo");
+    if (!admYear)             return Alert.alert("Error", "Batch year required");
     if (admYear.length !== 4) return Alert.alert("Error", "4 digit year dalo (e.g. 2023)");
     try {
       setSending(true);
       await API.post("/subject-requests", {
-        subjectId: selSubject._id,
-        subjectName: selSubject.name,
-        subjectCode: selSubject.code || "",
-        college: selSubject.college || teacherInfo?.college || "",
-        department: selSubject.department || teacherInfo?.department || "",
-        semester: Number(semester),
+        subjectId:     selSubject._id,
+        subjectName:   selSubject.name,
+        subjectCode:   selSubject.code || "",
+        college:       selSubject.college || teacherInfo?.college || "",
+        department:    selSubject.department || teacherInfo?.department || "",
+        semester:      Number(semester),
         admissionYear: String(admYear),
         section,
       });
       setModalVisible(false);
       await loadAll();
-      Alert.alert("✅ Request Sent!", "I've sent my request to the admin. After approval, you can set your schedule.");
+      Alert.alert("✅ Request Sent!", "Admin ko request bhej di. Approval ke baad schedule set kar sakte ho.");
     } catch (e) {
       Alert.alert("Error", e.response?.data?.message || "Could not send request");
     } finally {
@@ -629,7 +629,7 @@ export default function TeacherMySubjects() {
 
   // ── Delete Request ──
   const handleDelete = (req) => {
-    Alert.alert("Delete Request", `"${req.subjectName}" Delete that request?`, [
+    Alert.alert("Delete Request", `"${req.subjectName}" ki request delete karo?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete", style: "destructive",
@@ -649,7 +649,7 @@ export default function TeacherMySubjects() {
     router.push(`/teacher/mark-attendance?subjectRequestId=${req._id}`);
   };
 
-  const pendingCount = myRequests.filter(r => r.status === "pending").length;
+  const pendingCount  = myRequests.filter(r => r.status === "pending").length;
   const acceptedCount = myRequests.filter(r => r.status === "accepted").length;
 
   return (
@@ -657,7 +657,7 @@ export default function TeacherMySubjects() {
       <StatusBar barStyle="light-content" backgroundColor="#080d17" />
 
       {/* Header */}
-      <LinearGradient colors={["#080d17", "#0f1923"]} style={styles.header}>
+      <LinearGradient colors={["#080d17","#0f1923"]} style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </Pressable>
@@ -679,9 +679,9 @@ export default function TeacherMySubjects() {
         <View style={styles.infoBanner}>
           <Ionicons name="filter-outline" size={13} color="#f59e0b" />
           <Text style={styles.infoBannerText} numberOfLines={1}>
-            Subjects for: <Text style={{ color: "#f59e0b", fontWeight: "700" }}>
+            Subjects for: <Text style={{ color:"#f59e0b", fontWeight:"700" }}>
               {teacherInfo.college}
-            </Text> · <Text style={{ color: "#f59e0b", fontWeight: "700" }}>
+            </Text> · <Text style={{ color:"#f59e0b", fontWeight:"700" }}>
               {teacherInfo.department?.match(/\(([^)]+)\)/)?.[1] || teacherInfo.department?.split(" ")[0]}
             </Text>
           </Text>
@@ -692,13 +692,13 @@ export default function TeacherMySubjects() {
       <View style={styles.tabRow}>
         <Pressable style={[styles.tab, tab === "available" && styles.tabActive]} onPress={() => setTab("available")}>
           <Ionicons name="book-outline" size={14} color={tab === "available" ? "#00c6ff" : "#64748b"} />
-          <Text style={[styles.tabText, tab === "available" && { color: "#00c6ff" }]}>
+          <Text style={[styles.tabText, tab === "available" && { color:"#00c6ff" }]}>
             Available ({subjects.length})
           </Text>
         </Pressable>
         <Pressable style={[styles.tab, tab === "requests" && styles.tabActive]} onPress={() => setTab("requests")}>
           <Ionicons name="paper-plane-outline" size={14} color={tab === "requests" ? "#a78bfa" : "#64748b"} />
-          <Text style={[styles.tabText, tab === "requests" && { color: "#a78bfa" }]}>
+          <Text style={[styles.tabText, tab === "requests" && { color:"#a78bfa" }]}>
             My Requests ({myRequests.length})
           </Text>
           {pendingCount > 0 && (
@@ -729,7 +729,7 @@ export default function TeacherMySubjects() {
                   </View>
                   <Text style={styles.emptyTitle}>No Subjects Found</Text>
                   <Text style={styles.emptySub}>
-                    The admin has not yet added subjects for your college and department.
+                    Admin ne abhi tumhare college aur department ke liye subjects add nahi kiye.
                   </Text>
                 </View>
               )}
@@ -756,10 +756,10 @@ export default function TeacherMySubjects() {
               refreshing={refreshing}
               ListHeaderComponent={() =>
                 acceptedCount > 0 ? (
-                  <View style={[styles.listHeader, { borderColor: "rgba(52,211,153,0.3)", backgroundColor: "rgba(52,211,153,0.06)" }]}>
+                  <View style={[styles.listHeader, { borderColor:"rgba(52,211,153,0.3)", backgroundColor:"rgba(52,211,153,0.06)" }]}>
                     <Ionicons name="checkmark-circle-outline" size={13} color="#34d399" />
-                    <Text style={[styles.listHeaderText, { color: "#34d399" }]}>
-                      {acceptedCount} Subject Approved – Set schedule and update students&apos; timetable!
+                    <Text style={[styles.listHeaderText, { color:"#34d399" }]}>
+                      {acceptedCount} subject approved — Schedule set karke students ka timetable update karo!
                     </Text>
                   </View>
                 ) : null
@@ -770,7 +770,7 @@ export default function TeacherMySubjects() {
                     <Ionicons name="paper-plane-outline" size={44} color="#374151" />
                   </View>
                   <Text style={styles.emptyTitle}>No Requests Yet</Text>
-                  <Text style={styles.emptySub}>Tap the request button for any subject available.</Text>
+                  <Text style={styles.emptySub}>Available tab se kisi subject ka Request button tap karo.</Text>
                 </View>
               )}
               renderItem={({ item }) => (
@@ -800,31 +800,31 @@ export default function TeacherMySubjects() {
               </Pressable>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
+              contentContainerStyle={{ paddingHorizontal:20, paddingBottom:30 }}>
               {selSubject && (
                 <View style={styles.selectedBox}>
                   <Ionicons name="book" size={15} color="#f59e0b" />
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex:1 }}>
                     <Text style={styles.selectedName}>{selSubject.name}</Text>
                     <Text style={styles.selectedMeta}>{selSubject.code} · Sem {selSubject.semester}</Text>
                   </View>
                 </View>
               )}
               <Text style={styles.fieldLabel}>Semester *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom:16 }}>
                 <View style={styles.chipRow}>
                   {SEMESTERS.map(s => (
                     <Pressable key={s} style={[styles.chip, semester === s && styles.chipActive]} onPress={() => setSemester(s)}>
-                      <Text style={[styles.chipText, semester === s && { color: "#f59e0b" }]}>Sem {s}</Text>
+                      <Text style={[styles.chipText, semester === s && { color:"#f59e0b" }]}>Sem {s}</Text>
                     </Pressable>
                   ))}
                 </View>
               </ScrollView>
               <Text style={styles.fieldLabel}>Section</Text>
-              <View style={[styles.chipRow, { marginBottom: 16, flexWrap: "wrap" }]}>
+              <View style={[styles.chipRow, { marginBottom:16, flexWrap:"wrap" }]}>
                 {SECTIONS.map(s => (
                   <Pressable key={s} style={[styles.chip, section === s && styles.chipActive]} onPress={() => setSection(s)}>
-                    <Text style={[styles.chipText, section === s && { color: "#f59e0b" }]}>{s}</Text>
+                    <Text style={[styles.chipText, section === s && { color:"#f59e0b" }]}>{s}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -841,8 +841,8 @@ export default function TeacherMySubjects() {
                   maxLength={4}
                 />
               </View>
-              <Pressable style={[styles.sendBtn, sending && { opacity: 0.65 }]} onPress={handleSendRequest} disabled={sending}>
-                <LinearGradient colors={["#f59e0b", "#d97706"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.sendBtnGrad}>
+              <Pressable style={[styles.sendBtn, sending && { opacity:0.65 }]} onPress={handleSendRequest} disabled={sending}>
+                <LinearGradient colors={["#f59e0b","#d97706"]} start={{ x:0,y:0 }} end={{ x:1,y:0 }} style={styles.sendBtnGrad}>
                   {sending
                     ? <ActivityIndicator color="#fff" />
                     : <><Ionicons name="send" size={16} color="#fff" /><Text style={styles.sendBtnText}>Send Request to Admin</Text></>
@@ -867,143 +867,143 @@ export default function TeacherMySubjects() {
   );
 }
 
-
+// ═══════════════════════════════════════════════
 // STYLES
 // ═══════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#080d17" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 52, paddingBottom: 14 },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "800" },
-  headerSub: { color: "#64748b", fontSize: 11, marginTop: 2 },
-  infoBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(245,158,11,0.08)", marginHorizontal: 16, marginTop: 8, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: "rgba(245,158,11,0.2)" },
-  infoBannerText: { flex: 1, color: "#94a3b8", fontSize: 11 },
-  tabRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)", marginTop: 8 },
-  tab: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 13 },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: "#f59e0b" },
-  tabText: { color: "#64748b", fontSize: 12, fontWeight: "700" },
-  tabDot: { backgroundColor: "#f59e0b", borderRadius: 10, paddingHorizontal: 5, paddingVertical: 1 },
-  tabDotText: { color: "#000", fontSize: 9, fontWeight: "800" },
-  list: { padding: 16, paddingBottom: 30 },
-  listHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 14 },
-  listHeaderText: { color: "#64748b", fontSize: 11, flex: 1, lineHeight: 16 },
+  container:       { flex:1, backgroundColor:"#080d17" },
+  center:          { flex:1, justifyContent:"center", alignItems:"center" },
+  header:          { flexDirection:"row", alignItems:"center", paddingHorizontal:16, paddingTop:52, paddingBottom:14 },
+  backBtn:         { width:40, height:40, borderRadius:12, backgroundColor:"rgba(255,255,255,0.08)", justifyContent:"center", alignItems:"center" },
+  headerCenter:    { flex:1, alignItems:"center" },
+  headerTitle:     { color:"#fff", fontSize:18, fontWeight:"800" },
+  headerSub:       { color:"#64748b", fontSize:11, marginTop:2 },
+  infoBanner:      { flexDirection:"row", alignItems:"center", gap:8, backgroundColor:"rgba(245,158,11,0.08)", marginHorizontal:16, marginTop:8, padding:10, borderRadius:12, borderWidth:1, borderColor:"rgba(245,158,11,0.2)" },
+  infoBannerText:  { flex:1, color:"#94a3b8", fontSize:11 },
+  tabRow:          { flexDirection:"row", borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.06)", marginTop:8 },
+  tab:             { flex:1, flexDirection:"row", alignItems:"center", justifyContent:"center", gap:6, paddingVertical:13 },
+  tabActive:       { borderBottomWidth:2, borderBottomColor:"#f59e0b" },
+  tabText:         { color:"#64748b", fontSize:12, fontWeight:"700" },
+  tabDot:          { backgroundColor:"#f59e0b", borderRadius:10, paddingHorizontal:5, paddingVertical:1 },
+  tabDotText:      { color:"#000", fontSize:9, fontWeight:"800" },
+  list:            { padding:16, paddingBottom:30 },
+  listHeader:      { flexDirection:"row", alignItems:"flex-start", gap:8, padding:12, borderRadius:12, borderWidth:1, marginBottom:14 },
+  listHeaderText:  { color:"#64748b", fontSize:11, flex:1, lineHeight:16 },
 
   // Subject card
-  subCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#1a2535", borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", gap: 10 },
-  subIconWrap: { width: 46, height: 46, borderRadius: 13, justifyContent: "center", alignItems: "center" },
-  subInfo: { flex: 1 },
-  subName: { color: "#fff", fontSize: 14, fontWeight: "700", marginBottom: 5 },
-  subBadgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 5 },
-  codeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  codeBadgeText: { fontSize: 10, fontWeight: "800" },
-  semBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  semBadgeText: { fontSize: 10, fontWeight: "700" },
-  typeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  typeBadgeText: { fontSize: 10, fontWeight: "700" },
-  subMetaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  subMetaText: { color: "#64748b", fontSize: 10 },
-  subDot: { color: "#374151", fontSize: 10 },
-  schedSetRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 5 },
-  schedSetText: { color: "#a78bfa", fontSize: 10, fontWeight: "600" },
-  schedNotSetRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 5 },
-  schedNotSetText: { color: "#f59e0b", fontSize: 10 },
-  subAction: { alignItems: "center", gap: 6 },
-  scheduleBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(167,139,250,0.12)", paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: "rgba(167,139,250,0.3)" },
-  scheduleBtnText: { color: "#a78bfa", fontSize: 10, fontWeight: "700" },
-  acceptedPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(52,211,153,0.12)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: "rgba(52,211,153,0.3)" },
-  acceptedPillText: { color: "#34d399", fontSize: 10, fontWeight: "700" },
-  pendingPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(245,158,11,0.12)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  pendingPillText: { color: "#f59e0b", fontSize: 10, fontWeight: "700" },
-  requestBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(245,158,11,0.85)", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10 },
-  requestBtnText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  subCard:         { flexDirection:"row", alignItems:"center", backgroundColor:"#1a2535", borderRadius:14, padding:14, marginBottom:10, borderWidth:1, borderColor:"rgba(255,255,255,0.06)", gap:10 },
+  subIconWrap:     { width:46, height:46, borderRadius:13, justifyContent:"center", alignItems:"center" },
+  subInfo:         { flex:1 },
+  subName:         { color:"#fff", fontSize:14, fontWeight:"700", marginBottom:5 },
+  subBadgeRow:     { flexDirection:"row", flexWrap:"wrap", gap:6, marginBottom:5 },
+  codeBadge:       { paddingHorizontal:8, paddingVertical:2, borderRadius:6 },
+  codeBadgeText:   { fontSize:10, fontWeight:"800" },
+  semBadge:        { paddingHorizontal:8, paddingVertical:2, borderRadius:6 },
+  semBadgeText:    { fontSize:10, fontWeight:"700" },
+  typeBadge:       { paddingHorizontal:8, paddingVertical:2, borderRadius:6 },
+  typeBadgeText:   { fontSize:10, fontWeight:"700" },
+  subMetaRow:      { flexDirection:"row", alignItems:"center", gap:4 },
+  subMetaText:     { color:"#64748b", fontSize:10 },
+  subDot:          { color:"#374151", fontSize:10 },
+  schedSetRow:     { flexDirection:"row", alignItems:"center", gap:4, marginTop:5 },
+  schedSetText:    { color:"#a78bfa", fontSize:10, fontWeight:"600" },
+  schedNotSetRow:  { flexDirection:"row", alignItems:"center", gap:4, marginTop:5 },
+  schedNotSetText: { color:"#f59e0b", fontSize:10 },
+  subAction:       { alignItems:"center", gap:6 },
+  scheduleBtn:     { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(167,139,250,0.12)", paddingHorizontal:10, paddingVertical:7, borderRadius:8, borderWidth:1, borderColor:"rgba(167,139,250,0.3)" },
+  scheduleBtnText: { color:"#a78bfa", fontSize:10, fontWeight:"700" },
+  acceptedPill:    { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(52,211,153,0.12)", paddingHorizontal:10, paddingVertical:5, borderRadius:8, borderWidth:1, borderColor:"rgba(52,211,153,0.3)" },
+  acceptedPillText:{ color:"#34d399", fontSize:10, fontWeight:"700" },
+  pendingPill:     { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(245,158,11,0.12)", paddingHorizontal:10, paddingVertical:6, borderRadius:8 },
+  pendingPillText: { color:"#f59e0b", fontSize:10, fontWeight:"700" },
+  requestBtn:      { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(245,158,11,0.85)", paddingHorizontal:10, paddingVertical:8, borderRadius:10 },
+  requestBtnText:  { color:"#fff", fontSize:10, fontWeight:"800" },
 
   // Request card
-  reqCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#1a2535", borderRadius: 14, marginBottom: 10, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
-  reqAccent: { width: 3, alignSelf: "stretch" },
-  reqBody: { flex: 1, padding: 12 },
-  reqSubName: { color: "#fff", fontSize: 14, fontWeight: "700" },
-  reqSubCode: { color: "#64748b", fontSize: 11, marginTop: 1, marginBottom: 5 },
-  reqChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 5 },
-  reqChip: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  reqChipText: { color: "#64748b", fontSize: 10 },
-  reqNote: { fontSize: 11, fontStyle: "italic", marginTop: 4 },
-  acceptedActions: { marginTop: 6 },
-  reqRight: { paddingRight: 10, alignItems: "center", gap: 6 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  statusText: { fontSize: 10, fontWeight: "700" },
-  deleteBtn: { width: 30, height: 30, borderRadius: 8, backgroundColor: "rgba(248,113,113,0.12)", justifyContent: "center", alignItems: "center" },
-  acceptedBtns: { gap: 6, alignItems: "center" },
-  schedBtnSmall: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(167,139,250,0.12)", paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "rgba(167,139,250,0.25)" },
-  schedBtnSmallText: { color: "#a78bfa", fontSize: 10, fontWeight: "700" },
-  attendBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(52,211,153,0.12)", paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "rgba(52,211,153,0.25)" },
-  attendBtnText: { color: "#34d399", fontSize: 10, fontWeight: "700" },
+  reqCard:         { flexDirection:"row", alignItems:"center", backgroundColor:"#1a2535", borderRadius:14, marginBottom:10, overflow:"hidden", borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  reqAccent:       { width:3, alignSelf:"stretch" },
+  reqBody:         { flex:1, padding:12 },
+  reqSubName:      { color:"#fff", fontSize:14, fontWeight:"700" },
+  reqSubCode:      { color:"#64748b", fontSize:11, marginTop:1, marginBottom:5 },
+  reqChipRow:      { flexDirection:"row", flexWrap:"wrap", gap:6, marginBottom:5 },
+  reqChip:         { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(255,255,255,0.06)", paddingHorizontal:8, paddingVertical:3, borderRadius:6 },
+  reqChipText:     { color:"#64748b", fontSize:10 },
+  reqNote:         { fontSize:11, fontStyle:"italic", marginTop:4 },
+  acceptedActions: { marginTop:6 },
+  reqRight:        { paddingRight:10, alignItems:"center", gap:6 },
+  statusBadge:     { paddingHorizontal:8, paddingVertical:4, borderRadius:8, borderWidth:1 },
+  statusText:      { fontSize:10, fontWeight:"700" },
+  deleteBtn:       { width:30, height:30, borderRadius:8, backgroundColor:"rgba(248,113,113,0.12)", justifyContent:"center", alignItems:"center" },
+  acceptedBtns:    { gap:6, alignItems:"center" },
+  schedBtnSmall:   { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(167,139,250,0.12)", paddingHorizontal:8, paddingVertical:6, borderRadius:8, borderWidth:1, borderColor:"rgba(167,139,250,0.25)" },
+  schedBtnSmallText:{ color:"#a78bfa", fontSize:10, fontWeight:"700" },
+  attendBtn:       { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(52,211,153,0.12)", paddingHorizontal:8, paddingVertical:6, borderRadius:8, borderWidth:1, borderColor:"rgba(52,211,153,0.25)" },
+  attendBtnText:   { color:"#34d399", fontSize:10, fontWeight:"700" },
 
-  empty: { alignItems: "center", paddingTop: 70, gap: 12, paddingHorizontal: 20 },
-  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: "#1a2535", justifyContent: "center", alignItems: "center" },
-  emptyTitle: { color: "#374151", fontSize: 16, fontWeight: "700" },
-  emptySub: { color: "#1f2937", fontSize: 12, textAlign: "center", lineHeight: 18 },
+  empty:           { alignItems:"center", paddingTop:70, gap:12, paddingHorizontal:20 },
+  emptyIconWrap:   { width:80, height:80, borderRadius:40, backgroundColor:"#1a2535", justifyContent:"center", alignItems:"center" },
+  emptyTitle:      { color:"#374151", fontSize:16, fontWeight:"700" },
+  emptySub:        { color:"#1f2937", fontSize:12, textAlign:"center", lineHeight:18 },
 
   // Request Modal
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.78)", justifyContent: "flex-end" },
-  modalSheet: { backgroundColor: "#0f1923", borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: height * 0.85, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.12)", alignSelf: "center", marginTop: 12, marginBottom: 4 },
-  modalHeader: { flexDirection: "row", alignItems: "center", gap: 10, padding: 20, paddingBottom: 12 },
-  modalTitle: { flex: 1, color: "#fff", fontSize: 17, fontWeight: "800" },
-  selectedBox: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "rgba(245,158,11,0.08)", borderRadius: 14, padding: 14, marginBottom: 18, borderWidth: 1, borderColor: "rgba(245,158,11,0.2)" },
-  selectedName: { color: "#fff", fontSize: 14, fontWeight: "700" },
-  selectedMeta: { color: "#64748b", fontSize: 11, marginTop: 2 },
-  fieldLabel: { color: "#64748b", fontSize: 11, fontWeight: "700", letterSpacing: 0.5, marginBottom: 8 },
-  chipRow: { flexDirection: "row", gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  chipActive: { backgroundColor: "rgba(245,158,11,0.15)", borderColor: "#f59e0b" },
-  chipText: { color: "#64748b", fontSize: 12, fontWeight: "700" },
-  inputRow: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", marginBottom: 20 },
-  input: { flex: 1, color: "#fff", fontSize: 15, paddingVertical: 14 },
-  sendBtn: { borderRadius: 14, overflow: "hidden" },
-  sendBtnGrad: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
-  sendBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  modalOverlay:    { flex:1, backgroundColor:"rgba(0,0,0,0.78)", justifyContent:"flex-end" },
+  modalSheet:      { backgroundColor:"#0f1923", borderTopLeftRadius:28, borderTopRightRadius:28, maxHeight:height*0.85, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  modalHandle:     { width:40, height:4, borderRadius:2, backgroundColor:"rgba(255,255,255,0.12)", alignSelf:"center", marginTop:12, marginBottom:4 },
+  modalHeader:     { flexDirection:"row", alignItems:"center", gap:10, padding:20, paddingBottom:12 },
+  modalTitle:      { flex:1, color:"#fff", fontSize:17, fontWeight:"800" },
+  selectedBox:     { flexDirection:"row", alignItems:"flex-start", gap:10, backgroundColor:"rgba(245,158,11,0.08)", borderRadius:14, padding:14, marginBottom:18, borderWidth:1, borderColor:"rgba(245,158,11,0.2)" },
+  selectedName:    { color:"#fff", fontSize:14, fontWeight:"700" },
+  selectedMeta:    { color:"#64748b", fontSize:11, marginTop:2 },
+  fieldLabel:      { color:"#64748b", fontSize:11, fontWeight:"700", letterSpacing:0.5, marginBottom:8 },
+  chipRow:         { flexDirection:"row", gap:8 },
+  chip:            { paddingHorizontal:14, paddingVertical:8, borderRadius:10, backgroundColor:"rgba(255,255,255,0.06)", borderWidth:1, borderColor:"rgba(255,255,255,0.08)" },
+  chipActive:      { backgroundColor:"rgba(245,158,11,0.15)", borderColor:"#f59e0b" },
+  chipText:        { color:"#64748b", fontSize:12, fontWeight:"700" },
+  inputRow:        { flexDirection:"row", alignItems:"center", gap:10, backgroundColor:"rgba(255,255,255,0.06)", borderRadius:12, paddingHorizontal:14, borderWidth:1, borderColor:"rgba(255,255,255,0.08)", marginBottom:20 },
+  input:           { flex:1, color:"#fff", fontSize:15, paddingVertical:14 },
+  sendBtn:         { borderRadius:14, overflow:"hidden" },
+  sendBtnGrad:     { flexDirection:"row", alignItems:"center", justifyContent:"center", gap:8, paddingVertical:16 },
+  sendBtnText:     { color:"#fff", fontWeight:"700", fontSize:15 },
 
   // Schedule Modal
-  schedSheet: { backgroundColor: "#0f1923", borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: height * 0.92, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
-  schedHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 20, paddingBottom: 10 },
-  schedHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
-  schedTitle: { color: "#fff", fontSize: 16, fontWeight: "800" },
-  schedSub: { color: "#64748b", fontSize: 11, marginTop: 1 },
-  schedCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
-  schedInfoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 20, paddingBottom: 10 },
-  schedInfoChip: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  schedInfoText: { color: "#64748b", fontSize: 11, fontWeight: "600" },
-  dayTabsScroll: { borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)", maxHeight: 52 },
-  dayTabsContent: { paddingHorizontal: 16, gap: 8, paddingVertical: 10, alignItems: "center" },
-  dayTab: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: "#1a2535", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", flexDirection: "row", alignItems: "center", gap: 5 },
-  dayTabText: { color: "#64748b", fontSize: 12, fontWeight: "700" },
-  dayTabDot: { width: 16, height: 16, borderRadius: 8, justifyContent: "center", alignItems: "center" },
-  dayTabDotText: { color: "#000", fontSize: 9, fontWeight: "800" },
-  schedBody: { padding: 16, paddingBottom: 30 },
-  activeDayRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
-  activeDayDot: { width: 8, height: 8, borderRadius: 4 },
-  activeDayText: { fontSize: 14, fontWeight: "800" },
-  activeDayHint: { color: "#374151", fontSize: 11 },
-  slotsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  slotChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" },
-  slotChipText: { color: "#64748b", fontSize: 12, fontWeight: "600" },
-  roomSection: { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
-  roomSectionTitle: { color: "#94a3b8", fontSize: 12, fontWeight: "700", marginBottom: 10 },
-  roomInputRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-  roomTimeTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  roomTimeText: { fontSize: 11, fontWeight: "700" },
-  roomInput: { flex: 1, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, color: "#fff", fontSize: 13, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  slotSummary: { backgroundColor: "rgba(167,139,250,0.08)", borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: "rgba(167,139,250,0.2)" },
-  slotSummaryHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
-  slotSummaryTitle: { color: "#a78bfa", fontSize: 13, fontWeight: "700" },
-  summaryDayRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
-  summaryDayName: { fontSize: 11, fontWeight: "800", width: 34 },
-  summarySlots: { flexDirection: "row", flexWrap: "wrap", gap: 6, flex: 1 },
-  summarySlotBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  summarySlotText: { fontSize: 10, fontWeight: "700" },
-  saveSchedBtn: { borderRadius: 14, overflow: "hidden", marginTop: 4 },
-  saveSchedGrad: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
-  saveSchedText: { color: "#fff", fontWeight: "800", fontSize: 16 },
+  schedSheet:      { backgroundColor:"#0f1923", borderTopLeftRadius:28, borderTopRightRadius:28, maxHeight:height*0.92, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  schedHeader:     { flexDirection:"row", alignItems:"center", justifyContent:"space-between", padding:20, paddingBottom:10 },
+  schedHeaderLeft: { flexDirection:"row", alignItems:"center", gap:10, flex:1 },
+  schedTitle:      { color:"#fff", fontSize:16, fontWeight:"800" },
+  schedSub:        { color:"#64748b", fontSize:11, marginTop:1 },
+  schedCloseBtn:   { width:36, height:36, borderRadius:18, backgroundColor:"rgba(255,255,255,0.06)", justifyContent:"center", alignItems:"center" },
+  schedInfoRow:    { flexDirection:"row", flexWrap:"wrap", gap:8, paddingHorizontal:20, paddingBottom:10 },
+  schedInfoChip:   { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(255,255,255,0.06)", paddingHorizontal:10, paddingVertical:5, borderRadius:8, borderWidth:1, borderColor:"rgba(255,255,255,0.08)" },
+  schedInfoText:   { color:"#64748b", fontSize:11, fontWeight:"600" },
+  dayTabsScroll:   { borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.05)", maxHeight:52 },
+  dayTabsContent:  { paddingHorizontal:16, gap:8, paddingVertical:10, alignItems:"center" },
+  dayTab:          { paddingHorizontal:14, paddingVertical:6, borderRadius:20, backgroundColor:"#1a2535", borderWidth:1, borderColor:"rgba(255,255,255,0.06)", flexDirection:"row", alignItems:"center", gap:5 },
+  dayTabText:      { color:"#64748b", fontSize:12, fontWeight:"700" },
+  dayTabDot:       { width:16, height:16, borderRadius:8, justifyContent:"center", alignItems:"center" },
+  dayTabDotText:   { color:"#000", fontSize:9, fontWeight:"800" },
+  schedBody:       { padding:16, paddingBottom:30 },
+  activeDayRow:    { flexDirection:"row", alignItems:"center", gap:8, marginBottom:12 },
+  activeDayDot:    { width:8, height:8, borderRadius:4 },
+  activeDayText:   { fontSize:14, fontWeight:"800" },
+  activeDayHint:   { color:"#374151", fontSize:11 },
+  slotsGrid:       { flexDirection:"row", flexWrap:"wrap", gap:8, marginBottom:16 },
+  slotChip:        { flexDirection:"row", alignItems:"center", gap:5, paddingHorizontal:12, paddingVertical:9, borderRadius:10, backgroundColor:"rgba(255,255,255,0.05)", borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
+  slotChipText:    { color:"#64748b", fontSize:12, fontWeight:"600" },
+  roomSection:     { backgroundColor:"rgba(255,255,255,0.04)", borderRadius:14, padding:14, marginBottom:14, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  roomSectionTitle:{ color:"#94a3b8", fontSize:12, fontWeight:"700", marginBottom:10 },
+  roomInputRow:    { flexDirection:"row", alignItems:"center", gap:10, marginBottom:8 },
+  roomTimeTag:     { paddingHorizontal:10, paddingVertical:5, borderRadius:8 },
+  roomTimeText:    { fontSize:11, fontWeight:"700" },
+  roomInput:       { flex:1, backgroundColor:"rgba(255,255,255,0.06)", borderRadius:8, paddingHorizontal:12, paddingVertical:8, color:"#fff", fontSize:13, borderWidth:1, borderColor:"rgba(255,255,255,0.08)" },
+  slotSummary:     { backgroundColor:"rgba(167,139,250,0.08)", borderRadius:14, padding:14, marginBottom:16, borderWidth:1, borderColor:"rgba(167,139,250,0.2)" },
+  slotSummaryHeader:{ flexDirection:"row", alignItems:"center", gap:8, marginBottom:10 },
+  slotSummaryTitle:{ color:"#a78bfa", fontSize:13, fontWeight:"700" },
+  summaryDayRow:   { flexDirection:"row", alignItems:"center", gap:8, marginBottom:6 },
+  summaryDayName:  { fontSize:11, fontWeight:"800", width:34 },
+  summarySlots:    { flexDirection:"row", flexWrap:"wrap", gap:6, flex:1 },
+  summarySlotBadge:{ paddingHorizontal:10, paddingVertical:4, borderRadius:8 },
+  summarySlotText: { fontSize:10, fontWeight:"700" },
+  saveSchedBtn:    { borderRadius:14, overflow:"hidden", marginTop:4 },
+  saveSchedGrad:   { flexDirection:"row", alignItems:"center", justifyContent:"center", gap:8, paddingVertical:16 },
+  saveSchedText:   { color:"#fff", fontWeight:"800", fontSize:16 },
 });

@@ -1,15 +1,15 @@
 const express    = require("express");
 const router     = express.Router();
 const ctrl       = require("../controllers/timetableController");
-const { protect } = require("../middleware/authMiddleware");
+const { verifyToken } = require("../middleware/authMiddleware");
 
 // Teacher routes
-router.post(  "/save",              protect, ctrl.saveTeacherSchedule);
-router.get(   "/my",                protect, ctrl.getMyTimetable);
-router.get(   "/subject/:subjectId",protect, ctrl.getSubjectSchedule);
-router.delete("/:id",               protect, ctrl.deleteSchedule);
+router.post(  "/save",              verifyToken, ctrl.saveTeacherSchedule);
+router.get(   "/my",                verifyToken, ctrl.getMyTimetable);
+router.get(   "/subject/:subjectId",verifyToken, ctrl.getSubjectSchedule);
+router.delete("/:id",               verifyToken, ctrl.deleteSchedule);
 
 // Student route
-router.get("/for-student", protect, ctrl.getStudentTimetable);
+router.get("/for-student", verifyToken, ctrl.getStudentTimetable);
 
 module.exports = router;
