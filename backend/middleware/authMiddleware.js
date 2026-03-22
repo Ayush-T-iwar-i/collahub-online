@@ -1,123 +1,68 @@
-const jwt = require("jsonwebtoken");
+// middleware/authMiddleware.js
+const jwt  = require("jsonwebtoken");
 const User = require("../models/User");
 
-// ================= VERIFY TOKEN =================
+// ══════════════════════════════════════════════════════════
+// VERIFY TOKEN
+// ══════════════════════════════════════════════════════════
 exports.verifyToken = async (req, res, next) => {
   try {
-    // Check if system is shut down
+    // System shutdown check — only super-admin passes
     if (global.systemShutdown) {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.split(" ")[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const header = req.headers.authorization;
+      if (header?.startsWith("Bearer ")) {
+        const decoded = jwt.verify(header.split(" ")[1], process.env.JWT_SECRET);
         if (decoded.role === "super-admin") {
-          const user = await User.findById(decoded.id).select("-password");
-          req.user = user;
-          return next(); // Super admin always gets through
+          req.user = await User.findById(decoded.id).select("-password");
+          return next();
         }
       }
       return res.status(503).json({
-        success: false,
-        message: global.shutdownMessage || "System is under maintenance. Please try again later.",
+        success:  false,
         shutdown: true,
+        message:  global.shutdownMessage || "System is under maintenance. Please try again later.",
       });
     }
 
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Not authorized. Token missing.",
-      });
+    const header = req.headers.authorization;
+    if (!header?.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, message: "Not authorized. Token missing." });
     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
-
+    const decoded = jwt.verify(header.split(" ")[1], process.env.JWT_SECRET);
+    const user    = await User.findById(decoded.id).select("-password");
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "User not found",
-      });
+      return res.status(401).json({ success: false, message: "User not found." });
     }
 
     req.user = user;
     next();
-
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: "Token invalid or expired",
-    });
+  } catch {
+    return res.status(401).json({ success: false, message: "Token invalid or expired." });
   }
 };
 
-// ================= ROLE CHECKS =================
-exports.isAdmin = (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return res.status(403).json({
-      success: false,
-      message: "Access denied. Admins only.",
-    });
-  }
-  next();
-};
-
-exports.isTeacher = (req, res, next) => {
-  if (req.user.role !== "teacher") {
-    return res.status(403).json({
-      success: false,
-      message: "Access denied. Teachers only.",
-    });
-  }
-  next();
-};
-
-exports.isStudent = (req, res, next) => {
-  if (req.user.role !== "student") {
-    return res.status(403).json({
-      success: false,
-      message: "Access denied. Students only.",
-    });
-  }
-  next();
-};
-
-exports.isTeacherOrAdmin = (req, res, next) => {
-  if (req.user.role !== "teacher" && req.user.role !== "admin") {
-    return res.status(403).json({
-      success: false,
-      message: "Access denied. Teachers or Admins only.",
-    });
-  }
-  next();
-};
-
-// ================= SUPER ADMIN CHECK =================
-exports.isSuperAdmin = (req, res, next) => {
-  if (req.user.role !== "super-admin") {
-    return res.status(403).json({
-      success: false,
-      message: "Access denied. Super Admins only.",
-    });
-  }
-  next();
-};
-
-// ================= GENERAL ROLE CHECK =================
-exports.authorizeRoles = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: `Access denied. Required: ${roles.join(" or ")}`,
-      });
-    }
-    next();
-  };
-};
-
-// Alias `protect` to `verifyToken` so routes expecting `protect` work
+// Alias
 exports.protect = exports.verifyToken;
+
+// ══════════════════════════════════════════════════════════
+// ROLE GUARDS
+// ══════════════════════════════════════════════════════════
+const deny = (res, msg) =>
+  res.status(403).json({ success: false, message: msg });
+
+exports.isAdmin        = (req, res, next) => req.user.role === "admin"        ? next() : deny(res, "Admins only.");
+exports.isTeacher      = (req, res, next) => req.user.role === "teacher"      ? next() : deny(res, "Teachers only.");
+exports.isStudent      = (req, res, next) => req.user.role === "student"      ? next() : deny(res, "Students only.");
+exports.isSuperAdmin   = (req, res, next) => req.user.role === "super-admin"  ? next() : deny(res, "Super Admins only.");
+
+exports.isTeacherOrAdmin = (req, res, next) =>
+  ["teacher", "admin"].includes(req.user.role) ? next() : deny(res, "Teachers or Admins only.");
+
+// ── Dynamic role check ──
+exports.authorizeRoles = (...roles) => (req, res, next) =>
+  roles.includes(req.user.role)
+    ? next()
+    : deny(res, `Access denied. Required: ${roles.join(" or ")}`);
+
+exports.allowRoles = exports.authorizeRoles;

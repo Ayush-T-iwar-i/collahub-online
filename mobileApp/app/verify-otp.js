@@ -11,10 +11,10 @@ import API from "../services/api";
 
 // Role config — color + icon + where to navigate after login
 const ROLE_CONFIG = {
-  student:       { color: "#00c6ff", icon: "school",           label: "Student",     loggedInKey: "studentLoggedIn",     dataKey: "studentData",     route: "/student/dashboard"      },
-  teacher:       { color: "#f59e0b", icon: "person",           label: "Teacher",     loggedInKey: "teacherLoggedIn",     dataKey: "teacherData",     route: "/teacher/dashboard"      },
-  admin:         { color: "#a78bfa", icon: "shield-checkmark", label: "Admin",       loggedInKey: "adminLoggedIn",       dataKey: "adminData",       route: "/admin/dashboard"        },
-  "super-admin": { color: "#f87171", icon: "star",             label: "Super Admin", loggedInKey: "superAdminLoggedIn",  dataKey: "superAdminData",  route: "/super-admin/dashboard"  },
+  student: { color: "#00c6ff", icon: "school", label: "Student", loggedInKey: "studentLoggedIn", dataKey: "studentData", route: "/student/dashboard" },
+  teacher: { color: "#f59e0b", icon: "person", label: "Teacher", loggedInKey: "teacherLoggedIn", dataKey: "teacherData", route: "/teacher/dashboard" },
+  admin: { color: "#a78bfa", icon: "shield-checkmark", label: "Admin", loggedInKey: "adminLoggedIn", dataKey: "adminData", route: "/admin/dashboard" },
+  "super-admin": { color: "#f87171", icon: "star", label: "Super Admin", loggedInKey: "superAdminLoggedIn", dataKey: "superAdminData", route: "/super-admin/dashboard" },
 };
 
 export default function VerifyOtp() {
@@ -26,10 +26,10 @@ export default function VerifyOtp() {
   // Get role config — fallback to student if role missing
   const config = ROLE_CONFIG[role] || ROLE_CONFIG["student"];
 
-  const [otp,       setOtp]       = useState(["", "", "", "", "", ""]);
-  const [loading,   setLoading]   = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [timer,     setTimer]     = useState(60);
+  const [timer, setTimer] = useState(60);
   const inputs = useRef([]);
 
   // Countdown timer for resend
@@ -43,7 +43,7 @@ export default function VerifyOtp() {
   const handleOtpChange = (val, idx) => {
     if (!/^\d*$/.test(val)) return;
     const newOtp = [...otp];
-    newOtp[idx]  = val;
+    newOtp[idx] = val;
     setOtp(newOtp);
     // Auto move to next box
     if (val && idx < 5) inputs.current[idx + 1]?.focus();
@@ -60,7 +60,7 @@ export default function VerifyOtp() {
   const handleVerify = async () => {
     const otpStr = otp.join("");
     if (otpStr.length < 6) {
-      Alert.alert("Error", "6 digit OTP enter karo");
+      Alert.alert("Error", "Please Enter Your 6 digit OTP Here");
       return;
     }
 
@@ -75,21 +75,21 @@ export default function VerifyOtp() {
         const { accessToken, refreshToken, user, role: userRole } = res.data;
 
         // Save tokens
-        await AsyncStorage.setItem("accessToken",  accessToken);
+        await AsyncStorage.setItem("accessToken", accessToken);
         await AsyncStorage.setItem("refreshToken", refreshToken);
 
         // Get correct config from actual role returned by backend
         const finalConfig = ROLE_CONFIG[userRole] || ROLE_CONFIG["student"];
 
         // Save role-specific data
-        await AsyncStorage.setItem(finalConfig.dataKey,     JSON.stringify(user));
+        await AsyncStorage.setItem(finalConfig.dataKey, JSON.stringify(user));
         await AsyncStorage.setItem(finalConfig.loggedInKey, "true");
 
         // Navigate to correct dashboard
         router.replace(finalConfig.route);
       }
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "OTP galat hai ya expire ho gaya");
+      Alert.alert("Error", e.response?.data?.message || "The OTP is incorrect or expired");
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ export default function VerifyOtp() {
   const handleResend = () => {
     Alert.alert(
       "Resend OTP",
-      "Wapas login page pe jao aur dobara login karo — naya OTP aayega",
+      "Go back to the login page and login again",
       [{ text: "OK", onPress: () => router.back() }]
     );
   };
@@ -118,7 +118,7 @@ export default function VerifyOtp() {
         {/* Role badge — shows which role is logging in */}
         <View style={[styles.roleBadge, {
           backgroundColor: config.color + "18",
-          borderColor:     config.color + "40"
+          borderColor: config.color + "40"
         }]}>
           <Ionicons name={config.icon} size={16} color={config.color} />
           <Text style={[styles.roleText, { color: config.color }]}>
@@ -128,7 +128,7 @@ export default function VerifyOtp() {
 
         <Text style={styles.title}>Check your email</Text>
         <Text style={styles.sub}>
-          OTP bheja gaya hai{"\n"}
+          The OTP has been sent{"\n"}
           <Text style={{ color: "#a78bfa", fontWeight: "700" }}>{email}</Text>
         </Text>
 
@@ -141,7 +141,7 @@ export default function VerifyOtp() {
               style={[styles.otpBox, digit && { borderColor: config.color }]}
               value={digit}
               onChangeText={v => handleOtpChange(v, i)}
-              onKeyPress={e  => handleKeyPress(e, i)}
+              onKeyPress={e => handleKeyPress(e, i)}
               keyboardType="numeric"
               maxLength={1}
               selectTextOnFocus
@@ -172,8 +172,8 @@ export default function VerifyOtp() {
           {timer > 0
             ? <Text style={styles.timerText}>Resend in {timer}s</Text>
             : <Pressable onPress={handleResend} disabled={resending}>
-                <Text style={styles.resendText}>Resend OTP</Text>
-              </Pressable>
+              <Text style={styles.resendText}>Resend OTP</Text>
+            </Pressable>
           }
         </View>
       </View>
@@ -183,23 +183,23 @@ export default function VerifyOtp() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#080d17" },
-  backBtn:   { marginTop: 56, marginLeft: 20, width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
-  body:      { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
+  backBtn: { marginTop: 56, marginLeft: 20, width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
+  body: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
 
   roleBadge: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, marginBottom: 24 },
-  roleText:  { fontSize: 13, fontWeight: "700" },
+  roleText: { fontSize: 13, fontWeight: "700" },
 
   title: { color: "#fff", fontSize: 26, fontWeight: "800", marginBottom: 10, textAlign: "center" },
-  sub:   { color: "#64748b", fontSize: 14, textAlign: "center", lineHeight: 22, marginBottom: 36 },
+  sub: { color: "#64748b", fontSize: 14, textAlign: "center", lineHeight: 22, marginBottom: 36 },
 
   otpRow: { flexDirection: "row", gap: 10, marginBottom: 32 },
   otpBox: { width: 46, height: 56, borderRadius: 14, backgroundColor: "#1a2535", borderWidth: 2, borderColor: "rgba(255,255,255,0.08)", color: "#fff", fontSize: 22, fontWeight: "800", textAlign: "center" },
 
-  verifyBtn:     { width: "100%", borderRadius: 14, overflow: "hidden", marginBottom: 20 },
+  verifyBtn: { width: "100%", borderRadius: 14, overflow: "hidden", marginBottom: 20 },
   verifyBtnGrad: { paddingVertical: 16, alignItems: "center", justifyContent: "center" },
   verifyBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
 
-  resendRow:  { flexDirection: "row", alignItems: "center" },
-  timerText:  { color: "#374151", fontSize: 13 },
+  resendRow: { flexDirection: "row", alignItems: "center" },
+  timerText: { color: "#374151", fontSize: 13 },
   resendText: { color: "#a78bfa", fontSize: 13, fontWeight: "700" },
 });

@@ -1,126 +1,249 @@
-const Attendance    = require("../models/Attendance");
+const Attendance     = require("../models/Attendance");
 const SubjectRequest = require("../models/SubjectRequest");
-const User          = require("../models/User");
+const User           = require("../models/User");
 
-// ── Teacher: Mark/Update Attendance ──
-exports.markAttendance = async (req, res) => {
-  try {
-    const {
-      subjectId, subjectName, department, semester,
-      admissionYear, date, records,
-    } = req.body;
-
-    if (!subjectId || !date || !records?.length) {
-      return res.status(400).json({ success:false, message:"subjectId, date, records required" });
-    }
-
-    // Verify teacher owns this subject
-    const subject = await SubjectRequest.findOne({
-      _id:       subjectId,
-      teacherId: req.user.id,
-      status:    "accepted",
-    });
-    if (!subject) {
-      return res.status(403).json({ success:false, message:"Subject not found or not authorized" });
-    }
-
-    // Delete old records for this date + subject (update case)
-    await Attendance.deleteMany({ subjectId, date, markedBy: req.user.id });
-
-    // Insert new records
-    const docs = records.map(r => ({
-      studentId:    r.studentId,
-      subjectId,
-      subjectName:  subjectName || subject.subjectName,
-      department:   department  || subject.department,
-      semester:     semester    || subject.semester,
-      admissionYear: admissionYear || subject.admissionYear,
-      date,
-      status:   r.status,    // "present" | "absent"
-      markedBy: req.user.id,
-      markedByName: req.user.name || "",
-    }));
-
-    await Attendance.insertMany(docs);
-
-    res.json({
-      success: true,
-      message: "Attendance marked successfully",
-      total:   docs.length,
-      present: docs.filter(d=>d.status==="present").length,
-      absent:  docs.filter(d=>d.status==="absent").length,
-    });
-  } catch (e) {
-    console.log("MARK ATTENDANCE ERROR:", e.message);
-    res.status(500).json({ success:false, message:"Server error" });
-  }
-};
-
-// ── Teacher: Check if already marked ──
+// ══════════════════════════════════════════════════════════
+// TEACHER: Check if attendance already marked
+// GET /attendance/check?subjectId=xxx&date=2026-03-18
+// ══════════════════════════════════════════════════════════
 exports.checkAttendance = async (req, res) => {
   try {
     const { subjectId, date } = req.query;
+    if (!subjectId || !date) {
+      return res.status(400).json({ success: false, message: "subjectId and date required" });
+    }
+
     const records = await Attendance.find({
-      subjectId, date, markedBy: req.user.id,
+      subjectId,
+      date,
+      markedBy: req.user.id,
     });
+
     res.json({
       success: true,
       marked:  records.length > 0,
-      records: records.map(r => ({ studentId: r.studentId, status: r.status })),
+      records: records.map(r => ({
+        studentId: r.studentId,
+        status:    r.status,
+      })),
     });
   } catch (e) {
-    res.status(500).json({ success:false, message:"Server error" });
+    res.status(500).json({ success: false, message: e.message });
   }
 };
 
-// ── Student: Get My Attendance ──
-exports.getMyAttendance = async (req, res) => {
+// ══════════════════════════════════════════════════════════
+// TEACHER: Mark / Update Attendance
+// POST /attendance/mark
+// ══════════════════════════════════════════════════════════
+exports.markAttendance = async (req, res) => {
   try {
-    const records = await Attendance.find({ studentId: req.user.id }).sort("-date");
+    const { subjectId, date, day, time, records } = req.body;
 
-    // Group by subject
-    const map = {};
-    records.forEach(r => {
-      const key = r.subjectId?.toString() || r.subjectName || "unknown";
-      if (!map[key]) {
-        map[key] = {
-          subjectId:   r.subjectId,
-          subjectName: r.subjectName,
-          department:  r.department,
-          semester:    r.semester,
-          total:       0, present:0, absent:0, records:[],
-        };
-      }
-      map[key].total++;
-      if (r.status==="present") map[key].present++;
-      else map[key].absent++;
-      map[key].records.push({ date:r.date, status:r.status });
-    });
+    if (!subjectId || !date || !records?.length) {
+      return res.status(400).json({
+        success: false,
+        message: "subjectId, date, records required",
+      });
+    }
 
-    const subjects = Object.values(map).map(s=>({
-      ...s,
-      percentage: s.total > 0 ? Math.round((s.present/s.total)*100) : 0,
+    const subject = await SubjectRequest.findById(subjectId);
+    if (!subject || subject.status !== "accepted") {
+      return res.status(404).json({ success: false, message: "Accepted subject not found" });
+    }
+
+    if (subject.teacherId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Not your subject" });
+    }
+
+    const teacher = await User.findById(req.user.id).select("name");
+
+    // Upsert each student record
+    const ops = records.map(r => ({
+      updateOne: {
+        filter: { studentId: r.studentId, subjectId, date },
+        update: {
+          $set: {
+            studentId:     r.studentId,
+            subjectId,
+            subjectName:   subject.subjectName,
+            department:    subject.department,
+            semester:      subject.semester,
+            admissionYear: subject.admissionYear,
+            date,
+            day:           day  || "",
+            time:          time || "",
+            status:        r.status,
+            markedBy:      req.user.id,
+            markedByName:  teacher.name,
+          },
+        },
+        upsert: true,
+      },
     }));
 
-    res.json({ success:true, subjects, totalDays: records.length });
+    await Attendance.bulkWrite(ops);
+
+    const present = records.filter(r => r.status === "present").length;
+    const absent  = records.filter(r => r.status === "absent").length;
+
+    res.json({
+      success: true,
+      message: `Attendance marked! Present: ${present}, Absent: ${absent}`,
+      date, day, time, present, absent,
+    });
   } catch (e) {
-    res.status(500).json({ success:false, message:"Server error" });
+    console.log("MARK ATTENDANCE ERROR:", e.message);
+    res.status(500).json({ success: false, message: e.message });
   }
 };
 
-// ── Admin/Teacher: Get attendance by subject ──
-exports.getBySubject = async (req, res) => {
+// ══════════════════════════════════════════════════════════
+// TEACHER: Subject ki poori attendance history
+// GET /attendance/subject/:subjectId
+// GET /attendance/subject/:subjectId?date=2026-03-18
+// ══════════════════════════════════════════════════════════
+exports.getSubjectAttendance = async (req, res) => {
   try {
-    const { subjectId, date } = req.query;
-    const filter = { subjectId };
+    const { date } = req.query;
+    const filter = { subjectId: req.params.subjectId };
     if (date) filter.date = date;
 
     const records = await Attendance.find(filter)
-      .populate("studentId","name studentId email")
-      .sort("-date");
+      .populate("studentId", "name studentId email")
+      .sort({ date: -1 });
 
-    res.json({ success:true, records, total:records.length });
+    res.json({ success: true, records });
   } catch (e) {
-    res.status(500).json({ success:false, message:"Server error" });
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+// ══════════════════════════════════════════════════════════
+// TEACHER: Ek specific date ki attendance
+// GET /attendance/subject/:subjectId/date/:date
+// ══════════════════════════════════════════════════════════
+exports.getDateAttendance = async (req, res) => {
+  try {
+    const { subjectId, date } = req.params;
+
+    const subject = await SubjectRequest.findById(subjectId);
+    if (!subject) {
+      return res.status(404).json({ success: false, message: "Subject not found" });
+    }
+
+    const records = await Attendance.find({ subjectId, date })
+      .populate("studentId", "name studentId email");
+
+    const allStudents = await User.find({
+      role:          "student",
+      college:       subject.college,
+      department:    subject.department,
+      semester:      subject.semester,
+      admissionYear: subject.admissionYear,
+    }).select("name studentId email").sort({ name: 1 });
+
+    const attendanceMap = {};
+    records.forEach(r => {
+      attendanceMap[r.studentId._id.toString()] = r.status;
+    });
+
+    const merged = allStudents.map(s => ({
+      studentId: s._id,
+      name:      s.name,
+      rollNo:    s.studentId,
+      email:     s.email,
+      status:    attendanceMap[s._id.toString()] || "absent",
+      isMarked:  !!attendanceMap[s._id.toString()],
+    }));
+
+    res.json({ success: true, records: merged, date, subject: subject.subjectName });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+// ══════════════════════════════════════════════════════════
+// STUDENT: Apni saari attendance summary
+// GET /attendance/my
+// ══════════════════════════════════════════════════════════
+exports.getMyAttendance = async (req, res) => {
+  try {
+    const student = await User.findById(req.user.id)
+      .select("college department semester admissionYear role");
+
+    if (!student || student.role !== "student") {
+      return res.status(403).json({ success: false, message: "Only students" });
+    }
+
+    const records = await Attendance.find({ studentId: req.user.id })
+      .sort({ date: -1 });
+
+    // Group by subjectId
+    const summaryMap = {};
+    records.forEach(r => {
+      const key = r.subjectId?.toString() || "unknown";
+
+      if (!summaryMap[key]) {
+        summaryMap[key] = {
+          subjectId:   key,
+          subjectName: r.subjectName || "Unknown",
+          teacherName: r.markedByName || "",
+          total:   0,
+          present: 0,
+          absent:  0,
+          records: [],
+        };
+      }
+      summaryMap[key].total++;
+      if (r.status === "present") summaryMap[key].present++;
+      else summaryMap[key].absent++;
+      summaryMap[key].records.push({
+        date:   r.date,
+        day:    r.day  || "",
+        time:   r.time || "",
+        status: r.status,
+      });
+    });
+
+    const summary = Object.values(summaryMap).map(s => ({
+      ...s,
+      percentage: s.total > 0 ? Math.round((s.present / s.total) * 100) : 0,
+    }));
+
+    res.json({ success: true, summary, totalRecords: records.length });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+// ══════════════════════════════════════════════════════════
+// STUDENT: Ek subject ki detail attendance
+// GET /attendance/my/subject/:subjectId
+// ══════════════════════════════════════════════════════════
+exports.getMySubjectAttendance = async (req, res) => {
+  try {
+    const records = await Attendance.find({
+      studentId: req.user.id,
+      subjectId: req.params.subjectId,
+    }).sort({ date: -1 });
+
+    const total   = records.length;
+    const present = records.filter(r => r.status === "present").length;
+    const absent  = records.filter(r => r.status === "absent").length;
+    const percent = total > 0 ? Math.round((present / total) * 100) : 0;
+
+    res.json({
+      success: true,
+      records: records.map(r => ({
+        date:   r.date,
+        day:    r.day  || "",
+        time:   r.time || "",
+        status: r.status,
+      })),
+      stats: { total, present, absent, percentage: percent },
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
   }
 };

@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   studentId: {
-    color: "#475569",
+    color: "#ffffff96",
     fontSize: 12,
     marginTop: 4, marginBottom: 14,
   },
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     fontSize: 10, fontWeight: "700",
   },
   college: {
-    color: "#334155",
+    color: "#ffffff96",
     fontSize: 11,
     marginTop: 4,
     textAlign: "center",

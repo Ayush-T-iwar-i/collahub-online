@@ -50,7 +50,7 @@ export default function StudentResult() {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64data = reader.result.split(",")[1];
-        const fileUri = `${FileSystem.documentDirectory}CollaHub_Result.pdf`;
+        const fileUri = `${FileSystem.documentDirectory}COLLAहUB_Result.pdf`;
         await FileSystem.writeAsStringAsync(fileUri, base64data, { encoding: "base64" });
         await Sharing.shareAsync(fileUri);
       };

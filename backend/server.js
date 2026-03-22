@@ -17,7 +17,7 @@ connectDB();
 app.use(cors({
   origin: "*",
   methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization","x-refresh-token"],
+  allowedHeaders: ["Content-Type","Authorization","x-refresh-token","Cache-Control","Pragma"],
   preflightContinue: false,
   optionsSuccessStatus: 204,
 }));
@@ -51,8 +51,17 @@ app.use(generalLimiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(logger);
+
+// ✅ 304 cache fix — fresh data har baar
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  next();
+});
+
 app.use("/uploads", express.static("uploads"));
 
+// ── Routes ──
 app.use("/auth",             require("./routes/authRoutes"));
 app.use("/admin",            require("./routes/adminRoutes"));
 app.use("/students",         require("./routes/studentTeacherRoutes"));
@@ -72,12 +81,13 @@ app.use("/notifications",    require("./routes/notificationRoutes"));
 app.use("/dashboard",        require("./routes/dashboardRoutes"));
 app.use("/courses",          require("./routes/courseRoutes"));
 app.use("/leaves",           require("./routes/leaveRoutes"));
-app.use("/notes",            require("./routes/notesRoutes"));
+app.use("/notes",            require("./routes/noteRoutes"));
 app.use("/otp",              require("./routes/otpRoutes"));
 app.use("/announcements",    require("./routes/announcementRoutes"));
 app.use("/api/posts",        require("./routes/postRoutes"));
 app.use("/super-admin",      require("./routes/superAdminRoutes"));
 app.use("/biometric",        require("./routes/biometricRoutes"));
+app.use("/teacher-notes",    require("./routes/noteRoutes"));   // ← NEW
 
 app.get("/health", (req, res) => {
   res.json({ success: true, message: "CollaHub API is running 🚀" });

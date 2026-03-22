@@ -330,7 +330,7 @@ export default function BiometricGate() {
               </Text>
             </View>
             <Text style={styles.modalSub}>
-              Is device ID ko CollaHub student se link karo
+              Link this device ID to your COLLAहUB student
             </Text>
             <TextInput
               style={styles.modalInput}
@@ -359,9 +359,9 @@ export default function BiometricGate() {
       <Modal visible={pullModal} transparent animationType="slide">
         <View style={styles.overlay}>
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Device se Manual Pull</Text>
+            <Text style={styles.modalTitle}>Manual Pull from Device</Text>
             <Text style={styles.modalSub}>
-              Essl device ka local IP address daalo. Server aur device same network pe hone chahiye.
+              Enter the local IP address of the Essel device. The server and device must be on the same network.
             </Text>
             <TextInput
               style={styles.modalInput}

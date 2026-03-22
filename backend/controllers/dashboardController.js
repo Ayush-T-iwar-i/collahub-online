@@ -40,21 +40,37 @@ const teacherDashboard = async (req, res) => {
   try {
     const teacherId = req.user.id;
 
-    const subjects = await Subject.find({ teacherId });
-    const subjectIds = subjects.map((s) => s._id);
+    // ✅ Get teacher's college + department for filtering
+    const teacher = await User.findById(teacherId).select("college department").lean();
+    const college    = teacher?.college    || "";
+    const department = teacher?.department || "";
+
+    // Subjects via Subject model
+    const subjects    = await Subject.find({ teacherId });
+    const subjectIds  = subjects.map(s => s._id);
 
     const assignments = await Assignment.find({ subjectId: { $in: subjectIds } });
-    const assignmentIds = assignments.map((a) => a._id);
-
+    const assignmentIds = assignments.map(a => a._id);
     const submissions = await Submission.find({ assignmentId: { $in: assignmentIds } });
-    const students = await User.countDocuments({ role: "student" });
+
+    // ✅ Count only students of same college + department
+    const studentFilter = { role: "student" };
+    if (college)    studentFilter.college    = college;
+    if (department) studentFilter.department = department;
+    const totalStudents = await User.countDocuments(studentFilter);
+
+    // Attendance marked by this teacher
+    const attendanceMarked = await Attendance.countDocuments({ teacherId });
 
     res.json({
-      success: true,
-      totalSubjects: subjects.length,
+      success:          true,
+      totalStudents,          // ✅ dept-filtered
+      totalSubjects:    subjects.length,
       totalAssignments: assignments.length,
       totalSubmissions: submissions.length,
-      totalStudents: students,
+      attendanceMarked,
+      college,
+      department,
     });
 
   } catch (error) {

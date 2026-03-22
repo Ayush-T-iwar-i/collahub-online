@@ -71,12 +71,24 @@ exports.uploadProfileImage = async (req, res) => {
 };
 
 // ================= GET ALL STUDENTS =================
+// ✅ FIXED: college + department filter support added
+// Query params: ?college=X&department=Y&semester=3&admissionYear=2023
 exports.getAllStudents = async (req, res) => {
   try {
-    const students = await User.find({ role: "student" })
+    const { college, department, semester, admissionYear } = req.query;
+
+    const filter = { role: "student" };
+
+    if (college)       filter.college       = college;
+    if (department)    filter.department    = department;
+    if (semester)      filter.semester      = Number(semester);
+    if (admissionYear) filter.admissionYear = String(admissionYear);
+
+    const students = await User.find(filter)
       .select("-password -refreshToken -otp -otpExpire")
-      .sort({ createdAt: -1 });
-    res.json({ success: true, students });
+      .sort({ name: 1 });
+
+    res.json({ success: true, students, total: students.length });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

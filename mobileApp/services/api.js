@@ -18,13 +18,16 @@ const API = axios.create({
   },
 });
 
-// ── Request interceptor: attach token ──
+// ── Request interceptor: attach token + cache fix ──
 API.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // ✅ 304 cache fix
+    config.headers["Cache-Control"] = "no-cache";
+    config.headers["Pragma"]        = "no-cache";
     return config;
   },
   (error) => Promise.reject(error)

@@ -271,7 +271,7 @@ export default function SuperAdminDashboard() {
         start={{ x:0, y:0 }} end={{ x:1, y:1 }} style={styles.welcomeCard}>
         <View style={{ flex:1 }}>
           <Text style={styles.welcomeHi}>Hello, {superAdminData?.name?.split(" ")[0] || "Super Admin"} 👋</Text>
-          <Text style={styles.welcomeSub}>Super Administrator • CollaHub</Text>
+          <Text style={styles.welcomeSub}>Super Administrator • COLLAहUB</Text>
           <View style={styles.superBadge}>
             <Ionicons name="star" size={10} color="#fca5a5" />
             <Text style={styles.superBadgeText}>FULL SYSTEM ACCESS</Text>

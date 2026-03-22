@@ -89,11 +89,11 @@ export default function ManageAdmins() {
   // ─────────────────────────────────────────────────────────
   const handleCreate = async () => {
     const { name, email, password, college } = form;
-    if (!name.trim())     return Alert.alert("Required", "Name daalo");
-    if (!email.trim())    return Alert.alert("Required", "Email daalo");
-    if (!password.trim()) return Alert.alert("Required", "Password daalo");
-    if (password.length < 6) return Alert.alert("Password", "Password kam se kam 6 characters ka hona chahiye");
-    if (!college.trim())  return Alert.alert("Required", "College select karo ya type karo");
+    if (!name.trim())     return Alert.alert("Required", "Enter Name");
+    if (!email.trim())    return Alert.alert("Required", "Enter Email");
+    if (!password.trim()) return Alert.alert("Required", "Enter Password");
+    if (password.length < 6) return Alert.alert("Password", "Password must be at least 6 characters long");
+    if (!college.trim())  return Alert.alert("Required", "Select college or type");
 
     setCreating(true);
     try {
@@ -105,7 +105,7 @@ export default function ManageAdmins() {
         college:  form.college.trim(),
         role:     "admin",
       });
-      Alert.alert("✅ Admin Created!", `${form.name} ko admin bana diya gaya.\nCollege: ${form.college}`);
+      Alert.alert("✅ Admin Created!", `${form.name} was made an admin.\nCollege: ${form.college}`);
       setCreateModal(false);
       resetForm();
       loadAdmins();
@@ -127,7 +127,7 @@ export default function ManageAdmins() {
   const handleDelete = (admin) => {
     Alert.alert(
       "Delete Admin",
-      `"${admin.name}" ka admin account delete karna chahte ho?\n\nIs college ka koi admin nahi rahega:\n${admin.college || "—"}`,
+      `"${admin.name}"Do you want to delete the admin account of ?\n\nis college will no longer have any admin:\n${admin.college || "—"}`,
       [
         { text:"Cancel", style:"cancel" },
         { text:"Delete", style:"destructive", onPress: async () => {
@@ -135,7 +135,7 @@ export default function ManageAdmins() {
             await API.delete(`/super-admin/users/${admin._id}`);
             setAdmins(p => p.filter(a => a._id !== admin._id));
             setDetailAdmin(null);
-            Alert.alert("Deleted", `${admin.name} delete ho gaya`);
+            Alert.alert("Deleted", `${admin.name} got deleted`);
           } catch (e) {
             Alert.alert("Error", e.response?.data?.message || "Failed");
           }
@@ -260,7 +260,7 @@ export default function ManageAdmins() {
             </View>
             <View>
               <Text style={styles.bigCTATitle}>Create New Admin</Text>
-              <Text style={styles.bigCTASub}>College ke liye ek admin account banao</Text>
+              <Text style={styles.bigCTASub}>Create an admin account for the college</Text>
             </View>
           </View>
           <View style={styles.bigCTAArrow}>
@@ -286,9 +286,9 @@ export default function ManageAdmins() {
                 <View style={styles.emptyIcon}>
                   <Ionicons name="shield-outline" size={40} color="#1f2937" />
                 </View>
-                <Text style={styles.emptyTitle}>Koi Admin Nahi</Text>
+                <Text style={styles.emptyTitle}>no admin</Text>
                 <Text style={styles.emptySub}>
-                  "Create New Admin" button se pehla admin banao
+                  "Create your first admin using the "Create New Admin" button.
                 </Text>
                 <Pressable style={styles.emptyBtn} onPress={() => setCreateModal(true)}>
                   <Text style={styles.emptyBtnText}>+ Create Admin</Text>
@@ -340,7 +340,7 @@ export default function ManageAdmins() {
                   onPress={() => { setShowCollegeList(p => !p); setCustomCollege(false); }}>
                   <Ionicons name="business-outline" size={16} color={form.college ? "#00c6ff" : "#4b5563"} />
                   <Text style={[styles.collegePickerText, form.college && { color:"#fff" }]} numberOfLines={1}>
-                    {form.college || "College select karo..."}
+                    {form.college || "Select college..."}
                   </Text>
                   {collegesLoading
                     ? <ActivityIndicator size="small" color="#4b5563" />
@@ -355,8 +355,8 @@ export default function ManageAdmins() {
                       <View style={styles.noCollegeMsg}>
                         <Ionicons name="information-circle-outline" size={16} color="#f59e0b" />
                         <Text style={styles.noCollegeMsgText}>
-                          Koi college nahi mila.{"\n"}
-                          Pehle "Manage Colleges" se college add karo, ya neeche custom type karo.
+                          Could not find any college.{"\n"}
+                          First add college from "Manage Colleges", or type custom below.
                         </Text>
                       </View>
                     )}
@@ -466,7 +466,7 @@ export default function ManageAdmins() {
                   </View>
                 </View>
                 <Text style={styles.roleNote}>
-                  Yeh admin apne college ke students, teachers, timetable manage kar sakta hai.
+                  This admin can manage the students, teachers and timetable of his college.
                 </Text>
 
                 {/* CREATE BUTTON */}

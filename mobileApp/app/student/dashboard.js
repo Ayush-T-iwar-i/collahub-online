@@ -10,6 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRouter, useFocusEffect } from "expo-router";
 import API from "../../services/api";
+import SafeImage from "../../components/SafeImage";
 
 const { width } = Dimensions.get("window");
 
@@ -135,7 +136,6 @@ const CommentModal = ({ post, visible, onClose, onCommentAdded }) => {
 
 // ─── Post Card ───
 const PostCard = ({ item, onLike, onCommentPress }) => {
-  // Support both new Post model AND old notice model
   const authorName   = item.authorName  || item.author?.name  || "Unknown";
   const authorRole   = item.authorRole  || item.author?.role  || "admin";
   const caption      = item.caption     || item.content       || "";
@@ -148,7 +148,6 @@ const PostCard = ({ item, onLike, onCommentPress }) => {
 
   return (
     <View style={styles.postCard}>
-      {/* Author row */}
       <View style={styles.postHeader}>
         <View style={[styles.postAvatar,{backgroundColor:roleColor+"22"}]}>
           <Text style={[styles.postAvatarText,{color:roleColor}]}>{initials}</Text>
@@ -170,8 +169,10 @@ const PostCard = ({ item, onLike, onCommentPress }) => {
       </View>
       {!!item.title && <Text style={styles.postTitle}>{item.title}</Text>}
       {!!caption && <Text style={styles.postContent}>{caption}</Text>}
+
+      {/* ✅ SafeImage instead of Image */}
       {item.mediaType==="image" && !!item.mediaUrl && (
-        <Image source={{uri:item.mediaUrl}} style={styles.postImage} resizeMode="cover" />
+        <SafeImage uri={item.mediaUrl} style={styles.postImage} size={undefined} />
       )}
       {item.mediaType==="video" && (
         <View style={styles.mediaBanner}>
@@ -186,14 +187,12 @@ const PostCard = ({ item, onLike, onCommentPress }) => {
         </View>
       )}
       {!item.mediaType && !!item.image && (
-        <Image source={{uri:item.image}} style={styles.postImage} resizeMode="cover" />
+        <SafeImage uri={item.image} style={styles.postImage} size={undefined} />
       )}
-      {/* Like + Comment */}
+
       <View style={styles.postFooter}>
         <Pressable style={styles.footerBtn} onPress={()=>onLike(item)}>
-          <Ionicons
-            name={isLiked?"heart":"heart-outline"} size={21}
-            color={isLiked?"#f87171":"#64748b"} />
+          <Ionicons name={isLiked?"heart":"heart-outline"} size={21} color={isLiked?"#f87171":"#64748b"} />
           <Text style={[styles.footerCount,isLiked&&{color:"#f87171"}]}>{likeCount}</Text>
         </Pressable>
         <Pressable style={styles.footerBtn} onPress={()=>onCommentPress(item)}>
@@ -254,7 +253,6 @@ export default function StudentDashboard() {
         if (img) setImage(img);
       }
     }
-    // Fresh from server — gets latest section/semester/college assigned by admin
     try {
       const freshRes = await API.get("/student/me");
       if (freshRes.data?.student) {
@@ -306,13 +304,14 @@ export default function StudentDashboard() {
     router.replace("/");
   };
 
-  // Section badge: shows "Section A" if assigned, else dept+year
   const sectionLabel = (() => {
     if (studentData?.section) return `Section ${studentData.section}`;
     if (!studentData?.admissionYear || !studentData?.department) return null;
     const short = studentData.department.match(/\(([^)]+)\)/)?.[1] || studentData.department.split(" ")[0];
     return `${short} ${studentData.admissionYear}`;
   })();
+
+  const initials = studentData?.name?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase() || "S";
 
   if (checkingAuth) return (
     <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#00c6ff" /></View>
@@ -322,7 +321,6 @@ export default function StudentDashboard() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f1923" />
 
-      {/* Sticky Header */}
       <LinearGradient colors={["#0f1923","#1a2a3a"]} style={styles.header}>
         <Pressable onPress={()=>navigation.openDrawer()} style={styles.menuBtn}>
           <Ionicons name="menu" size={24} color="#fff" />
@@ -333,15 +331,18 @@ export default function StudentDashboard() {
             {studentData?.department?.split("(")[0]?.trim() || "Student Portal"}
           </Text>
         </View>
+        {/* ✅ SafeImage — no crash on web */}
         <Pressable onPress={()=>router.push("/student/profile")}>
-          <Image
-            source={{uri:image||"https://cdn-icons-png.flaticon.com/512/149/149071.png"}}
-            style={styles.avatar}
+          <SafeImage
+            uri={image}
+            size={40}
+            initials={initials}
+            color="#00c6ff"
+            style={{ borderWidth:2, borderColor:"#00c6ff" }}
           />
         </Pressable>
       </LinearGradient>
 
-      {/* Feed */}
       <FlatList
         data={posts}
         keyExtractor={(item,i)=>item._id||i.toString()}
@@ -350,14 +351,12 @@ export default function StudentDashboard() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>loadAll(true)} tintColor="#00c6ff" />}
         ListHeaderComponent={() => (
           <>
-            {/* Welcome */}
             <LinearGradient colors={["#0072ff","#00c6ff"]}
               start={{x:0,y:0}} end={{x:1,y:1}} style={styles.welcomeCard}>
               <View style={{flex:1}}>
                 <Text style={styles.welcomeHi}>Hello, {studentData?.name?.split(" ")[0]||"Student"} 👋</Text>
                 <Text style={styles.welcomeSub}>ID: {studentData?.studentId||"—"}</Text>
                 <Text style={styles.welcomeSub} numberOfLines={1}>{studentData?.college||""}</Text>
-                {/* Semester + Section */}
                 <View style={styles.badgesRow}>
                   {studentData?.semester && (
                     <View style={styles.semBadge}>
@@ -376,7 +375,6 @@ export default function StudentDashboard() {
               <Ionicons name="school" size={48} color="rgba(255,255,255,0.18)" />
             </LinearGradient>
 
-            {/* Stats */}
             <Text style={styles.sectionTitle}>Performance</Text>
             <View style={styles.statsRow}>
               <StatCard icon="document-text" label="Submissions" value={stats?.totalSubmissions} color="#00c6ff" />
@@ -418,7 +416,6 @@ export default function StudentDashboard() {
         }
       />
 
-      {/* Tab Bar */}
       <View style={styles.tabBar}>
         {TABS.map(tab => (
           <TabItem key={tab.key} tab={tab}
@@ -427,7 +424,6 @@ export default function StudentDashboard() {
         ))}
       </View>
 
-      {/* Comment Modal */}
       <CommentModal post={commentPost} visible={commentVisible}
         onClose={()=>setCommentVisible(false)}
         onCommentAdded={()=>{
@@ -448,7 +444,6 @@ const styles = StyleSheet.create({
   headerCenter:{ flex:1,alignItems:"center" },
   headerTitle:{ color:"#fff",fontSize:18,fontWeight:"800",letterSpacing:0.5 },
   headerSub:{ color:"#64748b",fontSize:11,marginTop:2 },
-  avatar:{ width:40,height:40,borderRadius:20,borderWidth:2,borderColor:"#00c6ff" },
   feedContainer:{ paddingHorizontal:16,paddingBottom:90 },
   welcomeCard:{ borderRadius:20,padding:22,marginTop:14,marginBottom:20,flexDirection:"row",justifyContent:"space-between",alignItems:"center" },
   welcomeHi:{ color:"#fff",fontSize:20,fontWeight:"800",marginBottom:4 },

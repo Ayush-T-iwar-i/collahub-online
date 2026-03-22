@@ -1,230 +1,297 @@
+// app/student/notes.js
+// Student: My subjects list → tap subject → see teacher-uploaded notes
 import React, { useState, useCallback } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Pressable,
-  ActivityIndicator,
-  StatusBar,
-  RefreshControl,
-  Linking,
-  TextInput,
+  View, Text, StyleSheet, Pressable, ScrollView,
+  StatusBar, ActivityIndicator, Alert, Linking, TextInput,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useRouter, useFocusEffect } from "expo-router";
 import API from "../../services/api";
 
-export default function Notes() {
-  const navigation = useNavigation();
-  const [notes, setNotes] = useState([]);
-  const [filtered, setFiltered] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState("");
+const FILE_TYPE_META = {
+  pdf:   { icon:"document-text", color:"#f87171", label:"PDF"      },
+  ppt:   { icon:"easel",         color:"#fb923c", label:"PPT"      },
+  doc:   { icon:"document",      color:"#60a5fa", label:"Word"     },
+  image: { icon:"image",         color:"#34d399", label:"Image"    },
+  other: { icon:"attach",        color:"#a78bfa", label:"File"     },
+};
+const getFileMeta = (type) => FILE_TYPE_META[type] || FILE_TYPE_META.other;
 
-  useFocusEffect(
-    useCallback(() => {
-      loadNotes();
-    }, [])
-  );
+export default function StudentNotes() {
+  const router = useRouter();
 
-  const loadNotes = async (isRefresh = false) => {
+  // Screen state: "subjects" | "notes"
+  const [screen,       setScreen]       = useState("subjects");
+  const [subjects,     setSubjects]     = useState([]);
+  const [subLoading,   setSubLoading]   = useState(true);
+  const [selSubject,   setSelSubject]   = useState(null);
+  const [notes,        setNotes]        = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [search,       setSearch]       = useState("");
+
+  useFocusEffect(useCallback(() => {
+    loadSubjects();
+  }, []));
+
+  const loadSubjects = async () => {
+    setSubLoading(true);
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-
-      const res = await API.get("/notes/all");
-      const data = res.data?.notes || res.data || [];
-      setNotes(data);
-      setFiltered(data);
-    } catch (error) {
-      console.log("Notes load error:", error.message);
-      setNotes([]);
-      setFiltered([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+      const res = await API.get("/subject-requests/student-subjects");
+      setSubjects(res.data?.subjects || []);
+    } catch {
+      // Fallback — try admin subjects
+      try {
+        const res2 = await API.get("/subject-requests/admin-subjects");
+        setSubjects(res2.data?.subjects || []);
+      } catch { setSubjects([]); }
+    } finally { setSubLoading(false); }
   };
 
-  const handleSearch = (text) => {
-    setSearch(text);
-    if (!text.trim()) {
-      setFiltered(notes);
-      return;
-    }
-    setFiltered(
-      notes.filter(
-        (n) =>
-          n.title?.toLowerCase().includes(text.toLowerCase()) ||
-          n.subjectId?.name?.toLowerCase().includes(text.toLowerCase())
+  const openSubject = async (subject) => {
+    setSelSubject(subject);
+    setScreen("notes");
+    setNotesLoading(true);
+    try {
+      const res = await API.get("/teacher-notes/for-student", {
+        params: { subjectName: subject.subjectName },
+      });
+      setNotes(res.data?.notes || []);
+    } catch { setNotes([]); }
+    finally { setNotesLoading(false); }
+  };
+
+  const openFile = (url) => {
+    if (!url) return Alert.alert("Error","File not available");
+    Linking.openURL(url).catch(() => Alert.alert("Error","Could not open file"));
+  };
+
+  const filteredSubjects = search.trim()
+    ? subjects.filter(s =>
+        s.subjectName?.toLowerCase().includes(search.toLowerCase()) ||
+        s.subjectCode?.toLowerCase().includes(search.toLowerCase())
       )
-    );
-  };
+    : subjects;
 
-  const openFile = (filename) => {
-    if (!filename) return;
-    const url = `http://10.0.2.2:5000/uploads/${filename}`;
-    Linking.openURL(url).catch(() =>
-      console.log("Cannot open file:", url)
-    );
-  };
+  const filteredNotes = search.trim()
+    ? notes.filter(n =>
+        n.title?.toLowerCase().includes(search.toLowerCase()) ||
+        n.description?.toLowerCase().includes(search.toLowerCase())
+      )
+    : notes;
 
-  const getFileIcon = (filename) => {
-    if (!filename) return "document-outline";
-    const ext = filename.split(".").pop().toLowerCase();
-    if (ext === "pdf") return "document-text";
-    if (["jpg", "jpeg", "png"].includes(ext)) return "image";
-    if (["doc", "docx"].includes(ext)) return "document";
-    return "attach";
-  };
-
-  const getFileColor = (filename) => {
-    if (!filename) return "#64748b";
-    const ext = filename.split(".").pop().toLowerCase();
-    if (ext === "pdf") return "#f87171";
-    if (["jpg", "jpeg", "png"].includes(ext)) return "#34d399";
-    if (["doc", "docx"].includes(ext)) return "#60a5fa";
-    return "#a78bfa";
-  };
-
-  const renderItem = ({ item }) => {
-    const color = getFileColor(item.file);
+  // ── SUBJECTS SCREEN ─────────────────────────────────────
+  if (screen === "subjects") {
     return (
-      <Pressable style={styles.card} onPress={() => openFile(item.file)}>
-        <View style={[styles.fileIcon, { backgroundColor: color + "22" }]}>
-          <Ionicons name={getFileIcon(item.file)} size={24} color={color} />
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#070d1a" />
+
+        <LinearGradient colors={["#070d1a","#0a1628"]} style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </Pressable>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Notes</Text>
+            <Text style={styles.headerSub}>Select a subject to view notes</Text>
+          </View>
+          <View style={{ width:40 }} />
+        </LinearGradient>
+
+        {/* Search */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={15} color="#64748b" />
+          <TextInput style={styles.searchInput}
+            placeholder="Search subjects..."
+            placeholderTextColor="#374151"
+            value={search} onChangeText={setSearch} />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")}>
+              <Ionicons name="close-circle" size={15} color="#64748b" />
+            </Pressable>
+          )}
         </View>
-        <View style={styles.cardContent}>
-          <Text style={styles.noteTitle} numberOfLines={1}>{item.title || "Untitled"}</Text>
-          <Text style={styles.noteSubject} numberOfLines={1}>
-            {item.subjectId?.name || item.subjectId || "General"}
-          </Text>
-          <View style={styles.noteMeta}>
-            <View style={[styles.fileTag, { backgroundColor: color + "22" }]}>
-              <Text style={[styles.fileTagText, { color }]}>
-                {item.file?.split(".").pop()?.toUpperCase() || "FILE"}
+
+        <ScrollView showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal:16, paddingBottom:40, paddingTop:8 }}>
+
+          {subLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color="#00c6ff" />
+            </View>
+          ) : filteredSubjects.length === 0 ? (
+            <View style={styles.empty}>
+              <Ionicons name="book-outline" size={48} color="#374151" />
+              <Text style={styles.emptyTitle}>No subjects found</Text>
+              <Text style={styles.emptySub}>
+                {search ? "Try a different search" : "Your assigned subjects will appear here"}
               </Text>
             </View>
-          </View>
-        </View>
-        <Ionicons name="download-outline" size={20} color="#374151" />
-      </Pressable>
-    );
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#00c6ff" />
+          ) : (
+            <>
+              <Text style={styles.countLabel}>{filteredSubjects.length} subjects</Text>
+              {filteredSubjects.map(s => {
+                const deptShort = s.department?.match(/\(([^)]+)\)/)?.[1] || s.department?.split(" ")[0] || "";
+                return (
+                  <Pressable key={s._id || s.subjectName} onPress={() => openSubject(s)}
+                    style={styles.subjectCard}>
+                    <LinearGradient colors={["rgba(0,198,255,0.12)","rgba(0,198,255,0.04)"]}
+                      style={styles.subjectIconBox}>
+                      <Ionicons name="book" size={22} color="#00c6ff" />
+                    </LinearGradient>
+                    <View style={{ flex:1 }}>
+                      <Text style={styles.subjectName} numberOfLines={1}>{s.subjectName}</Text>
+                      <Text style={styles.subjectMeta}>
+                        {deptShort} · Sem {s.semester}
+                        {s.admissionYear ? ` · ${s.admissionYear}` : ""}
+                        {s.section && s.section!=="All" ? ` · Sec ${s.section}` : ""}
+                      </Text>
+                      {s.subjectCode ? (
+                        <View style={styles.subjectCodeBadge}>
+                          <Text style={styles.subjectCodeText}>{s.subjectCode}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.openBtn}>
+                      <Ionicons name="folder-open-outline" size={16} color="#00c6ff" />
+                      <Text style={styles.openBtnText}>Notes</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </>
+          )}
+        </ScrollView>
       </View>
     );
   }
 
+  // ── NOTES SCREEN (subject selected) ─────────────────────
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0f1923" />
+      <StatusBar barStyle="light-content" backgroundColor="#070d1a" />
 
-      {/* HEADER */}
-      <LinearGradient colors={["#0f1923", "#1a2a3a"]} style={styles.header}>
-        <Pressable onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
-          <Ionicons name="menu" size={24} color="#fff" />
+      <LinearGradient colors={["#070d1a","#0a1628"]} style={styles.header}>
+        <Pressable onPress={() => { setScreen("subjects"); setNotes([]); setSearch(""); setSelSubject(null); }}
+          style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
         </Pressable>
-        <Text style={styles.headerTitle}>Notes</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle} numberOfLines={1}>{selSubject?.subjectName}</Text>
+          <Text style={styles.headerSub}>
+            {selSubject?.department?.match(/\(([^)]+)\)/)?.[1]||selSubject?.department?.split(" ")[0]}
+            {selSubject?.semester ? ` · Sem ${selSubject.semester}` : ""}
+          </Text>
+        </View>
+        <View style={{ width:40 }} />
       </LinearGradient>
 
-      {/* SEARCH */}
-      <View style={styles.searchWrapper}>
-        <Ionicons name="search-outline" size={18} color="#64748b" style={{ marginRight: 8 }} />
-        <TextInput
-          placeholder="Search notes or subject..."
+      {/* Search notes */}
+      <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={15} color="#64748b" />
+        <TextInput style={styles.searchInput}
+          placeholder="Search notes..."
           placeholderTextColor="#374151"
-          style={styles.searchInput}
-          value={search}
-          onChangeText={handleSearch}
-        />
+          value={search} onChangeText={setSearch} />
         {search.length > 0 && (
-          <Pressable onPress={() => handleSearch("")}>
-            <Ionicons name="close-circle" size={18} color="#64748b" />
+          <Pressable onPress={() => setSearch("")}>
+            <Ionicons name="close-circle" size={15} color="#64748b" />
           </Pressable>
         )}
       </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item, i) => item._id || i.toString()}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => loadNotes(true)} tintColor="#00c6ff" />
-        }
-        ListHeaderComponent={() => (
-          <Text style={styles.sectionTitle}>
-            {filtered.length} {filtered.length === 1 ? "Note" : "Notes"} Available
-          </Text>
-        )}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyState}>
-            <Ionicons name="book-outline" size={56} color="#1f2937" />
-            <Text style={styles.emptyTitle}>No Notes Found</Text>
-            <Text style={styles.emptyText}>
-              {search ? "Try a different search" : "Notes uploaded by teachers will appear here"}
+      <ScrollView showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal:16, paddingBottom:50, paddingTop:8 }}>
+
+        {notesLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="#00c6ff" />
+            <Text style={styles.loadingText}>Loading notes...</Text>
+          </View>
+        ) : filteredNotes.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="documents-outline" size={48} color="#374151" />
+            <Text style={styles.emptyTitle}>
+              {search ? "No notes match search" : "No notes yet"}
+            </Text>
+            <Text style={styles.emptySub}>
+              {search ? "Try a different search" : "Your teacher hasn't uploaded notes for this subject yet"}
             </Text>
           </View>
+        ) : (
+          <>
+            <Text style={styles.countLabel}>{filteredNotes.length} note{filteredNotes.length!==1?"s":""}</Text>
+            {filteredNotes.map(n => {
+              const { icon, color, label } = getFileMeta(n.fileType);
+              return (
+                <Pressable key={n._id} onPress={() => openFile(n.fileUrl)}
+                  style={styles.noteCard}>
+                  <View style={[styles.noteIconBox, { backgroundColor:color+"18" }]}>
+                    <Ionicons name={icon} size={24} color={color} />
+                  </View>
+                  <View style={{ flex:1 }}>
+                    <Text style={styles.noteTitle} numberOfLines={2}>{n.title}</Text>
+                    {n.description ? (
+                      <Text style={styles.noteDesc} numberOfLines={2}>{n.description}</Text>
+                    ) : null}
+                    <View style={styles.noteMeta}>
+                      <View style={[styles.typePill, { backgroundColor:color+"18" }]}>
+                        <Text style={[styles.typePillText, { color }]}>{label}</Text>
+                      </View>
+                      <Ionicons name="person-outline" size={11} color="#374151" />
+                      <Text style={styles.teacherName} numberOfLines={1}>{n.teacherName}</Text>
+                      <Text style={styles.noteDate}>
+                        {n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-IN",{day:"numeric",month:"short"}) : ""}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.downloadBtn}>
+                    <Ionicons name="download-outline" size={20} color="#00c6ff" />
+                  </View>
+                </Pressable>
+              );
+            })}
+          </>
         )}
-        renderItem={renderItem}
-      />
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f1923" },
-  loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0f1923" },
-  header: {
-    flexDirection: "row", alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16, paddingTop: 55, paddingBottom: 16,
-  },
-  menuBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    justifyContent: "center", alignItems: "center",
-  },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  searchWrapper: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: "#1a2535", marginHorizontal: 16,
-    marginTop: 12, marginBottom: 4,
-    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 4,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.06)",
-  },
-  searchInput: { flex: 1, color: "#fff", fontSize: 14, paddingVertical: 12 },
-  list: { padding: 16, paddingTop: 8, paddingBottom: 30 },
-  sectionTitle: {
-    color: "#374151", fontSize: 12, fontWeight: "700",
-    letterSpacing: 0.5, marginBottom: 12,
-  },
-  card: {
-    backgroundColor: "#1a2535", borderRadius: 16,
-    padding: 16, marginBottom: 10,
-    flexDirection: "row", alignItems: "center", gap: 12,
-  },
-  fileIcon: {
-    width: 50, height: 50, borderRadius: 14,
-    justifyContent: "center", alignItems: "center",
-  },
-  cardContent: { flex: 1 },
-  noteTitle: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  noteSubject: { color: "#64748b", fontSize: 12, marginTop: 3 },
-  noteMeta: { flexDirection: "row", marginTop: 8 },
-  fileTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  fileTagText: { fontSize: 10, fontWeight: "700" },
-  emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
-  emptyTitle: { color: "#374151", fontSize: 17, fontWeight: "700" },
-  emptyText: { color: "#1f2937", fontSize: 13, textAlign: "center" },
+  container:         { flex:1, backgroundColor:"#070d1a" },
+  center:            { alignItems:"center", paddingTop:60, gap:12 },
+  header:            { flexDirection:"row", alignItems:"center", paddingHorizontal:16, paddingTop:52, paddingBottom:14 },
+  backBtn:           { width:40, height:40, borderRadius:12, backgroundColor:"rgba(255,255,255,0.08)", justifyContent:"center", alignItems:"center" },
+  headerCenter:      { flex:1, alignItems:"center" },
+  headerTitle:       { color:"#fff", fontSize:17, fontWeight:"800" },
+  headerSub:         { color:"#64748b", fontSize:10, marginTop:2 },
+  searchBar:         { flexDirection:"row", alignItems:"center", gap:8, backgroundColor:"#1a2535", marginHorizontal:16, marginTop:10, marginBottom:4, borderRadius:12, paddingHorizontal:12, paddingVertical:2, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  searchInput:       { flex:1, color:"#fff", fontSize:14, paddingVertical:10 },
+  countLabel:        { color:"#374151", fontSize:11, fontWeight:"700", letterSpacing:0.5, marginBottom:12 },
+  loadingText:       { color:"#374151", fontSize:12 },
+  // Subject cards
+  subjectCard:       { flexDirection:"row", alignItems:"center", gap:12, backgroundColor:"#1a2535", borderRadius:16, padding:14, marginBottom:10, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  subjectIconBox:    { width:48, height:48, borderRadius:14, justifyContent:"center", alignItems:"center" },
+  subjectName:       { color:"#fff", fontSize:14, fontWeight:"700" },
+  subjectMeta:       { color:"#64748b", fontSize:11, marginTop:3 },
+  subjectCodeBadge:  { backgroundColor:"rgba(0,198,255,0.1)", paddingHorizontal:8, paddingVertical:2, borderRadius:5, alignSelf:"flex-start", marginTop:5 },
+  subjectCodeText:   { color:"#00c6ff", fontSize:10, fontWeight:"700" },
+  openBtn:           { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(0,198,255,0.1)", paddingHorizontal:10, paddingVertical:7, borderRadius:9, borderWidth:1, borderColor:"rgba(0,198,255,0.2)" },
+  openBtnText:       { color:"#00c6ff", fontSize:11, fontWeight:"700" },
+  // Note cards
+  noteCard:          { flexDirection:"row", alignItems:"flex-start", gap:12, backgroundColor:"#1a2535", borderRadius:16, padding:16, marginBottom:10, borderWidth:1, borderColor:"rgba(255,255,255,0.05)" },
+  noteIconBox:       { width:50, height:50, borderRadius:14, justifyContent:"center", alignItems:"center" },
+  noteTitle:         { color:"#fff", fontSize:14, fontWeight:"700", lineHeight:20 },
+  noteDesc:          { color:"#64748b", fontSize:12, marginTop:4, lineHeight:17 },
+  noteMeta:          { flexDirection:"row", alignItems:"center", gap:7, marginTop:8, flexWrap:"wrap" },
+  typePill:          { paddingHorizontal:8, paddingVertical:3, borderRadius:6 },
+  typePillText:      { fontSize:10, fontWeight:"800" },
+  teacherName:       { color:"#374151", fontSize:10, flex:1 },
+  noteDate:          { color:"#1f2937", fontSize:10 },
+  downloadBtn:       { padding:4 },
+  // Empty
+  empty:             { alignItems:"center", paddingTop:60, gap:12 },
+  emptyTitle:        { color:"#374151", fontSize:16, fontWeight:"700" },
+  emptySub:          { color:"#1f2937", fontSize:12, textAlign:"center", paddingHorizontal:20 },
 });

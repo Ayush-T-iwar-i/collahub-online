@@ -69,7 +69,7 @@ export default function SuperAdminSettings(){
     {
       title:"About",
       items:[
-        {icon:"information-circle",label:"App Version",sub:"CollaHub v1.0.0",color:"#64748b",onPress:()=>{}},
+        {icon:"information-circle",label:"App Version",sub:"COLLAहUB v1.0.0",color:"#64748b",onPress:()=>{}},
         {icon:"globe",label:"Backend Status",sub:"Check server health",color:"#34d399",onPress:async()=>{
           try{await API.get("/health");Alert.alert("✅ Online","Backend server is running fine!");}
           catch{Alert.alert("❌ Offline","Could not connect to backend");}

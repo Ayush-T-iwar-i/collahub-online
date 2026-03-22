@@ -1,64 +1,50 @@
+// middleware/uploadMiddleware.js
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const path   = require("path");
+const fs     = require("fs");
 
-// Create uploads folder if not exists
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
+// Ensure uploads dir exists
+const ensureDir = (dir) => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); };
+ensureDir("uploads");
+ensureDir("uploads/notes");
+ensureDir("uploads/assignments");
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
+const diskStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename:    (req, file, cb) => cb(null, `${Date.now()}${path.extname(file.originalname)}`),
 });
 
-// ✅ Images only (profile photo ke liye)
-const imageFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only image files are allowed"), false);
-  }
-};
+// ── Filters ──
+const imageFilter = (req, file, cb) =>
+  file.mimetype.startsWith("image/")
+    ? cb(null, true)
+    : cb(new Error("Only image files allowed."), false);
 
-// ✅ PDF + Docs (notes aur assignments ke liye)
 const documentFilter = (req, file, cb) => {
   const allowed = [
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "image/jpeg",
-    "image/png",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "image/jpeg", "image/png", "image/webp",
   ];
-
-  if (allowed.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only PDF, DOC, DOCX, JPG, PNG files are allowed"), false);
-  }
+  allowed.includes(file.mimetype)
+    ? cb(null, true)
+    : cb(new Error("File type not allowed."), false);
 };
 
-// ✅ Image upload (profile)
-const uploadImage = multer({
-  storage,
-  fileFilter: imageFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-});
+const anyFilter = (req, file, cb) => cb(null, true);
 
-// ✅ Document upload (notes, assignments, submissions)
-const uploadDocument = multer({
-  storage,
-  fileFilter: documentFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-});
+// ── Exportable instances ──
+exports.uploadImage    = multer({ storage: diskStorage, fileFilter: imageFilter,   limits: { fileSize: 5  * 1024 * 1024 } });
+exports.uploadDocument = multer({ storage: diskStorage, fileFilter: documentFilter, limits: { fileSize: 20 * 1024 * 1024 } });
+exports.uploadAny      = multer({ storage: diskStorage, fileFilter: anyFilter,      limits: { fileSize: 50 * 1024 * 1024 } });
+exports.uploadMemory   = multer({ storage: multer.memoryStorage(),                  limits: { fileSize: 50 * 1024 * 1024 } });
 
-// Default export — use uploadDocument for general use
-module.exports = uploadDocument;
-
-// Named exports for specific use
-module.exports.uploadImage = uploadImage;
-module.exports.uploadDocument = uploadDocument;
+// Default export (backward compat)
+module.exports = exports.uploadDocument;
+module.exports.uploadImage    = exports.uploadImage;
+module.exports.uploadDocument = exports.uploadDocument;
+module.exports.uploadAny      = exports.uploadAny;
+module.exports.uploadMemory   = exports.uploadMemory;

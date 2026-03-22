@@ -5,7 +5,7 @@ const jwt    = require("jsonwebtoken");
 // ─── Helpers ──────────────────────────────────────────────
 
 const generateStudentId = async (department, admissionYear) => {
-  const match   = department?.match(/\(([^)]+)\)/);
+  const match    = department?.match(/\(([^)]+)\)/);
   const deptCode = match
     ? match[1].toUpperCase()
     : department?.split(" ").filter(w => w.length > 2)[0]?.toUpperCase() || "DEPT";
@@ -33,7 +33,7 @@ const getAutoSemester = (admissionYear) => {
 };
 
 // ══════════════════════════════════════════════════════════
-//  AUTH  (kept for legacy — single login flow uses /auth)
+//  AUTH
 // ══════════════════════════════════════════════════════════
 const registerAdmin = async (req, res) => {
   try {
@@ -63,7 +63,11 @@ const loginAdmin = async (req, res) => {
     if (!user || user.role !== "admin" || !(await bcrypt.compare(password, user.password)))
       return res.status(400).json({ message: "Invalid admin credentials" });
 
-    const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "15m" });
+    const accessToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
     res.json({ message: "Admin login successful", accessToken, user });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -74,8 +78,6 @@ const loginAdmin = async (req, res) => {
 //  STUDENTS
 // ══════════════════════════════════════════════════════════
 
-/* GET /admin/students?department=CSE&admissionYear=2023
-   Returns students of admin's own college only */
 const getStudents = async (req, res) => {
   try {
     const admin = await User.findById(req.user.id).select("college").lean();
@@ -96,7 +98,6 @@ const getStudents = async (req, res) => {
   }
 };
 
-/* POST /admin/add-student */
 const addStudent = async (req, res) => {
   try {
     let { name, email, password, phone, admissionYear, college, department, gender, semester: manualSem } = req.body;
@@ -123,14 +124,17 @@ const addStudent = async (req, res) => {
 
     res.status(201).json({
       message: "Student added successfully",
-      student: { _id: s._id, name: s.name, email: s.email, studentId: s.studentId, department: s.department, semester: s.semester, admissionYear: s.admissionYear, college: s.college },
+      student: {
+        _id: s._id, name: s.name, email: s.email,
+        studentId: s.studentId, department: s.department,
+        semester: s.semester, admissionYear: s.admissionYear, college: s.college,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
-/* DELETE /admin/students/:studentId */
 const removeStudent = async (req, res) => {
   try {
     const s = await User.findOneAndDelete({ _id: req.params.studentId, role: "student" });
@@ -141,8 +145,6 @@ const removeStudent = async (req, res) => {
   }
 };
 
-/* PUT /admin/update-batch-semester
-   Body: { admissionYear, college?, department?, newSemester? } */
 const updateBatchSemester = async (req, res) => {
   try {
     const { college, department, admissionYear, newSemester } = req.body;
@@ -154,15 +156,17 @@ const updateBatchSemester = async (req, res) => {
     if (department) filter.department = department;
 
     const result = await User.updateMany(filter, { $set: { semester } });
-    res.json({ success: true, message: `${result.modifiedCount} students updated to Semester ${semester}`, newSemester: semester, updatedCount: result.modifiedCount });
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} students updated to Semester ${semester}`,
+      newSemester: semester,
+      updatedCount: result.modifiedCount,
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
-/* PUT /admin/assign-section
-   Body: { admissionYear, section, department? }
-   Assigns section A/B/C/D to entire batch */
 const assignSection = async (req, res) => {
   try {
     const { department, admissionYear, section } = req.body;
@@ -174,7 +178,11 @@ const assignSection = async (req, res) => {
     if (department) filter.department = department;
 
     const result = await User.updateMany(filter, { $set: { section } });
-    res.json({ success: true, message: `${result.modifiedCount} students assigned to Section ${section}`, updatedCount: result.modifiedCount });
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} students assigned to Section ${section}`,
+      updatedCount: result.modifiedCount,
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error: " + err.message });
   }
@@ -184,12 +192,11 @@ const assignSection = async (req, res) => {
 //  TEACHERS
 // ══════════════════════════════════════════════════════════
 
-/* GET /admin/teachers?department=CSE */
 const getTeachers = async (req, res) => {
   try {
-    const admin      = await User.findById(req.user.id).select("college").lean();
+    const admin          = await User.findById(req.user.id).select("college").lean();
     const { department } = req.query;
-    const filter     = { role: "teacher", college: admin.college };
+    const filter         = { role: "teacher", college: admin.college };
     if (department) filter.department = department;
 
     const teachers = await User.find(filter)
@@ -202,44 +209,105 @@ const getTeachers = async (req, res) => {
   }
 };
 
-/* POST /admin/add-teacher */
+// ✅ FIXED addTeacher — console.log added + better error messages
 const addTeacher = async (req, res) => {
   try {
+    // ── DEBUG: exact body dekho terminal mein ──
+    console.log("=== ADD TEACHER DEBUG ===");
+    console.log("Body received:", JSON.stringify(req.body, null, 2));
+    console.log("========================");
+
     let { name, email, password, phone, teacherId, college, department } = req.body;
-    if (!name || !email || !password)
-      return res.status(400).json({ message: "Name, email, password required" });
+
+    // ── Field by field validation with exact error messages ──
+    if (!name || !name.trim()) {
+      console.log("FAIL: name missing");
+      return res.status(400).json({ message: "Teacher name is required" });
+    }
+    if (!email || !email.trim()) {
+      console.log("FAIL: email missing");
+      return res.status(400).json({ message: "Email is required" });
+    }
+    if (!password || !password.trim()) {
+      console.log("FAIL: password missing");
+      return res.status(400).json({ message: "Password is required" });
+    }
+    if (password.length < 6) {
+      console.log("FAIL: password too short");
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
 
     email = email.toLowerCase().trim();
-    if (await User.findOne({ email }))
-      return res.status(400).json({ message: "Email already registered" });
+
+    // ── Email duplicate check ──
+    const existing = await User.findOne({ email });
+    if (existing) {
+      console.log("FAIL: email already exists:", email, "role:", existing.role);
+      return res.status(400).json({
+        message: `Email "${email}" is already registered as ${existing.role}. Please use a different email.`,
+      });
+    }
+
+    // ── College check ──
+    if (!college || !college.trim()) {
+      console.log("FAIL: college missing");
+      return res.status(400).json({ message: "College is required. Please re-login and try again." });
+    }
+
+    console.log("All validations passed — creating teacher...");
 
     const t = await User.create({
-      name, email,
-      password: await bcrypt.hash(password, 10),
-      phone: phone || "", teacherId: teacherId || "",
-      college: college || "", department: department || "",
-      role: "teacher", isEmailVerified: true,
+      name:       name.trim(),
+      email,
+      password:   await bcrypt.hash(password, 10),
+      phone:      phone?.trim()      || "",
+      teacherId:  teacherId?.trim()  || "",
+      college:    college.trim(),
+      department: department?.trim() || "",
+      role:       "teacher",
+      isEmailVerified: true,
     });
 
-    res.status(201).json({ message: "Teacher added", teacher: { _id: t._id, name: t.name, email: t.email, teacherId: t.teacherId, department: t.department } });
+    console.log("Teacher created successfully:", t._id, t.name);
+
+    res.status(201).json({
+      message: "Teacher added successfully",
+      teacher: {
+        _id:        t._id,
+        name:       t.name,
+        email:      t.email,
+        teacherId:  t.teacherId,
+        department: t.department,
+        college:    t.college,
+      },
+    });
   } catch (err) {
+    console.log("ADD TEACHER SERVER ERROR:", err.message);
+    // MongoDB duplicate key error
+    if (err.code === 11000) {
+      return res.status(400).json({
+        message: "A user with this email already exists.",
+      });
+    }
     res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
 // ══════════════════════════════════════════════════════════
-//  SUBJECT ASSIGNMENT  →  Auto-updates teacher timetable
+//  SUBJECT ASSIGNMENT
 // ══════════════════════════════════════════════════════════
 
-/* POST /admin/assign-subject
-   Body: { teacherId, subjectName, subjectCode, department,
-           admissionYear, section, semester, days[], timeSlot, roomNumber } */
 const assignSubjectToTeacher = async (req, res) => {
   try {
-    const { teacherId, subjectName, subjectCode, department, admissionYear, section, semester, days, timeSlot, roomNumber } = req.body;
+    const {
+      teacherId, subjectName, subjectCode, department,
+      admissionYear, section, semester, days, timeSlot, roomNumber,
+    } = req.body;
 
     if (!teacherId || !subjectName || !department || !days?.length || !timeSlot)
-      return res.status(400).json({ message: "teacherId, subjectName, department, days, timeSlot required" });
+      return res.status(400).json({
+        message: "teacherId, subjectName, department, days, timeSlot required",
+      });
 
     const teacher = await User.findOne({ _id: teacherId, role: "teacher" });
     if (!teacher) return res.status(404).json({ message: "Teacher not found" });
@@ -261,16 +329,19 @@ const assignSubjectToTeacher = async (req, res) => {
     teacher.assignedSubjects.push(sub);
     await teacher.save();
 
-    res.json({ success: true, message: `"${subjectName}" assigned to ${teacher.name}`, subject: sub });
+    res.json({
+      success: true,
+      message: `"${subjectName}" assigned to ${teacher.name}`,
+      subject: sub,
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
-/* DELETE /admin/assign-subject/:teacherId/:subjectIndex */
 const removeAssignedSubject = async (req, res) => {
   try {
-    const idx = parseInt(req.params.subjectIndex);
+    const idx     = parseInt(req.params.subjectIndex);
     const teacher = await User.findOne({ _id: req.params.teacherId, role: "teacher" });
     if (!teacher) return res.status(404).json({ message: "Teacher not found" });
     if (idx < 0 || idx >= (teacher.assignedSubjects?.length || 0))
@@ -284,16 +355,13 @@ const removeAssignedSubject = async (req, res) => {
   }
 };
 
+// ══════════════════════════════════════════════════════════
+//  BULK ADD STUDENTS
+// ══════════════════════════════════════════════════════════
 
-/* ══════════════════════════════════════════════════════
-   POST /admin/bulk-add-students
-   Body: { students: [{name,email,password,phone,
-           admissionYear,department,gender,section}] }
-   One API call instead of 100 — for Excel import
-   ══════════════════════════════════════════════════════ */
 const bulkAddStudents = async (req, res) => {
   try {
-    const admin = await User.findById(req.user.id).select("college").lean();
+    const admin   = await User.findById(req.user.id).select("college").lean();
     const college = admin?.college || "";
     if (!college) return res.status(400).json({ message: "Admin college not found" });
 
@@ -301,12 +369,15 @@ const bulkAddStudents = async (req, res) => {
     if (!students || !Array.isArray(students) || students.length === 0)
       return res.status(400).json({ message: "students array required" });
 
-    const results  = { imported: 0, failed: [] };
+    const results = { imported: 0, failed: [] };
 
     for (let i = 0; i < students.length; i++) {
       const s = students[i];
       try {
-        const { name, email, password, phone, admissionYear, department, gender, section, semester: manualSem } = s;
+        const {
+          name, email, password, phone,
+          admissionYear, department, gender, section, semester: manualSem,
+        } = s;
 
         if (!name || !email || !password || !department || !admissionYear) {
           results.failed.push({ rowNum: i + 2, email: email || "—", error: "Missing required fields" });
@@ -314,7 +385,7 @@ const bulkAddStudents = async (req, res) => {
         }
 
         const cleanEmail = email.toLowerCase().trim();
-        const exists = await User.findOne({ email: cleanEmail });
+        const exists     = await User.findOne({ email: cleanEmail });
         if (exists) {
           results.failed.push({ rowNum: i + 2, email: cleanEmail, error: "Email already registered" });
           continue;
@@ -333,7 +404,7 @@ const bulkAddStudents = async (req, res) => {
           college,
           department,
           semester,
-          gender: gender || "",
+          gender:  gender  || "",
           section: section || "",
           role: "student",
           isEmailVerified: true,
@@ -346,13 +417,12 @@ const bulkAddStudents = async (req, res) => {
     }
 
     res.status(200).json({
-      success: true,
-      message: `${results.imported} students imported successfully`,
+      success:  true,
+      message:  `${results.imported} students imported successfully`,
       imported: results.imported,
       failed:   results.failed,
       total:    students.length,
     });
-
   } catch (err) {
     res.status(500).json({ message: "Server error: " + err.message });
   }
