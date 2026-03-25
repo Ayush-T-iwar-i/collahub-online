@@ -44,6 +44,7 @@ const TimetableModal = ({ visible, request, onClose, onSaved }) => {
   const [blockedRoom,      setBlockedRoom]      = useState({});
   const [sameSubjectSlots, setSameSubjectSlots] = useState({});
   const [loadingConflicts, setLoadingConflicts] = useState(false);
+  const [collegeRooms,     setCollegeRooms]     = useState([]);  // rooms from DB
 
   const loadConflicts = async (req) => {
     if (!req) return;
@@ -101,6 +102,12 @@ const TimetableModal = ({ visible, request, onClose, onSaved }) => {
       }
       setActiveDay("Monday");
       loadConflicts(request);
+      // Load rooms for this college
+      if (request.college) {
+        API.get("/rooms", { params:{ college: request.college } })
+          .then(r => setCollegeRooms(r.data?.rooms || []))
+          .catch(() => setCollegeRooms([]));
+      }
     }
   }, [visible, request]);
 
@@ -274,26 +281,87 @@ const TimetableModal = ({ visible, request, onClose, onSaved }) => {
 
             {Object.keys(selectedSlots).filter(k => k.startsWith(activeDay)).length > 0 && (
               <View style={styles.roomSection}>
-                <Text style={styles.roomSectionTitle}>Room Numbers (optional)</Text>
+                <Text style={styles.roomSectionTitle}>Assign Rooms (optional)</Text>
+
+                {/* College rooms chips */}
+                {collegeRooms.length > 0 && (
+                  <View style={styles.roomChipsWrap}>
+                    <Text style={styles.roomChipsLabel}>Select from your college rooms:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.roomChipsRow}>
+                      {collegeRooms.map(r => {
+                        const rc     = r.type==="Lab"?"#34d399":r.type==="Theater"?"#a78bfa":r.type==="Seminar"?"#f59e0b":"#00c6ff";
+                        const ri     = r.type==="Lab"?"flask-outline":r.type==="Theater"?"business-outline":"school-outline";
+                        // Check if this room is selected for ANY active-day slot
+                        const anySelected = Object.keys(selectedSlots)
+                          .filter(k=>k.startsWith(activeDay))
+                          .some(k => roomInputs[k] === r.name);
+                        return (
+                          <Pressable key={r._id}
+                            style={[styles.roomChip, anySelected&&{backgroundColor:rc+"20",borderColor:rc+"55"}]}
+                            onPress={() => {
+                              // Assign this room to ALL selected slots on this day
+                              const updates = {};
+                              Object.keys(selectedSlots)
+                                .filter(k=>k.startsWith(activeDay))
+                                .forEach(k => { updates[k] = r.name; });
+                              setRoomInputs(prev => ({ ...prev, ...updates }));
+                            }}>
+                            <Ionicons name={ri} size={11} color={anySelected?rc:"#64748b"}/>
+                            <Text style={[styles.roomChipText, anySelected&&{color:rc}]}>{r.name}</Text>
+                            {r.capacity>0 && (
+                              <Text style={[styles.roomChipCap, anySelected&&{color:rc+"99"}]}>·{r.capacity}</Text>
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* Per-slot room assignment */}
                 {Object.entries(selectedSlots)
                   .filter(([k]) => k.startsWith(activeDay))
                   .sort(([,a],[,b]) => a.startTime.localeCompare(b.startTime))
                   .map(([key, slot]) => {
                     const room  = roomInputs[key] || "";
                     const rConf = isRoomBlocked(slot.day, slot.startTime, room);
+                    const selRoom = collegeRooms.find(r=>r.name===room);
+                    const rc = selRoom
+                      ? (selRoom.type==="Lab"?"#34d399":selRoom.type==="Theater"?"#a78bfa":"#00c6ff")
+                      : "#64748b";
                     return (
-                      <View key={key}>
-                        <View style={styles.roomRow}>
-                          <View style={[styles.roomTimeTag,{backgroundColor:DAY_COLORS[activeDay]+"18"}]}>
-                            <Text style={[styles.roomTimeText,{color:DAY_COLORS[activeDay]}]}>{TIME_SLOTS.find(t=>t.startTime===slot.startTime)?.label}</Text>
-                          </View>
-                          <TextInput
-                            style={[styles.roomInput, rConf&&{borderColor:"#f87171",backgroundColor:"rgba(248,113,113,0.08)"}]}
-                            placeholder="e.g. A-101" placeholderTextColor="#374151"
-                            value={room} onChangeText={v=>handleRoomChange(key,v,slot.day,slot.startTime)} maxLength={10}/>
-                          {rConf && <Ionicons name="warning" size={16} color="#f87171"/>}
+                      <View key={key} style={styles.roomSlotBlock}>
+                        {/* Time label */}
+                        <View style={[styles.roomTimeTag,{backgroundColor:DAY_COLORS[activeDay]+"18"}]}>
+                          <Text style={[styles.roomTimeText,{color:DAY_COLORS[activeDay]}]}>
+                            {TIME_SLOTS.find(t=>t.startTime===slot.startTime)?.label}
+                          </Text>
                         </View>
-                        {rConf && <Text style={styles.roomConflictText}>Room {room} is booked for "{rConf}"</Text>}
+                        {/* Room input row */}
+                        <View style={styles.roomRow}>
+                          <TextInput
+                            style={[styles.roomInput,
+                              rConf&&{borderColor:"#f87171",backgroundColor:"rgba(248,113,113,0.08)"},
+                              !rConf&&room&&{borderColor:rc+"55",backgroundColor:rc+"08"},
+                            ]}
+                            placeholder="Room name / number..."
+                            placeholderTextColor="#374151"
+                            value={room}
+                            onChangeText={v=>handleRoomChange(key,v,slot.day,slot.startTime)}
+                            maxLength={20}/>
+                          {rConf && <Ionicons name="warning" size={16} color="#f87171"/>}
+                          {!rConf && room && <Ionicons name="checkmark-circle" size={16} color={rc}/>}
+                          {room && (
+                            <Pressable onPress={()=>handleRoomChange(key,"",slot.day,slot.startTime)}
+                              style={styles.roomClearBtn}>
+                              <Ionicons name="close-circle" size={15} color="#374151"/>
+                            </Pressable>
+                          )}
+                        </View>
+                        {rConf && (
+                          <Text style={styles.roomConflictText}>⚠️ Room {room} is already booked for "{rConf}"</Text>
+                        )}
                       </View>
                     );
                   })}
@@ -635,11 +703,19 @@ const styles = StyleSheet.create({
   slotBlockedSubject:  { fontSize:8, fontWeight:"700", maxWidth:50 },
   roomSection:         { backgroundColor:"rgba(255,255,255,0.04)", borderRadius:12, padding:12, marginBottom:14, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
   roomSectionTitle:    { color:"#94a3b8", fontSize:12, fontWeight:"700", marginBottom:10 },
-  roomRow:             { flexDirection:"row", alignItems:"center", gap:10, marginBottom:4 },
-  roomTimeTag:         { paddingHorizontal:10, paddingVertical:6, borderRadius:8 },
+  roomChipsWrap:       { marginBottom:12 },
+  roomChipsLabel:      { color:"#374151", fontSize:10, fontWeight:"700", textTransform:"uppercase", letterSpacing:0.5, marginBottom:7 },
+  roomChipsRow:        { gap:8 },
+  roomChip:            { flexDirection:"row", alignItems:"center", gap:5, paddingHorizontal:11, paddingVertical:7, borderRadius:20, borderWidth:1, borderColor:"rgba(255,255,255,0.1)", backgroundColor:"rgba(255,255,255,0.04)" },
+  roomChipText:        { color:"#64748b", fontSize:11, fontWeight:"700" },
+  roomChipCap:         { color:"#374151", fontSize:9 },
+  roomSlotBlock:       { marginBottom:10 },
+  roomRow:             { flexDirection:"row", alignItems:"center", gap:8, marginTop:6 },
+  roomTimeTag:         { paddingHorizontal:10, paddingVertical:6, borderRadius:8, alignSelf:"flex-start" },
   roomTimeText:        { fontSize:11, fontWeight:"700" },
-  roomInput:           { flex:1, backgroundColor:"rgba(255,255,255,0.06)", borderRadius:8, paddingHorizontal:12, paddingVertical:8, color:"#fff", fontSize:13, borderWidth:1, borderColor:"rgba(255,255,255,0.08)" },
-  roomConflictText:    { color:"#f87171", fontSize:10, marginBottom:8, marginLeft:4 },
+  roomInput:           { flex:1, backgroundColor:"rgba(255,255,255,0.06)", borderRadius:8, paddingHorizontal:12, paddingVertical:9, color:"#fff", fontSize:13, borderWidth:1, borderColor:"rgba(255,255,255,0.08)" },
+  roomClearBtn:        { padding:2 },
+  roomConflictText:    { color:"#f87171", fontSize:10, marginTop:4, marginLeft:2 },
   summaryBox:          { backgroundColor:"rgba(167,139,250,0.08)", borderRadius:12, padding:14, marginBottom:14, borderWidth:1, borderColor:"rgba(167,139,250,0.2)" },
   summaryHeader:       { flexDirection:"row", alignItems:"center", gap:7, marginBottom:10 },
   summaryTitle:        { color:"#a78bfa", fontSize:12, fontWeight:"700" },

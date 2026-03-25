@@ -1,13 +1,10 @@
-// ══════════════════════════════════════════════════════════════
-// super-admin/dashboard.js  —  Fully working Super Admin Panel
-// ══════════════════════════════════════════════════════════════
-
+// app/super-admin/dashboard.js
 import React, { useState, useRef, useCallback } from "react";
 import {
-  View, Text, StyleSheet, Pressable, FlatList,
-  ActivityIndicator, BackHandler, ToastAndroid,
-  StatusBar, RefreshControl, Dimensions, Modal,
-  Alert, ScrollView, TextInput, KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, Pressable, ScrollView,
+  ActivityIndicator, BackHandler, ToastAndroid, StatusBar,
+  RefreshControl, Dimensions, Modal, Alert, TextInput,
+  KeyboardAvoidingView, Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -17,535 +14,414 @@ import API from "../../services/api";
 
 const { width } = Dimensions.get("window");
 
-// ─── Which routes are actually built ──────────────────────────
-const BUILT_ROUTES = {
-  "/super-admin/colleges":      true,
-  "/super-admin/manage-admins": true,
-};
-const isBuilt = (route) => !!route && !!BUILT_ROUTES[route];
-
-// ─── Coming Soon toast ────────────────────────────────────────
-const comingSoon = (label) => {
-  if (Platform.OS === "android") {
-    ToastAndroid.show(`${label} — Coming Soon`, ToastAndroid.SHORT);
-  } else {
-    Alert.alert("Coming Soon", `${label} screen is under development.`);
-  }
-};
-
-// ─── Stat Card ────────────────────────────────────────────────
-const StatCard = ({ icon, label, value, color, onPress, built }) => (
-  <Pressable style={[styles.statCard, { borderColor: color + "35" }]} onPress={onPress} disabled={!onPress}>
-    <LinearGradient colors={[color + "15", color + "04"]} style={styles.statGrad}>
-      <View style={[styles.statIconBox, { backgroundColor: color + "20" }]}>
+const StatCard = ({ icon, label, value, color, onPress }) => (
+  <Pressable style={[s.statCard, { borderColor: color + "30" }]} onPress={onPress}>
+    <LinearGradient colors={[color + "18", color + "05"]} style={s.statGrad}>
+      <View style={[s.statIcon, { backgroundColor: color + "22" }]}>
         <Ionicons name={icon} size={18} color={color} />
       </View>
-      <Text style={[styles.statValue, { color }]}>{value ?? "—"}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-      {onPress && (
-        <View style={[styles.statChevron, { backgroundColor: color + "15" }]}>
-          <Ionicons name={built ? "chevron-forward" : "time-outline"} size={10} color={color} />
-        </View>
-      )}
+      <Text style={[s.statVal, { color }]}>{value ?? "—"}</Text>
+      <Text style={s.statLabel}>{label}</Text>
+      <View style={[s.statArrow, { backgroundColor: color + "18" }]}>
+        <Ionicons name="arrow-forward" size={10} color={color} />
+      </View>
     </LinearGradient>
   </Pressable>
 );
 
-// ─── Menu Row ─────────────────────────────────────────────────
-const MenuRow = ({ icon, label, subtitle, color, onPress, built, isLast }) => (
-  <Pressable style={[styles.menuRow, isLast && styles.menuRowLast]} onPress={onPress}>
-    <View style={[styles.menuRowIcon, { backgroundColor: color + "18", borderColor: color + "30" }]}>
+const MenuItem = ({ icon, label, sub, color, onPress, last }) => (
+  <Pressable style={[s.menuItem, last && s.menuItemLast]} onPress={onPress}>
+    <View style={[s.menuIcon, { backgroundColor: color + "18", borderColor: color + "25" }]}>
       <Ionicons name={icon} size={20} color={color} />
     </View>
-    <View style={styles.menuRowInfo}>
-      <View style={styles.menuRowTop}>
-        <Text style={styles.menuRowLabel}>{label}</Text>
-        {!built && <View style={styles.soonBadge}><Text style={styles.soonBadgeText}>Soon</Text></View>}
-      </View>
-      <Text style={styles.menuRowSub} numberOfLines={1}>{subtitle}</Text>
+    <View style={s.menuInfo}>
+      <Text style={s.menuLabel}>{label}</Text>
+      <Text style={s.menuSub} numberOfLines={1}>{sub}</Text>
     </View>
-    <Ionicons name={built ? "chevron-forward" : "lock-closed-outline"} size={14}
-      color={built ? color + "80" : "#1f2937"} />
+    <Ionicons name="chevron-forward" size={14} color={color} />
   </Pressable>
 );
 
-// ─── Quick Btn ────────────────────────────────────────────────
-const QuickBtn = ({ icon, label, color, onPress, built }) => (
-  <Pressable style={styles.quickBtn} onPress={onPress}>
-    <LinearGradient colors={[color + "25", color + "08"]}
-      style={[styles.quickBtnGrad, { borderColor: color + "30" }]}>
-      <View style={[styles.quickBtnIcon, { backgroundColor: color + "20" }]}>
-        <Ionicons name={icon} size={22} color={color} />
-      </View>
-      <Text style={[styles.quickBtnLabel, { color }]} numberOfLines={2}>{label}</Text>
-      {!built && <Ionicons name="time-outline" size={9} color={color + "55"} style={styles.quickSoon} />}
-    </LinearGradient>
-  </Pressable>
-);
-
-// ════════════════════════════════════════════════════════════
-//  MAIN
-// ════════════════════════════════════════════════════════════
 export default function SuperAdminDashboard() {
-  const router = useRouter();
-  const [superAdminData,    setSuperAdminData]    = useState(null);
-  const [stats,             setStats]             = useState(null);
-  const [checkingAuth,      setCheckingAuth]      = useState(true);
-  const [refreshing,        setRefreshing]        = useState(false);
-  const [activeTab,         setActiveTab]         = useState("home");
-  const [colleges,          setColleges]          = useState([]);
+  const router  = useRouter();
+  const backRef = useRef(0);
 
-  // Modals
-  const [shutdownModal,     setShutdownModal]     = useState(false);
-  const [shutdownLoading,   setShutdownLoading]   = useState(false);
-  const [shutdownConfirm,   setShutdownConfirm]   = useState("");
+  const [data,      setData]      = useState(null);
+  const [stats,     setStats]     = useState(null);
+  const [colleges,  setColleges]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [refreshing,setRefreshing]= useState(false);
 
-  const [addAdminModal,     setAddAdminModal]     = useState(false);
-  const [addAdminLoading,   setAddAdminLoading]   = useState(false);
-  const [adminForm,  setAdminForm]  = useState({ name:"", email:"", password:"", college:"" });
-  const [showPass,   setShowPass]   = useState(false);
+  // Shutdown modal
+  const [sdModal,   setSdModal]   = useState(false);
+  const [sdConfirm, setSdConfirm] = useState("");
+  const [sdLoading, setSdLoading] = useState(false);
 
-  const [broadcastModal,    setBroadcastModal]    = useState(false);
-  const [broadcastLoading,  setBroadcastLoading]  = useState(false);
-  const [broadcastText,     setBroadcastText]     = useState("");
+  // Add admin modal
+  const [aaModal,   setAaModal]   = useState(false);
+  const [aaForm,    setAaForm]    = useState({ name:"", email:"", password:"", college:"" });
+  const [aaLoading, setAaLoading] = useState(false);
+  const [showPwd,   setShowPwd]   = useState(false);
 
-  const backPressCount = useRef(0);
+  // Broadcast modal
+  const [bcModal,   setBcModal]   = useState(false);
+  const [bcText,    setBcText]    = useState("");
+  const [bcLoading, setBcLoading] = useState(false);
 
-  // ─── Load ──────────────────────────────────────────────
-  const loadAll = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
+  const loadAll = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true);
     const token = await AsyncStorage.getItem("superAdminLoggedIn");
     if (!token) { router.replace("/login"); return; }
     const raw = await AsyncStorage.getItem("superAdminData");
-    if (raw) setSuperAdminData(JSON.parse(raw));
-    try { const r = await API.get("/super-admin/stats"); if (r.data) setStats(r.data); } catch {}
+    if (raw) setData(JSON.parse(raw));
+    try { const r = await API.get("/super-admin/stats"); setStats(r.data); } catch {}
     try {
       const r = await API.get("/super-admin/colleges");
-      const list = r.data?.colleges || [];
-      setColleges(list.map(c => typeof c === "string" ? c : c.name).filter(Boolean));
+      setColleges((r.data?.colleges || []).map(c => typeof c === "string" ? c : c.name).filter(Boolean));
     } catch {}
-    setCheckingAuth(false);
+    setLoading(false);
     setRefreshing(false);
-  }, [router]);
+  }, []);
 
   useFocusEffect(useCallback(() => { loadAll(); }, [loadAll]));
 
-  // ─── Back handler ──────────────────────────────────────
   useFocusEffect(useCallback(() => {
-    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (backPressCount.current === 0) {
-        backPressCount.current = 1;
-        ToastAndroid?.show?.("Press back again to exit", ToastAndroid.SHORT);
-        setTimeout(() => { backPressCount.current = 0; }, 2000);
+    if (Platform.OS === "web") return;
+    const h = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (backRef.current === 0) {
+        backRef.current = 1;
+        ToastAndroid.show("Press back again to exit", ToastAndroid.SHORT);
+        setTimeout(() => { backRef.current = 0; }, 2000);
         return true;
       }
-      BackHandler.exitApp();
-      return true;
+      BackHandler.exitApp(); return true;
     });
-    return () => handler.remove();
+    return () => h.remove();
   }, []));
 
-  // ─── Logout ────────────────────────────────────────────
-  const handleLogout = async () => {
-    try { await API.post("/auth/logout"); } catch {}
-    await AsyncStorage.multiRemove(["accessToken","refreshToken","superAdminData","superAdminLoggedIn"]);
-    router.replace("/login");
-  };
+  const logout = () => Alert.alert("Logout", "Are you sure you want to logout?", [
+    { text: "Cancel", style: "cancel" },
+    { text: "Logout", style: "destructive", onPress: async () => {
+      try { await API.post("/auth/logout"); } catch {}
+      await AsyncStorage.multiRemove(["accessToken","refreshToken","superAdminData","superAdminLoggedIn"]);
+      router.replace("/login");
+    }},
+  ]);
 
-  // ─── Shutdown ──────────────────────────────────────────
-  const handleShutdown = async () => {
-    if (shutdownConfirm.trim().toUpperCase() !== "SHUTDOWN") {
-      Alert.alert("Error", 'Type "SHUTDOWN" to confirm'); return;
-    }
-    setShutdownLoading(true);
+  const shutdown = async () => {
+    if (sdConfirm.trim().toUpperCase() !== "SHUTDOWN")
+      return Alert.alert("Error", 'Please type "SHUTDOWN" to confirm');
+    setSdLoading(true);
     try {
       await API.post("/super-admin/shutdown");
-      setShutdownModal(false);
-      Alert.alert("Done", "All users logged out.", [{ text:"OK", onPress: handleLogout }]);
-    } catch {
-      Alert.alert("Shutdown", "Initiated.", [{ text:"OK", onPress: handleLogout }]);
-    } finally { setShutdownLoading(false); }
+      setSdModal(false);
+      Alert.alert("Done", "All users have been logged out.", [{ text: "OK" }]);
+    } catch { Alert.alert("Shutdown", "System shutdown initiated."); }
+    finally { setSdLoading(false); }
   };
 
-  // ─── Create Admin ──────────────────────────────────────
-  const handleCreateAdmin = async () => {
-    const { name, email, password, college } = adminForm;
-    if (!name || !email || !password) return Alert.alert("Required", "Name, email, password required");
-    if (password.length < 6) return Alert.alert("Password", "Min 6 characters");
-    if (!college) return Alert.alert("Required", "College select karo");
-    setAddAdminLoading(true);
+  const createAdmin = async () => {
+    const { name, email, password, college } = aaForm;
+    if (!name || !email || !password) return Alert.alert("Required", "Name, email and password are required.");
+    if (password.length < 6) return Alert.alert("Password", "Minimum 6 characters required.");
+    if (!college) return Alert.alert("Required", "Please select a college.");
+    setAaLoading(true);
     try {
-      await API.post("/super-admin/create-admin", adminForm);
-      setAddAdminModal(false);
-      setAdminForm({ name:"", email:"", password:"", college:"" });
-      Alert.alert("Done!", "Admin account created!");
+      await API.post("/super-admin/create-admin", aaForm);
+      setAaModal(false);
+      setAaForm({ name:"", email:"", password:"", college:"" });
+      Alert.alert("Success!", "Admin account created successfully.");
       loadAll();
-    } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Failed");
-    } finally { setAddAdminLoading(false); }
+    } catch (e) { Alert.alert("Error", e.response?.data?.message || "Failed to create admin."); }
+    finally { setAaLoading(false); }
   };
 
-  // ─── Broadcast ─────────────────────────────────────────
-  const handleBroadcast = async () => {
-    if (!broadcastText.trim()) return Alert.alert("Required", "Message daalo");
-    setBroadcastLoading(true);
+  const broadcast = async () => {
+    if (!bcText.trim()) return Alert.alert("Required", "Please write a message.");
+    setBcLoading(true);
     try {
-      await API.post("/super-admin/broadcast", { message: broadcastText });
-      setBroadcastModal(false);
-      setBroadcastText("");
-      Alert.alert("Sent!", "All users ko announcement milega");
-    } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Failed");
-    } finally { setBroadcastLoading(false); }
+      await API.post("/super-admin/broadcast", { message: bcText });
+      setBcModal(false); setBcText("");
+      Alert.alert("Sent!", "Announcement sent to all users.");
+    } catch (e) { Alert.alert("Error", e.response?.data?.message || "Failed to send."); }
+    finally { setBcLoading(false); }
   };
 
-  const go = (route, label) => {
-    if (!route) return comingSoon(label);
-    if (isBuilt(route)) { router.push(route); return; }
-    comingSoon(label);
-  };
+  const go = (route) => router.push(route);
 
-  if (checkingAuth) return (
-    <View style={styles.loader}><ActivityIndicator size="large" color="#f87171" /></View>
+  if (loading) return (
+    <View style={s.loader}><ActivityIndicator size="large" color="#f87171" /></View>
   );
 
-  const statsData = [
-    { icon:"business",         label:"Colleges",    value:stats?.totalColleges,    color:"#00c6ff", route:"/super-admin/colleges"      },
-    { icon:"shield-checkmark", label:"Admins",      value:stats?.totalAdmins,      color:"#a78bfa", route:"/super-admin/manage-admins"  },
-    { icon:"people",           label:"Students",    value:stats?.totalStudents,    color:"#34d399", route:"/super-admin/students"       },
-    { icon:"person",           label:"Teachers",    value:stats?.totalTeachers,    color:"#f59e0b", route:"/super-admin/teachers"       },
-    { icon:"book",             label:"Subjects",    value:stats?.totalSubjects,    color:"#60a5fa", route:null                          },
-    { icon:"document-text",    label:"Assignments", value:stats?.totalAssignments, color:"#fb923c", route:null                          },
-    { icon:"trophy",           label:"Results",     value:stats?.totalResults,     color:"#e879f9", route:null                          },
-    { icon:"newspaper",        label:"Posts",       value:stats?.totalPosts,       color:"#f87171", route:null                          },
+  const statsItems = [
+    { icon:"business",         label:"Colleges",  value:stats?.totalColleges,    color:"#00c6ff", route:"/super-admin/colleges"      },
+    { icon:"shield-checkmark", label:"Admins",    value:stats?.totalAdmins,      color:"#a78bfa", route:"/super-admin/manage-admins"  },
+    { icon:"people",           label:"Students",  value:stats?.totalStudents,    color:"#34d399", route:"/super-admin/students"       },
+    { icon:"person",           label:"Teachers",  value:stats?.totalTeachers,    color:"#f59e0b", route:"/super-admin/teachers"       },
+    { icon:"book",             label:"Subjects",  value:stats?.totalSubjects,    color:"#60a5fa", route:"/super-admin/subjects"       },
+    { icon:"newspaper",        label:"Posts",     value:stats?.totalPosts,       color:"#f87171", route:"/super-admin/posts"          },
+    { icon:"trophy",           label:"Results",   value:stats?.totalResults,     color:"#e879f9", route:"/super-admin/results"        },
+    { icon:"bar-chart",        label:"Analytics", value:null,                    color:"#22d3ee", route:"/super-admin/analytics"      },
+  ];
+
+  const menuItems = [
+    { icon:"business",         label:"Manage Colleges",    sub:`${stats?.totalColleges||0} colleges registered`,  color:"#00c6ff", route:"/super-admin/colleges"      },
+    { icon:"shield-checkmark", label:"Manage Admins",      sub:`${stats?.totalAdmins||0} admins active`,           color:"#a78bfa", route:"/super-admin/manage-admins"  },
+    { icon:"people",           label:"All Students",       sub:`${stats?.totalStudents||0} students`,              color:"#34d399", route:"/super-admin/students"       },
+    { icon:"person",           label:"All Teachers",       sub:`${stats?.totalTeachers||0} teachers`,              color:"#f59e0b", route:"/super-admin/teachers"       },
+    { icon:"book",             label:"All Subjects",       sub:"System-wide subjects",                             color:"#60a5fa", route:"/super-admin/subjects"       },
+    { icon:"calendar",         label:"Attendance Reports", sub:"College-wise attendance",                          color:"#34d399", route:"/super-admin/attendance"     },
+    { icon:"trophy",           label:"All Results",        sub:"SGPA / CGPA across colleges",                     color:"#e879f9", route:"/super-admin/results"        },
+    { icon:"bar-chart",        label:"Analytics",          sub:"Platform overview & stats",                        color:"#22d3ee", route:"/super-admin/analytics"      },
+    { icon:"megaphone",        label:"Announcements",      sub:"Global broadcast & notices",                       color:"#f59e0b", route:"/super-admin/announcements"  },
+    { icon:"newspaper",        label:"All Posts",          sub:"Manage posts & feed",                              color:"#f87171", route:"/super-admin/posts"          },
+    { icon:"receipt",          label:"Finance Overview",   sub:"Fee & revenue overview",                           color:"#10b981", route:"/super-admin/finance"        },
+    { icon:"settings",         label:"System Settings",    sub:"App config & preferences",                         color:"#64748b", route:"/super-admin/settings"       },
   ];
 
   const quickActions = [
-    { icon:"business",   label:"Colleges",  color:"#00c6ff", built:true,  action:() => go("/super-admin/colleges","Colleges")       },
-    { icon:"person-add", label:"Add Admin", color:"#a78bfa", built:true,  action:() => setAddAdminModal(true)                       },
-    { icon:"megaphone",  label:"Broadcast", color:"#f59e0b", built:true,  action:() => setBroadcastModal(true)                      },
-    { icon:"people",     label:"Students",  color:"#34d399", built:false, action:() => comingSoon("Students")                       },
-    { icon:"person",     label:"Teachers",  color:"#f59e0b", built:false, action:() => comingSoon("Teachers")                       },
-    { icon:"bar-chart",  label:"Analytics", color:"#22d3ee", built:false, action:() => comingSoon("Analytics")                      },
+    { icon:"business",   label:"Colleges",  color:"#00c6ff", fn:()=>go("/super-admin/colleges")      },
+    { icon:"person-add", label:"Add Admin", color:"#a78bfa", fn:()=>setAaModal(true)                 },
+    { icon:"megaphone",  label:"Broadcast", color:"#f59e0b", fn:()=>setBcModal(true)                  },
+    { icon:"people",     label:"Students",  color:"#34d399", fn:()=>go("/super-admin/students")      },
+    { icon:"person",     label:"Teachers",  color:"#f59e0b", fn:()=>go("/super-admin/teachers")      },
+    { icon:"bar-chart",  label:"Analytics", color:"#22d3ee", fn:()=>go("/super-admin/analytics")     },
   ];
-
-  const menuGroups = [
-    {
-      title:"✅ Ready to Use", color:"#34d399",
-      items:[
-        { icon:"business",         label:"Manage Colleges", subtitle:`${stats?.totalColleges||0} colleges registered`, color:"#00c6ff", route:"/super-admin/colleges",      built:true  },
-        { icon:"shield-checkmark", label:"Manage Admins",   subtitle:`${stats?.totalAdmins||0} admins active`,         color:"#a78bfa", route:"/super-admin/manage-admins", built:true  },
-      ],
-    },
-    {
-      title:"🚧 Coming Soon", color:"#374151",
-      items:[
-        { icon:"people",       label:"All Students",       subtitle:`${stats?.totalStudents||0} students`,      color:"#34d399", route:"/super-admin/students",      built:false },
-        { icon:"person",       label:"All Teachers",       subtitle:`${stats?.totalTeachers||0} teachers`,      color:"#f59e0b", route:"/super-admin/teachers",      built:false },
-        { icon:"book",         label:"All Subjects",       subtitle:"System-wide subjects",                     color:"#60a5fa", route:"/super-admin/subjects",      built:false },
-        { icon:"calendar",     label:"Attendance Reports", subtitle:"College-wise attendance",                  color:"#34d399", route:"/super-admin/attendance",    built:false },
-        { icon:"bar-chart",    label:"System Analytics",   subtitle:"Performance & usage",                      color:"#22d3ee", route:"/super-admin/analytics",     built:false },
-        { icon:"trophy",       label:"All Results",        subtitle:"SGPA/CGPA across colleges",                color:"#e879f9", route:"/super-admin/results",       built:false },
-        { icon:"time",         label:"All Timetables",     subtitle:"Schedules across colleges",                color:"#fb923c", route:"/super-admin/timetables",    built:false },
-        { icon:"document-text",label:"All Assignments",    subtitle:"Assignments system-wide",                  color:"#fbbf24", route:"/super-admin/assignments",   built:false },
-        { icon:"newspaper",    label:"All Posts & Feed",   subtitle:"Manage posts",                             color:"#f87171", route:"/super-admin/posts",         built:false },
-        { icon:"megaphone",    label:"Announcements",      subtitle:"Global & college notices",                 color:"#f59e0b", route:"/super-admin/announcements", built:false },
-        { icon:"receipt",      label:"Fees & Finance",     subtitle:"Fee structure overview",                   color:"#10b981", route:"/super-admin/finance",       built:false },
-        { icon:"settings",     label:"System Settings",    subtitle:"App config & preferences",                 color:"#334155", route:"/super-admin/settings",      built:false },
-      ],
-    },
-  ];
-
-  const sections = [
-    { type:"welcome" },
-    { type:"stats"   },
-    { type:"quick"   },
-    { type:"menu"    },
-    { type:"danger"  },
-    { type:"footer"  },
-  ];
-
-  const renderSection = ({ item }) => {
-    if (item.type === "welcome") return (
-      <LinearGradient colors={["#7f1d1d","#b91c1c","#f87171"]}
-        start={{ x:0, y:0 }} end={{ x:1, y:1 }} style={styles.welcomeCard}>
-        <View style={{ flex:1 }}>
-          <Text style={styles.welcomeHi}>Hello, {superAdminData?.name?.split(" ")[0] || "Super Admin"} 👋</Text>
-          <Text style={styles.welcomeSub}>Super Administrator • COLLAहUB</Text>
-          <View style={styles.superBadge}>
-            <Ionicons name="star" size={10} color="#fca5a5" />
-            <Text style={styles.superBadgeText}>FULL SYSTEM ACCESS</Text>
-          </View>
-          <View style={styles.welcomeStats}>
-            {[
-              { val:stats?.totalColleges, label:"Colleges"  },
-              { val:stats?.totalStudents, label:"Students"  },
-              { val:stats?.totalAdmins,   label:"Admins"    },
-            ].map((s, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <View style={styles.welcomeStatDiv} />}
-                <View style={styles.welcomeStat}>
-                  <Text style={styles.welcomeStatVal}>{s.val ?? "—"}</Text>
-                  <Text style={styles.welcomeStatLabel}>{s.label}</Text>
-                </View>
-              </React.Fragment>
-            ))}
-          </View>
-        </View>
-        <Ionicons name="globe" size={56} color="rgba(255,255,255,0.12)" />
-      </LinearGradient>
-    );
-
-    if (item.type === "stats") return (
-      <>
-        <Text style={styles.sectionTitle}>System Overview</Text>
-        <View style={styles.statsGrid}>
-          {statsData.map((s, i) => (
-            <StatCard key={i} icon={s.icon} label={s.label} value={s.value} color={s.color}
-              built={isBuilt(s.route)} onPress={s.route ? () => go(s.route, s.label) : null} />
-          ))}
-        </View>
-      </>
-    );
-
-    if (item.type === "quick") return (
-      <>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickGrid}>
-          {quickActions.map((q, i) => (
-            <QuickBtn key={i} icon={q.icon} label={q.label} color={q.color}
-              built={q.built} onPress={q.action} />
-          ))}
-        </View>
-      </>
-    );
-
-    if (item.type === "menu") return (
-      <>
-        {menuGroups.map((group, gi) => (
-          <View key={gi}>
-            <View style={styles.groupHeader}>
-              <View style={[styles.groupDot, { backgroundColor: group.color }]} />
-              <Text style={[styles.groupTitle, { color: group.color }]}>{group.title}</Text>
-            </View>
-            <View style={styles.menuGroup}>
-              {group.items.map((m, mi) => (
-                <MenuRow key={mi} icon={m.icon} label={m.label} subtitle={m.subtitle}
-                  color={m.color} built={m.built} isLast={mi === group.items.length - 1}
-                  onPress={() => go(m.route, m.label)} />
-              ))}
-            </View>
-          </View>
-        ))}
-      </>
-    );
-
-    if (item.type === "danger") return (
-      <View style={styles.dangerZone}>
-        <View style={styles.dangerHeader}>
-          <Ionicons name="warning" size={14} color="#f87171" />
-          <Text style={styles.dangerTitle}>Danger Zone</Text>
-        </View>
-        <Pressable style={styles.shutdownCard} onPress={() => { setShutdownConfirm(""); setShutdownModal(true); }}>
-          <LinearGradient colors={["rgba(239,68,68,0.15)","rgba(239,68,68,0.04)"]} style={styles.shutdownGrad}>
-            <View style={styles.shutdownIconBox}>
-              <Ionicons name="power" size={22} color="#f87171" />
-            </View>
-            <View style={{ flex:1 }}>
-              <Text style={styles.shutdownTitle}>Emergency Shutdown</Text>
-              <Text style={styles.shutdownSub}>Instantly logs out ALL users system-wide</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#f87171" />
-          </LinearGradient>
-        </Pressable>
-        <Pressable style={styles.logoutBtn} onPress={() => Alert.alert("Logout","Logout karna chahte ho?",[
-          { text:"Cancel", style:"cancel" },
-          { text:"Logout", style:"destructive", onPress: handleLogout },
-        ])}>
-          <Ionicons name="log-out-outline" size={16} color="#f87171" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </Pressable>
-      </View>
-    );
-
-    if (item.type === "footer") return <View style={{ height:100 }} />;
-    return null;
-  };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#080d17" />
+    <View style={s.container}>
+      <StatusBar barStyle="light-content" />
 
-      <LinearGradient colors={["#080d17","#130505"]} style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.headerBadge}>
-            <Ionicons name="star" size={15} color="#f87171" />
+      {/* Header */}
+      <LinearGradient colors={["#0d0000","#1a0000"]} style={s.header}>
+        <View style={s.headerLeft}>
+          <View style={s.headerBadge}>
+            <Ionicons name="star" size={16} color="#f87171" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>Super Admin</Text>
-            <Text style={styles.headerSub}>Full System Access</Text>
+            <Text style={s.headerTitle}>Super Admin</Text>
+            <Text style={s.headerSub}>Full System Access</Text>
           </View>
         </View>
-        <Pressable onPress={() => { setShutdownConfirm(""); setShutdownModal(true); }} style={styles.powerBtn}>
+        <Pressable onPress={() => { setSdConfirm(""); setSdModal(true); }} style={s.powerBtn}>
           <Ionicons name="power" size={18} color="#f87171" />
         </Pressable>
       </LinearGradient>
 
-      <FlatList data={sections} keyExtractor={i => i.type} showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.body}
+      <ScrollView showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAll(true)} tintColor="#f87171" />}
-        renderItem={renderSection}
-      />
+        contentContainerStyle={s.body}>
 
-      {/* ── Tab Bar ── */}
-      <View style={styles.tabBar}>
+        {/* Welcome */}
+        <LinearGradient colors={["#7f1d1d","#b91c1c"]}
+          start={{x:0,y:0}} end={{x:1,y:1}} style={s.welcome}>
+          <View style={{flex:1}}>
+            <Text style={s.welcomeHi}>Hello, {data?.name?.split(" ")[0] || "Super Admin"} 👋</Text>
+            <Text style={s.welcomeSub}>Super Administrator · COLLAहUB</Text>
+            <View style={s.welcomeBadge}>
+              <Ionicons name="star" size={10} color="#fca5a5" />
+              <Text style={s.welcomeBadgeText}>FULL SYSTEM ACCESS</Text>
+            </View>
+            <View style={s.welcomeRow}>
+              {[
+                { label:"Colleges", val:stats?.totalColleges },
+                { label:"Students", val:stats?.totalStudents },
+                { label:"Admins",   val:stats?.totalAdmins   },
+              ].map((x,i) => (
+                <React.Fragment key={i}>
+                  {i>0 && <View style={s.welcomeDivider}/>}
+                  <View style={s.welcomeItem}>
+                    <Text style={s.welcomeVal}>{x.val??0}</Text>
+                    <Text style={s.welcomeItemLabel}>{x.label}</Text>
+                  </View>
+                </React.Fragment>
+              ))}
+            </View>
+          </View>
+          <Ionicons name="globe" size={52} color="rgba(255,255,255,0.1)" />
+        </LinearGradient>
+
+        {/* Stats grid */}
+        <Text style={s.sectionTitle}>SYSTEM OVERVIEW</Text>
+        <View style={s.statsGrid}>
+          {statsItems.map((x,i) => (
+            <StatCard key={i} icon={x.icon} label={x.label} value={x.value}
+              color={x.color} onPress={() => go(x.route)} />
+          ))}
+        </View>
+
+        {/* Quick Actions */}
+        <Text style={s.sectionTitle}>QUICK ACTIONS</Text>
+        <View style={s.quickGrid}>
+          {quickActions.map((q,i) => (
+            <Pressable key={i} style={s.quickBtn} onPress={q.fn}>
+              <LinearGradient colors={[q.color+"22",q.color+"08"]}
+                style={[s.quickGrad,{borderColor:q.color+"30"}]}>
+                <View style={[s.quickIcon,{backgroundColor:q.color+"20"}]}>
+                  <Ionicons name={q.icon} size={22} color={q.color} />
+                </View>
+                <Text style={[s.quickLabel,{color:q.color}]}>{q.label}</Text>
+              </LinearGradient>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Menu */}
+        <Text style={s.sectionTitle}>ALL FEATURES</Text>
+        <View style={s.menuCard}>
+          {menuItems.map((m,i) => (
+            <MenuItem key={i} icon={m.icon} label={m.label} sub={m.sub}
+              color={m.color} last={i===menuItems.length-1}
+              onPress={() => go(m.route)} />
+          ))}
+        </View>
+
+        {/* Danger */}
+        <Text style={[s.sectionTitle,{color:"#f87171"}]}>DANGER ZONE</Text>
+        <Pressable style={s.shutdownCard}
+          onPress={() => { setSdConfirm(""); setSdModal(true); }}>
+          <View style={s.shutdownIconBox}>
+            <Ionicons name="power" size={22} color="#f87171" />
+          </View>
+          <View style={{flex:1}}>
+            <Text style={s.shutdownTitle}>Emergency Shutdown</Text>
+            <Text style={s.shutdownSub}>Instantly logs out ALL users system-wide</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#f87171" />
+        </Pressable>
+        <Pressable style={s.logoutBtn} onPress={logout}>
+          <Ionicons name="log-out-outline" size={16} color="#f87171" />
+          <Text style={s.logoutText}>Logout</Text>
+        </Pressable>
+
+        <View style={{height:100}} />
+      </ScrollView>
+
+      {/* Bottom Tab */}
+      <View style={s.tabBar}>
         {[
-          { key:"home",     icon:"home",              label:"Home",     action:() => setActiveTab("home")                           },
-          { key:"colleges", icon:"business",           label:"Colleges", action:() => go("/super-admin/colleges","Colleges")         },
-          { key:"admins",   icon:"shield-checkmark",   label:"Admins",   action:() => go("/super-admin/manage-admins","Admins")      },
-          { key:"more",     icon:"ellipsis-horizontal",label:"More",     action:() => comingSoon("More")                             },
-        ].map(tab => (
-          <Pressable key={tab.key} style={styles.tabItem} onPress={tab.action}>
-            <Ionicons
-              name={activeTab === tab.key ? tab.icon : tab.icon + "-outline"}
-              size={21} color={activeTab === tab.key ? "#f87171" : "#374151"} />
-            <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
-            {activeTab === tab.key && <View style={styles.tabDot} />}
+          { icon:"home",             label:"Home",     fn:()=>{}                                  },
+          { icon:"business",         label:"Colleges", fn:()=>go("/super-admin/colleges")         },
+          { icon:"shield-checkmark", label:"Admins",   fn:()=>go("/super-admin/manage-admins")   },
+          { icon:"people",           label:"Students", fn:()=>go("/super-admin/students")        },
+          { icon:"settings",         label:"Settings", fn:()=>go("/super-admin/settings")        },
+        ].map((t,i) => (
+          <Pressable key={i} style={s.tabItem} onPress={t.fn}>
+            <Ionicons name={i===0?t.icon:t.icon+"-outline"} size={21}
+              color={i===0?"#f87171":"#374151"} />
+            <Text style={[s.tabLabel,i===0&&{color:"#f87171"}]}>{t.label}</Text>
           </Pressable>
         ))}
       </View>
 
-      {/* ════ SHUTDOWN MODAL ════ */}
-      <Modal visible={shutdownModal} transparent animationType="fade"
-        onRequestClose={() => !shutdownLoading && setShutdownModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.shutdownModal}>
-            <LinearGradient colors={["#7f1d1d","#ef4444"]} style={styles.shutdownModalIcon}>
+      {/* ── Shutdown Modal ── */}
+      <Modal visible={sdModal} transparent animationType="fade"
+        onRequestClose={() => !sdLoading && setSdModal(false)}>
+        <View style={s.overlay}>
+          <View style={s.sdModal}>
+            <LinearGradient colors={["#7f1d1d","#ef4444"]} style={s.sdIcon}>
               <Ionicons name="power" size={32} color="#fff" />
             </LinearGradient>
-            <Text style={styles.shutdownModalTitle}>Emergency Shutdown</Text>
-            <Text style={styles.shutdownModalDesc}>
-              Yeh action immediately ALL users ko logout kar dega.
-            </Text>
+            <Text style={s.sdTitle}>Emergency Shutdown</Text>
+            <Text style={s.sdDesc}>This will immediately log out ALL users from the entire system.</Text>
             {[
-              "Saare students, teachers, admins logout honge",
-              "Saare active sessions expire honge",
-              "Database se sab refresh tokens clear honge",
-            ].map((pt, i) => (
-              <View key={i} style={styles.shutdownPt}>
+              "All students, teachers and admins will be signed out",
+              "All active sessions will be expired immediately",
+              "All refresh tokens will be cleared from database",
+            ].map((pt,i) => (
+              <View key={i} style={s.sdPt}>
                 <Ionicons name="alert-circle" size={12} color="#f87171" />
-                <Text style={styles.shutdownPtText}>{pt}</Text>
+                <Text style={s.sdPtText}>{pt}</Text>
               </View>
             ))}
-            <View style={styles.shutdownConfirmBox}>
-              <Text style={styles.shutdownConfirmLabel}>
-                Confirm: <Text style={{ color:"#f87171", fontWeight:"800" }}>SHUTDOWN</Text> type karo
-              </Text>
-              <TextInput style={styles.shutdownConfirmInput}
-                placeholder="SHUTDOWN" placeholderTextColor="#374151"
-                value={shutdownConfirm} onChangeText={setShutdownConfirm}
-                autoCapitalize="characters" />
-            </View>
-            <View style={styles.shutdownModalBtns}>
-              <Pressable style={styles.shutdownCancelBtn}
-                onPress={() => setShutdownModal(false)} disabled={shutdownLoading}>
-                <Text style={styles.shutdownCancelText}>Cancel</Text>
+            <Text style={s.sdConfirmLabel}>
+              Type <Text style={{color:"#f87171",fontWeight:"800"}}>SHUTDOWN</Text> to confirm
+            </Text>
+            <TextInput style={s.sdInput}
+              placeholder="SHUTDOWN" placeholderTextColor="#374151"
+              value={sdConfirm} onChangeText={setSdConfirm}
+              autoCapitalize="characters" />
+            <View style={s.sdBtns}>
+              <Pressable style={s.sdCancel} onPress={()=>setSdModal(false)} disabled={sdLoading}>
+                <Text style={s.sdCancelText}>Cancel</Text>
               </Pressable>
-              <Pressable
-                style={[styles.shutdownConfirmBtn, shutdownConfirm.trim().toUpperCase() !== "SHUTDOWN" && { opacity:0.35 }]}
-                onPress={handleShutdown}
-                disabled={shutdownLoading || shutdownConfirm.trim().toUpperCase() !== "SHUTDOWN"}>
-                {shutdownLoading
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <><Ionicons name="power" size={13} color="#fff" /><Text style={styles.shutdownConfirmText}>SHUTDOWN</Text></>
-                }
+              <Pressable style={[s.sdConfirm, sdConfirm.trim().toUpperCase()!=="SHUTDOWN"&&{opacity:0.3}]}
+                onPress={shutdown}
+                disabled={sdLoading||sdConfirm.trim().toUpperCase()!=="SHUTDOWN"}>
+                {sdLoading
+                  ? <ActivityIndicator size="small" color="#fff"/>
+                  : <><Ionicons name="power" size={13} color="#fff"/>
+                      <Text style={s.sdConfirmText}>SHUTDOWN</Text></>}
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* ════ ADD ADMIN MODAL ════ */}
-      <Modal visible={addAdminModal} transparent animationType="slide"
-        onRequestClose={() => !addAdminLoading && setAddAdminModal(false)}>
-        <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <View style={styles.sheetOverlay}>
-            <View style={styles.sheet}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.sheetHeader}>
-                <LinearGradient colors={["#00c6ff","#0072ff"]} style={styles.sheetHeaderIcon}>
-                  <Ionicons name="shield-checkmark" size={17} color="#fff" />
+      {/* ── Add Admin Modal ── */}
+      <Modal visible={aaModal} transparent animationType="slide"
+        onRequestClose={()=>!aaLoading&&setAaModal(false)}>
+        <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":"height"}>
+          <View style={s.sheetOverlay}>
+            <View style={s.sheet}>
+              <View style={s.handle}/>
+              <View style={s.sheetHead}>
+                <LinearGradient colors={["#00c6ff","#0072ff"]} style={s.sheetHeadIcon}>
+                  <Ionicons name="shield-checkmark" size={18} color="#fff"/>
                 </LinearGradient>
-                <View style={{ flex:1 }}>
-                  <Text style={styles.sheetTitle}>Create Admin</Text>
-                  <Text style={styles.sheetSub}>New college admin account</Text>
+                <View style={{flex:1}}>
+                  <Text style={s.sheetTitle}>Create Admin</Text>
+                  <Text style={s.sheetSub}>New college admin account</Text>
                 </View>
-                <Pressable onPress={() => setAddAdminModal(false)} style={styles.sheetClose}>
-                  <Ionicons name="close" size={17} color="#64748b" />
+                <Pressable onPress={()=>setAaModal(false)} style={s.closeBtn}>
+                  <Ionicons name="close" size={18} color="#64748b"/>
                 </Pressable>
               </View>
-
-              <ScrollView showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal:20, paddingBottom:50 }}
-                keyboardShouldPersistTaps="handled">
-
-                {/* College chips */}
-                <Text style={styles.fieldLabel}>College <Text style={{ color:"#f87171" }}>*</Text></Text>
-                {colleges.length > 0 ? (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ gap:8, marginBottom:10 }}>
-                    {colleges.map((c, i) => (
-                      <Pressable key={i}
-                        style={[styles.collegeChip, adminForm.college === c && styles.collegeChipActive]}
-                        onPress={() => setAdminForm(p => ({ ...p, college:c }))}>
-                        <Text style={[styles.collegeChipText, adminForm.college === c && { color:"#00c6ff" }]}
-                          numberOfLines={1}>{c}</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                ) : (
-                  <View style={styles.noCollegeWarn}>
-                    <Ionicons name="warning-outline" size={13} color="#f59e0b" />
-                    <Text style={styles.noCollegeWarnText}>
-                      Pehle Manage Colleges se college add karo. Ya neeche manually type karo.
-                    </Text>
-                  </View>
+              <ScrollView keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{paddingHorizontal:20,paddingBottom:50}}>
+                <Text style={s.fieldLabel}>College *</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{gap:8,marginBottom:14}}>
+                  {colleges.map((c,i)=>(
+                    <Pressable key={i}
+                      style={[s.collegeChip, aaForm.college===c&&s.collegeChipActive]}
+                      onPress={()=>setAaForm(p=>({...p,college:c}))}>
+                      <Text style={[s.collegeChipText,aaForm.college===c&&{color:"#00c6ff"}]}
+                        numberOfLines={1}>{c}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+                {colleges.length===0&&(
+                  <TextInput style={s.input} placeholder="College name"
+                    placeholderTextColor="#374151" value={aaForm.college}
+                    onChangeText={v=>setAaForm(p=>({...p,college:v}))}/>
                 )}
-
-                {[
-                  { key:"college",  placeholder:"College naam", icon:"business-outline",      auto:"words"  },
-                  { key:"name",     placeholder:"Full Name *",  icon:"person-outline",        auto:"words"  },
-                  { key:"email",    placeholder:"Email *",      icon:"mail-outline",          auto:"none"   },
-                ].map(f => (
-                  <View key={f.key} style={styles.formInput}>
-                    <Ionicons name={f.icon} size={15} color="#64748b" />
-                    <TextInput style={styles.formInputText}
-                      placeholder={f.placeholder} placeholderTextColor="#374151"
-                      autoCapitalize={f.auto}
-                      value={adminForm[f.key]}
-                      onChangeText={v => setAdminForm(p => ({ ...p, [f.key]:v }))} />
-                  </View>
-                ))}
-
-                {/* Password */}
-                <View style={styles.formInput}>
-                  <Ionicons name="lock-closed-outline" size={15} color="#64748b" />
-                  <TextInput style={[styles.formInputText,{ flex:1 }]}
-                    placeholder="Password (min 6) *" placeholderTextColor="#374151"
-                    secureTextEntry={!showPass}
-                    value={adminForm.password}
-                    onChangeText={v => setAdminForm(p => ({ ...p, password:v }))} />
-                  <Pressable onPress={() => setShowPass(p => !p)} style={{ paddingRight:14 }}>
-                    <Ionicons name={showPass ? "eye-off-outline" : "eye-outline"} size={15} color="#64748b" />
+                <Text style={s.fieldLabel}>Full Name *</Text>
+                <TextInput style={s.input} placeholder="Admin full name"
+                  placeholderTextColor="#374151" value={aaForm.name}
+                  onChangeText={v=>setAaForm(p=>({...p,name:v}))}/>
+                <Text style={s.fieldLabel}>Email *</Text>
+                <TextInput style={s.input} placeholder="admin@college.edu"
+                  placeholderTextColor="#374151" keyboardType="email-address"
+                  autoCapitalize="none" value={aaForm.email}
+                  onChangeText={v=>setAaForm(p=>({...p,email:v}))}/>
+                <Text style={s.fieldLabel}>Password * (min 6)</Text>
+                <View style={[s.input,{flexDirection:"row",alignItems:"center",paddingVertical:0}]}>
+                  <TextInput style={{flex:1,color:"#fff",fontSize:14,paddingVertical:12}}
+                    placeholder="Password" placeholderTextColor="#374151"
+                    secureTextEntry={!showPwd} value={aaForm.password}
+                    onChangeText={v=>setAaForm(p=>({...p,password:v}))}/>
+                  <Pressable onPress={()=>setShowPwd(p=>!p)} style={{paddingRight:4}}>
+                    <Ionicons name={showPwd?"eye-off-outline":"eye-outline"} size={16} color="#64748b"/>
                   </Pressable>
                 </View>
-
-                <Pressable style={[styles.submitBtn, addAdminLoading && { opacity:0.6 }]}
-                  onPress={handleCreateAdmin} disabled={addAdminLoading}>
-                  <LinearGradient colors={["#00c6ff","#0072ff"]} style={styles.submitBtnGrad}>
-                    {addAdminLoading ? <ActivityIndicator size="small" color="#fff" />
-                      : <><Ionicons name="shield-checkmark-outline" size={15} color="#fff" />
-                          <Text style={styles.submitBtnText}>Create Admin Account</Text></>}
+                <Pressable style={[s.submitBtn,aaLoading&&{opacity:0.6}]}
+                  onPress={createAdmin} disabled={aaLoading}>
+                  <LinearGradient colors={["#00c6ff","#0072ff"]} style={s.submitGrad}>
+                    {aaLoading
+                      ? <ActivityIndicator size="small" color="#fff"/>
+                      : <><Ionicons name="shield-checkmark-outline" size={16} color="#fff"/>
+                          <Text style={s.submitText}>Create Admin Account</Text></>}
                   </LinearGradient>
                 </Pressable>
               </ScrollView>
@@ -554,43 +430,45 @@ export default function SuperAdminDashboard() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ════ BROADCAST MODAL ════ */}
-      <Modal visible={broadcastModal} transparent animationType="slide"
-        onRequestClose={() => !broadcastLoading && setBroadcastModal(false)}>
-        <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <View style={styles.sheetOverlay}>
-            <View style={styles.sheet}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.sheetHeader}>
-                <LinearGradient colors={["#f59e0b","#d97706"]} style={styles.sheetHeaderIcon}>
-                  <Ionicons name="megaphone" size={17} color="#fff" />
+      {/* ── Broadcast Modal ── */}
+      <Modal visible={bcModal} transparent animationType="slide"
+        onRequestClose={()=>!bcLoading&&setBcModal(false)}>
+        <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":"height"}>
+          <View style={s.sheetOverlay}>
+            <View style={s.sheet}>
+              <View style={s.handle}/>
+              <View style={s.sheetHead}>
+                <LinearGradient colors={["#f59e0b","#d97706"]} style={s.sheetHeadIcon}>
+                  <Ionicons name="megaphone" size={18} color="#fff"/>
                 </LinearGradient>
-                <View style={{ flex:1 }}>
-                  <Text style={styles.sheetTitle}>Global Broadcast</Text>
-                  <Text style={styles.sheetSub}>Sabko notification jayegi</Text>
+                <View style={{flex:1}}>
+                  <Text style={s.sheetTitle}>Global Broadcast</Text>
+                  <Text style={s.sheetSub}>Send to all users across all colleges</Text>
                 </View>
-                <Pressable onPress={() => setBroadcastModal(false)} style={styles.sheetClose}>
-                  <Ionicons name="close" size={17} color="#64748b" />
+                <Pressable onPress={()=>setBcModal(false)} style={s.closeBtn}>
+                  <Ionicons name="close" size={18} color="#64748b"/>
                 </Pressable>
               </View>
-              <View style={{ paddingHorizontal:20, paddingBottom:50 }}>
-                <View style={styles.broadcastInfo}>
-                  <Ionicons name="information-circle" size={15} color="#60a5fa" />
-                  <Text style={styles.broadcastInfoText}>
-                    Yeh message ALL students, teachers aur admins ko milega.
+              <View style={{paddingHorizontal:20,paddingBottom:50}}>
+                <View style={s.bcInfo}>
+                  <Ionicons name="information-circle" size={15} color="#60a5fa"/>
+                  <Text style={s.bcInfoText}>
+                    This message will be delivered to ALL students, teachers and admins instantly.
                   </Text>
                 </View>
-                <TextInput style={styles.broadcastInput}
-                  placeholder="Announcement message..." placeholderTextColor="#374151"
-                  value={broadcastText} onChangeText={setBroadcastText}
-                  multiline maxLength={500} textAlignVertical="top" />
-                <Text style={styles.broadcastCount}>{broadcastText.length}/500</Text>
-                <Pressable style={[styles.submitBtn, broadcastLoading && { opacity:0.6 }]}
-                  onPress={handleBroadcast} disabled={broadcastLoading}>
-                  <LinearGradient colors={["#f59e0b","#d97706"]} style={styles.submitBtnGrad}>
-                    {broadcastLoading ? <ActivityIndicator size="small" color="#fff" />
-                      : <><Ionicons name="megaphone" size={15} color="#fff" />
-                          <Text style={styles.submitBtnText}>Send to All Users</Text></>}
+                <TextInput style={s.bcInput}
+                  placeholder="Write your announcement here..."
+                  placeholderTextColor="#374151"
+                  value={bcText} onChangeText={setBcText}
+                  multiline maxLength={500} textAlignVertical="top"/>
+                <Text style={s.bcCount}>{bcText.length}/500</Text>
+                <Pressable style={[s.submitBtn,bcLoading&&{opacity:0.6}]}
+                  onPress={broadcast} disabled={bcLoading}>
+                  <LinearGradient colors={["#f59e0b","#d97706"]} style={s.submitGrad}>
+                    {bcLoading
+                      ? <ActivityIndicator size="small" color="#fff"/>
+                      : <><Ionicons name="megaphone" size={16} color="#fff"/>
+                          <Text style={s.submitText}>Send to All Users</Text></>}
                   </LinearGradient>
                 </Pressable>
               </View>
@@ -602,122 +480,96 @@ export default function SuperAdminDashboard() {
   );
 }
 
-// ════════════════════════════════════════════
-const styles = StyleSheet.create({
-  container:  { flex:1, backgroundColor:"#080d17" },
-  loader:     { flex:1, justifyContent:"center", alignItems:"center", backgroundColor:"#080d17" },
-  header:     { flexDirection:"row", alignItems:"center", justifyContent:"space-between", paddingHorizontal:16, paddingTop:52, paddingBottom:14 },
-  headerLeft: { flexDirection:"row", alignItems:"center", gap:12 },
-  headerBadge:{ width:40, height:40, borderRadius:12, backgroundColor:"rgba(248,113,113,0.12)", justifyContent:"center", alignItems:"center", borderWidth:1, borderColor:"rgba(248,113,113,0.3)" },
-  headerTitle:{ color:"#fff", fontSize:16, fontWeight:"800" },
-  headerSub:  { color:"#374151", fontSize:11, marginTop:1 },
-  powerBtn:   { width:40, height:40, borderRadius:12, backgroundColor:"rgba(248,113,113,0.1)", justifyContent:"center", alignItems:"center", borderWidth:1, borderColor:"rgba(248,113,113,0.25)" },
-  body:       { paddingHorizontal:16, paddingBottom:80 },
-
+const s = StyleSheet.create({
+  container:    { flex:1, backgroundColor:"#070d1a" },
+  loader:       { flex:1, justifyContent:"center", alignItems:"center", backgroundColor:"#070d1a" },
+  header:       { flexDirection:"row", alignItems:"center", justifyContent:"space-between", paddingHorizontal:16, paddingTop:52, paddingBottom:14 },
+  headerLeft:   { flexDirection:"row", alignItems:"center", gap:12 },
+  headerBadge:  { width:40, height:40, borderRadius:12, backgroundColor:"rgba(248,113,113,0.14)", justifyContent:"center", alignItems:"center", borderWidth:1, borderColor:"rgba(248,113,113,0.3)" },
+  headerTitle:  { color:"#fff", fontSize:16, fontWeight:"800" },
+  headerSub:    { color:"#374151", fontSize:11, marginTop:1 },
+  powerBtn:     { width:40, height:40, borderRadius:12, backgroundColor:"rgba(248,113,113,0.1)", justifyContent:"center", alignItems:"center", borderWidth:1, borderColor:"rgba(248,113,113,0.25)" },
+  body:         { paddingHorizontal:16, paddingBottom:30 },
   // Welcome
-  welcomeCard:       { borderRadius:22, padding:22, marginTop:14, marginBottom:22, flexDirection:"row", justifyContent:"space-between", alignItems:"flex-start" },
-  welcomeHi:         { color:"#fff", fontSize:20, fontWeight:"800", marginBottom:4 },
-  welcomeSub:        { color:"rgba(255,255,255,0.7)", fontSize:12, marginBottom:10 },
-  superBadge:        { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(0,0,0,0.22)", paddingHorizontal:10, paddingVertical:4, borderRadius:20, alignSelf:"flex-start", marginBottom:14 },
-  superBadgeText:    { color:"#fca5a5", fontSize:9, fontWeight:"800", letterSpacing:1 },
-  welcomeStats:      { flexDirection:"row", alignItems:"center", backgroundColor:"rgba(0,0,0,0.18)", borderRadius:14, paddingVertical:10, paddingHorizontal:14 },
-  welcomeStat:       { alignItems:"center", flex:1 },
-  welcomeStatVal:    { color:"#fff", fontSize:18, fontWeight:"900" },
-  welcomeStatLabel:  { color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:"600", marginTop:2 },
-  welcomeStatDiv:    { width:1, height:26, backgroundColor:"rgba(255,255,255,0.18)" },
-
-  sectionTitle: { color:"#374151", fontSize:11, fontWeight:"700", letterSpacing:1, marginBottom:12, marginTop:4, textTransform:"uppercase" },
-
+  welcome:      { borderRadius:22, padding:22, marginTop:14, marginBottom:22, flexDirection:"row", justifyContent:"space-between", alignItems:"flex-start" },
+  welcomeHi:    { color:"#fff", fontSize:20, fontWeight:"800", marginBottom:4 },
+  welcomeSub:   { color:"rgba(255,255,255,0.65)", fontSize:12, marginBottom:10 },
+  welcomeBadge: { flexDirection:"row", alignItems:"center", gap:4, backgroundColor:"rgba(0,0,0,0.22)", paddingHorizontal:10, paddingVertical:4, borderRadius:20, alignSelf:"flex-start", marginBottom:14 },
+  welcomeBadgeText:{ color:"#fca5a5", fontSize:9, fontWeight:"800", letterSpacing:1 },
+  welcomeRow:   { flexDirection:"row", backgroundColor:"rgba(0,0,0,0.18)", borderRadius:14, paddingVertical:10, paddingHorizontal:14 },
+  welcomeItem:  { alignItems:"center", flex:1 },
+  welcomeVal:   { color:"#fff", fontSize:17, fontWeight:"900" },
+  welcomeItemLabel:{ color:"rgba(255,255,255,0.5)", fontSize:9, fontWeight:"600", marginTop:2 },
+  welcomeDivider:{ width:1, height:26, backgroundColor:"rgba(255,255,255,0.18)" },
+  // Section title
+  sectionTitle: { color:"#374151", fontSize:10, fontWeight:"800", letterSpacing:1.5, marginBottom:12, marginTop:4 },
   // Stats
-  statsGrid:   { flexDirection:"row", flexWrap:"wrap", gap:10, marginBottom:22 },
-  statCard:    { width:(width-52)/2, borderRadius:16, overflow:"hidden", borderWidth:1 },
-  statGrad:    { padding:14, borderRadius:16, minHeight:96 },
-  statIconBox: { width:34, height:34, borderRadius:10, justifyContent:"center", alignItems:"center", marginBottom:10 },
-  statValue:   { fontSize:22, fontWeight:"900" },
-  statLabel:   { color:"#64748b", fontSize:11, marginTop:3 },
-  statChevron: { position:"absolute", bottom:12, right:12, width:20, height:20, borderRadius:10, justifyContent:"center", alignItems:"center" },
-
-  // Quick
-  quickGrid:     { flexDirection:"row", flexWrap:"wrap", gap:10, marginBottom:22 },
-  quickBtn:      { width:(width-52)/3, borderRadius:14, overflow:"hidden" },
-  quickBtnGrad:  { padding:12, alignItems:"center", borderRadius:14, borderWidth:1, gap:8, minHeight:82 },
-  quickBtnIcon:  { width:40, height:40, borderRadius:12, justifyContent:"center", alignItems:"center" },
-  quickBtnLabel: { fontSize:11, fontWeight:"700", textAlign:"center" },
-  quickSoon:     { position:"absolute", top:6, right:6 },
-
+  statsGrid:    { flexDirection:"row", flexWrap:"wrap", gap:10, marginBottom:22 },
+  statCard:     { width:(width-52)/2, borderRadius:16, overflow:"hidden", borderWidth:1 },
+  statGrad:     { padding:14, minHeight:96 },
+  statIcon:     { width:34, height:34, borderRadius:10, justifyContent:"center", alignItems:"center", marginBottom:10 },
+  statVal:      { fontSize:22, fontWeight:"900" },
+  statLabel:    { color:"#64748b", fontSize:11, marginTop:3 },
+  statArrow:    { position:"absolute", bottom:12, right:12, width:20, height:20, borderRadius:10, justifyContent:"center", alignItems:"center" },
+  // Quick actions
+  quickGrid:    { flexDirection:"row", flexWrap:"wrap", gap:10, marginBottom:22 },
+  quickBtn:     { width:(width-52)/3, borderRadius:14, overflow:"hidden" },
+  quickGrad:    { padding:12, alignItems:"center", borderRadius:14, borderWidth:1, gap:8, minHeight:82 },
+  quickIcon:    { width:40, height:40, borderRadius:12, justifyContent:"center", alignItems:"center" },
+  quickLabel:   { fontSize:11, fontWeight:"700", textAlign:"center" },
   // Menu
-  groupHeader: { flexDirection:"row", alignItems:"center", gap:8, marginBottom:8, marginTop:20 },
-  groupDot:    { width:6, height:6, borderRadius:3 },
-  groupTitle:  { fontSize:11, fontWeight:"800", letterSpacing:1, textTransform:"uppercase" },
-  menuGroup:   { backgroundColor:"#0f1b2d", borderRadius:18, overflow:"hidden", marginBottom:8, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
-  menuRow:     { flexDirection:"row", alignItems:"center", padding:14, gap:12, borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.04)" },
-  menuRowLast: { borderBottomWidth:0 },
-  menuRowIcon: { width:38, height:38, borderRadius:11, justifyContent:"center", alignItems:"center", borderWidth:1 },
-  menuRowInfo: { flex:1 },
-  menuRowTop:  { flexDirection:"row", alignItems:"center", gap:8 },
-  menuRowLabel:{ color:"#fff", fontSize:13, fontWeight:"700" },
-  menuRowSub:  { color:"#374151", fontSize:11, marginTop:2 },
-  soonBadge:   { backgroundColor:"rgba(100,116,139,0.18)", paddingHorizontal:7, paddingVertical:2, borderRadius:6 },
-  soonBadgeText:{ color:"#64748b", fontSize:9, fontWeight:"700" },
-
-  // Danger zone
-  dangerZone:     { marginTop:24, marginBottom:8 },
-  dangerHeader:   { flexDirection:"row", alignItems:"center", gap:8, marginBottom:12 },
-  dangerTitle:    { color:"#f87171", fontSize:11, fontWeight:"800", textTransform:"uppercase", letterSpacing:1 },
-  shutdownCard:   { borderRadius:16, overflow:"hidden", marginBottom:10, borderWidth:1, borderColor:"rgba(239,68,68,0.3)" },
-  shutdownGrad:   { flexDirection:"row", alignItems:"center", padding:16, gap:14 },
+  menuCard:     { backgroundColor:"#0f1b2d", borderRadius:18, overflow:"hidden", marginBottom:22, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  menuItem:     { flexDirection:"row", alignItems:"center", padding:14, gap:12, borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.04)" },
+  menuItemLast: { borderBottomWidth:0 },
+  menuIcon:     { width:38, height:38, borderRadius:11, justifyContent:"center", alignItems:"center", borderWidth:1 },
+  menuInfo:     { flex:1 },
+  menuLabel:    { color:"#fff", fontSize:13, fontWeight:"700" },
+  menuSub:      { color:"#374151", fontSize:11, marginTop:2 },
+  // Danger
+  shutdownCard: { flexDirection:"row", alignItems:"center", gap:14, backgroundColor:"rgba(239,68,68,0.08)", borderRadius:16, padding:16, marginBottom:10, borderWidth:1, borderColor:"rgba(239,68,68,0.25)" },
   shutdownIconBox:{ width:44, height:44, borderRadius:13, backgroundColor:"rgba(239,68,68,0.15)", justifyContent:"center", alignItems:"center" },
-  shutdownTitle:  { color:"#f87171", fontSize:14, fontWeight:"800" },
-  shutdownSub:    { color:"#64748b", fontSize:11, marginTop:2 },
-  logoutBtn:      { flexDirection:"row", alignItems:"center", justifyContent:"center", gap:8, padding:13, backgroundColor:"rgba(248,113,113,0.06)", borderRadius:14, borderWidth:1, borderColor:"rgba(248,113,113,0.15)" },
-  logoutText:     { color:"#f87171", fontWeight:"700", fontSize:14 },
-
+  shutdownTitle:{ color:"#f87171", fontSize:14, fontWeight:"800" },
+  shutdownSub:  { color:"#64748b", fontSize:11, marginTop:2 },
+  logoutBtn:    { flexDirection:"row", alignItems:"center", justifyContent:"center", gap:8, padding:13, backgroundColor:"rgba(248,113,113,0.06)", borderRadius:14, borderWidth:1, borderColor:"rgba(248,113,113,0.15)" },
+  logoutText:   { color:"#f87171", fontWeight:"700", fontSize:14 },
   // Tab bar
-  tabBar:        { position:"absolute", bottom:0, left:0, right:0, flexDirection:"row", backgroundColor:"#0a0f1a", borderTopWidth:1, borderTopColor:"rgba(255,255,255,0.06)", paddingBottom:20, paddingTop:10 },
-  tabItem:       { flex:1, alignItems:"center", gap:3, position:"relative" },
-  tabLabel:      { color:"#374151", fontSize:10, fontWeight:"600" },
-  tabLabelActive:{ color:"#f87171" },
-  tabDot:        { position:"absolute", bottom:-10, width:4, height:4, borderRadius:2, backgroundColor:"#f87171" },
-
+  tabBar:       { position:"absolute", bottom:0, left:0, right:0, flexDirection:"row", backgroundColor:"#0a0f1a", borderTopWidth:1, borderTopColor:"rgba(255,255,255,0.06)", paddingBottom:20, paddingTop:10 },
+  tabItem:      { flex:1, alignItems:"center", gap:3 },
+  tabLabel:     { color:"#374151", fontSize:10, fontWeight:"600" },
   // Shutdown modal
-  modalOverlay:        { flex:1, backgroundColor:"rgba(0,0,0,0.9)", justifyContent:"center", alignItems:"center", padding:20 },
-  shutdownModal:       { backgroundColor:"#0f1b2d", borderRadius:24, padding:24, width:"100%", borderWidth:1, borderColor:"rgba(239,68,68,0.3)", alignItems:"center" },
-  shutdownModalIcon:   { width:68, height:68, borderRadius:34, justifyContent:"center", alignItems:"center", marginBottom:16 },
-  shutdownModalTitle:  { color:"#fff", fontSize:20, fontWeight:"800", textAlign:"center", marginBottom:8 },
-  shutdownModalDesc:   { color:"#64748b", fontSize:12, textAlign:"center", lineHeight:18, marginBottom:14 },
-  shutdownPt:          { flexDirection:"row", alignItems:"flex-start", gap:8, marginBottom:7, alignSelf:"flex-start" },
-  shutdownPtText:      { color:"#94a3b8", fontSize:12, flex:1, lineHeight:17 },
-  shutdownConfirmBox:  { width:"100%", marginTop:16, marginBottom:18 },
-  shutdownConfirmLabel:{ color:"#94a3b8", fontSize:12, marginBottom:10, textAlign:"center", lineHeight:18 },
-  shutdownConfirmInput:{ backgroundColor:"#070d1a", color:"#f87171", borderRadius:12, paddingHorizontal:16, paddingVertical:12, textAlign:"center", fontSize:16, fontWeight:"800", letterSpacing:4, borderWidth:1, borderColor:"rgba(239,68,68,0.4)" },
-  shutdownModalBtns:   { flexDirection:"row", gap:12, width:"100%" },
-  shutdownCancelBtn:   { flex:1, paddingVertical:13, borderRadius:12, backgroundColor:"rgba(255,255,255,0.06)", alignItems:"center" },
-  shutdownCancelText:  { color:"#94a3b8", fontWeight:"700" },
-  shutdownConfirmBtn:  { flex:1, flexDirection:"row", alignItems:"center", justifyContent:"center", gap:8, paddingVertical:13, borderRadius:12, backgroundColor:"#dc2626" },
-  shutdownConfirmText: { color:"#fff", fontWeight:"800", letterSpacing:0.5 },
-
-  // Bottom sheets
-  sheetOverlay:     { flex:1, backgroundColor:"rgba(0,0,0,0.8)", justifyContent:"flex-end" },
-  sheet:            { backgroundColor:"#0a1220", borderTopLeftRadius:26, borderTopRightRadius:26, maxHeight:"90%", borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
-  sheetHandle:      { width:40, height:4, borderRadius:2, backgroundColor:"rgba(255,255,255,0.1)", alignSelf:"center", marginTop:12, marginBottom:4 },
-  sheetHeader:      { flexDirection:"row", alignItems:"center", gap:12, paddingHorizontal:20, paddingVertical:16, borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.06)" },
-  sheetHeaderIcon:  { width:40, height:40, borderRadius:12, justifyContent:"center", alignItems:"center" },
-  sheetTitle:       { color:"#fff", fontSize:16, fontWeight:"800" },
-  sheetSub:         { color:"#374151", fontSize:11, marginTop:1 },
-  sheetClose:       { width:30, height:30, borderRadius:15, backgroundColor:"rgba(255,255,255,0.06)", justifyContent:"center", alignItems:"center" },
-  fieldLabel:       { color:"#94a3b8", fontSize:11, fontWeight:"700", letterSpacing:0.5, textTransform:"uppercase", marginBottom:8, marginTop:14 },
-  collegeChip:      { paddingHorizontal:14, paddingVertical:8, borderRadius:20, borderWidth:1, borderColor:"rgba(255,255,255,0.1)", backgroundColor:"rgba(255,255,255,0.04)", maxWidth:160 },
+  overlay:      { flex:1, backgroundColor:"rgba(0,0,0,0.92)", justifyContent:"center", alignItems:"center", padding:20 },
+  sdModal:      { backgroundColor:"#0f1b2d", borderRadius:24, padding:24, width:"100%", borderWidth:1, borderColor:"rgba(239,68,68,0.3)", alignItems:"center" },
+  sdIcon:       { width:68, height:68, borderRadius:34, justifyContent:"center", alignItems:"center", marginBottom:16 },
+  sdTitle:      { color:"#fff", fontSize:20, fontWeight:"800", textAlign:"center", marginBottom:8 },
+  sdDesc:       { color:"#64748b", fontSize:12, textAlign:"center", lineHeight:18, marginBottom:14 },
+  sdPt:         { flexDirection:"row", alignItems:"flex-start", gap:8, marginBottom:7, alignSelf:"flex-start" },
+  sdPtText:     { color:"#94a3b8", fontSize:12, flex:1, lineHeight:17 },
+  sdConfirmLabel:{ color:"#94a3b8", fontSize:12, marginTop:16, marginBottom:10, textAlign:"center", lineHeight:18 },
+  sdInput:      { backgroundColor:"#070d1a", color:"#f87171", borderRadius:12, paddingHorizontal:16, paddingVertical:12, textAlign:"center", fontSize:16, fontWeight:"800", letterSpacing:4, borderWidth:1, borderColor:"rgba(239,68,68,0.4)", width:"100%", marginBottom:18 },
+  sdBtns:       { flexDirection:"row", gap:12, width:"100%" },
+  sdCancel:     { flex:1, paddingVertical:13, borderRadius:12, backgroundColor:"rgba(255,255,255,0.06)", alignItems:"center" },
+  sdCancelText: { color:"#94a3b8", fontWeight:"700" },
+  sdConfirm:    { flex:1, flexDirection:"row", alignItems:"center", justifyContent:"center", gap:8, paddingVertical:13, borderRadius:12, backgroundColor:"#dc2626" },
+  sdConfirmText:{ color:"#fff", fontWeight:"800", letterSpacing:0.5 },
+  // Sheets
+  sheetOverlay: { flex:1, backgroundColor:"rgba(0,0,0,0.82)", justifyContent:"flex-end" },
+  sheet:        { backgroundColor:"#0a1220", borderTopLeftRadius:26, borderTopRightRadius:26, maxHeight:"92%", borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
+  handle:       { width:40, height:4, borderRadius:2, backgroundColor:"rgba(255,255,255,0.1)", alignSelf:"center", marginTop:12, marginBottom:4 },
+  sheetHead:    { flexDirection:"row", alignItems:"center", gap:12, paddingHorizontal:20, paddingVertical:16, borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.06)" },
+  sheetHeadIcon:{ width:42, height:42, borderRadius:12, justifyContent:"center", alignItems:"center" },
+  sheetTitle:   { color:"#fff", fontSize:16, fontWeight:"800" },
+  sheetSub:     { color:"#374151", fontSize:11, marginTop:1 },
+  closeBtn:     { width:32, height:32, borderRadius:16, backgroundColor:"rgba(255,255,255,0.06)", justifyContent:"center", alignItems:"center" },
+  fieldLabel:   { color:"#94a3b8", fontSize:11, fontWeight:"700", letterSpacing:0.5, textTransform:"uppercase", marginBottom:8, marginTop:14 },
+  input:        { backgroundColor:"#0f1b2d", color:"#fff", borderRadius:12, paddingHorizontal:14, paddingVertical:12, fontSize:14, borderWidth:1, borderColor:"rgba(255,255,255,0.08)", marginBottom:4 },
+  collegeChip:  { paddingHorizontal:14, paddingVertical:8, borderRadius:20, borderWidth:1, borderColor:"rgba(255,255,255,0.1)", backgroundColor:"rgba(255,255,255,0.04)", maxWidth:160 },
   collegeChipActive:{ borderColor:"rgba(0,198,255,0.5)", backgroundColor:"rgba(0,198,255,0.1)" },
-  collegeChipText:  { color:"#64748b", fontSize:11, fontWeight:"600" },
-  noCollegeWarn:    { flexDirection:"row", alignItems:"flex-start", gap:8, backgroundColor:"rgba(245,158,11,0.08)", padding:12, borderRadius:12, marginBottom:10, borderWidth:1, borderColor:"rgba(245,158,11,0.2)" },
-  noCollegeWarnText:{ flex:1, color:"#f59e0b", fontSize:11, lineHeight:17 },
-  formInput:        { flexDirection:"row", alignItems:"center", gap:10, backgroundColor:"#0f1b2d", borderRadius:12, paddingHorizontal:14, paddingVertical:13, marginBottom:10, borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
-  formInputText:    { flex:1, color:"#fff", fontSize:13 },
-  submitBtn:        { borderRadius:14, overflow:"hidden", marginTop:14 },
-  submitBtnGrad:    { flexDirection:"row", alignItems:"center", justifyContent:"center", gap:10, paddingVertical:15 },
-  submitBtnText:    { color:"#fff", fontSize:15, fontWeight:"800" },
-  broadcastInfo:    { flexDirection:"row", alignItems:"flex-start", gap:8, backgroundColor:"rgba(96,165,250,0.08)", padding:12, borderRadius:12, marginTop:14, marginBottom:14, borderWidth:1, borderColor:"rgba(96,165,250,0.2)" },
-  broadcastInfoText:{ flex:1, color:"#60a5fa", fontSize:12, lineHeight:18 },
-  broadcastInput:   { backgroundColor:"#0f1b2d", borderRadius:14, padding:14, color:"#fff", fontSize:13, minHeight:120, borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
-  broadcastCount:   { color:"#1f2937", fontSize:11, textAlign:"right", marginTop:5, marginBottom:4 },
+  collegeChipText:{ color:"#64748b", fontSize:11, fontWeight:"600" },
+  submitBtn:    { borderRadius:14, overflow:"hidden", marginTop:16 },
+  submitGrad:   { flexDirection:"row", alignItems:"center", justifyContent:"center", gap:10, paddingVertical:15 },
+  submitText:   { color:"#fff", fontSize:15, fontWeight:"800" },
+  bcInfo:       { flexDirection:"row", alignItems:"flex-start", gap:8, backgroundColor:"rgba(96,165,250,0.08)", padding:12, borderRadius:12, marginTop:14, marginBottom:14, borderWidth:1, borderColor:"rgba(96,165,250,0.2)" },
+  bcInfoText:   { flex:1, color:"#60a5fa", fontSize:12, lineHeight:18 },
+  bcInput:      { backgroundColor:"#0f1b2d", borderRadius:14, padding:14, color:"#fff", fontSize:13, minHeight:120, borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
+  bcCount:      { color:"#1f2937", fontSize:11, textAlign:"right", marginTop:5, marginBottom:4 },
 });
