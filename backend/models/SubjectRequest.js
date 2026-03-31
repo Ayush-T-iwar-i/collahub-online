@@ -16,6 +16,7 @@ const subjectRequestSchema = new mongoose.Schema({
   subjectName: { type: String, required: true },
   subjectCode: { type: String, default: "" },
   subjectId:   { type: mongoose.Schema.Types.ObjectId, ref: "Subject", default: null },
+  subjectType: { type: String, enum: ["Theory","Lab","Both"], default: "Theory" },
 
   // ── Target class ──
   college:       { type: String, required: true },

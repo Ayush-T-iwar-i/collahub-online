@@ -116,35 +116,35 @@ exports.acceptRequest = async (req, res) => {
     const request = await SubjectRequest.findById(req.params.id);
     if (!request) return res.status(404).json({ success: false, message: "Request not found" });
 
-    const { timetable } = req.body; // admin assigns slots
+    const { timetable, subjectType } = req.body;
+    if (subjectType) request.subjectType = subjectType;
 
-    // ── Conflict checks ──
+    // ── Conflict checks (only Teacher + Room — NOT batch) ──────────────────
     if (timetable && timetable.length > 0) {
       for (const slot of timetable) {
-        // 1. Teacher conflict — same teacher, same day+time, different subject
+
+        // 1. Teacher conflict — same teacher, same day+time
+        //    (A teacher cannot teach two subjects at the same time)
         const teacherConflict = await SubjectRequest.findOne({
-          _id:      { $ne: request._id },
+          _id:       { $ne: request._id },
           teacherId: request.teacherId,
-          status:   "accepted",
-          timetable: {
-            $elemMatch: {
-              day:       slot.day,
-              startTime: slot.startTime,
-            },
-          },
+          status:    "accepted",
+          timetable: { $elemMatch: { day: slot.day, startTime: slot.startTime } },
         });
         if (teacherConflict) {
           return res.status(400).json({
             success: false,
-            message: `Teacher conflict: ${request.teacherName} already has a class on ${slot.day} at ${slot.startTime} for "${teacherConflict.subjectName}"`,
+            message: `Teacher conflict: ${request.teacherName} already has "${teacherConflict.subjectName}" on ${slot.day} at ${slot.startTime}.`,
           });
         }
 
-        // 2. Room conflict — same room, same day+time
+        // 2. Room conflict — same room, same college, same day+time
+        //    (Different colleges can use same room number — college-scoped)
         if (slot.room && slot.room.trim()) {
           const roomConflict = await SubjectRequest.findOne({
-            _id:    { $ne: request._id },
-            status: "accepted",
+            _id:     { $ne: request._id },
+            college: request.college,           // same college only
+            status:  "accepted",
             timetable: {
               $elemMatch: {
                 day:       slot.day,
@@ -156,9 +156,32 @@ exports.acceptRequest = async (req, res) => {
           if (roomConflict) {
             return res.status(400).json({
               success: false,
-              message: `Room conflict: Room ${slot.room} is already booked on ${slot.day} at ${slot.startTime} for "${roomConflict.subjectName}" (${roomConflict.teacherName})`,
+              message: `Room conflict: Room "${slot.room}" is already booked on ${slot.day} at ${slot.startTime} for "${roomConflict.subjectName}" (${roomConflict.teacherName}).`,
             });
           }
+        }
+
+        // 3. Student batch conflict — same semester + admissionYear + section cannot
+        //    have two different subjects at the same time
+        const batchConflict = await SubjectRequest.findOne({
+          _id:          { $ne: request._id },
+          college:      request.college,
+          department:   request.department,
+          semester:     request.semester,
+          admissionYear:request.admissionYear,
+          status:       "accepted",
+          $or: [
+            { section: "All" },
+            { section: request.section },
+            ...(request.section === "All" ? [{}] : []),
+          ],
+          timetable: { $elemMatch: { day: slot.day, startTime: slot.startTime } },
+        });
+        if (batchConflict) {
+          return res.status(400).json({
+            success: false,
+            message: `Schedule conflict: ${request.teacherName} already has a class on ${slot.day} at ${slot.startTime} — students of Sem ${request.semester} Batch ${request.admissionYear} already have "${batchConflict.subjectName}" at this time.`,
+          });
         }
       }
     }
