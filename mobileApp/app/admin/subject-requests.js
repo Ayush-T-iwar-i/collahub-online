@@ -8,6 +8,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import API from "../../services/api";
 
 const { height, width } = Dimensions.get("window");
@@ -244,86 +245,95 @@ This time slot cannot be selected.`
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={ST.overlay}>
         <View style={ST.sheet}>
-          <View style={ST.handle}/>
 
-          {/* ── Header ── */}
-          <View style={ST.header}>
-            {step !== "type" ? (
-              <Pressable onPress={() => {
-                if (step === "slots")   setStep("type");
-                if (step === "rooms")   setStep("slots");
-                if (step === "confirm") setStep("rooms");
-              }} style={ST.backBtn}>
-                <Ionicons name="arrow-back" size={18} color="#fff"/>
+          {/* ══ FIXED HEADER SECTION — never scrolls ══ */}
+          <View style={ST.fixedTop}>
+            <View style={ST.handle}/>
+
+            {/* Header row */}
+            <View style={ST.header}>
+              {step !== "type" ? (
+                <Pressable onPress={() => {
+                  if (step === "slots")   setStep("type");
+                  if (step === "rooms")   setStep("slots");
+                  if (step === "confirm") setStep("rooms");
+                }} style={ST.backBtn}>
+                  <Ionicons name="arrow-back" size={18} color="#fff"/>
+                </Pressable>
+              ) : <View style={{width:36}}/>}
+
+              <View style={{flex:1, alignItems:"center"}}>
+                <Text style={ST.headerTitle} numberOfLines={1}>
+                  {step==="type"    ? "Subject Type"
+                  : step==="slots"  ? "Select Free Slots"
+                  : step==="rooms"  ? "Assign Rooms"
+                                    : "Review & Confirm"}
+                </Text>
+                <Text style={ST.headerSub} numberOfLines={1}>
+                  {request.subjectName} · {request.teacherName}
+                </Text>
+              </View>
+
+              <Pressable onPress={onClose} style={ST.closeBtn}>
+                <Ionicons name="close" size={18} color="#64748b"/>
               </Pressable>
-            ) : <View style={{width:36}}/>}
-
-            <View style={{flex:1, alignItems:"center"}}>
-              <Text style={ST.headerTitle}>
-                {step==="type"    ? "Subject Type"
-                : step==="slots"  ? "Select Free Slots"
-                : step==="rooms"  ? "Assign Rooms"
-                                  : "Review & Confirm"}
-              </Text>
-              <Text style={ST.headerSub} numberOfLines={1}>
-                {request.subjectName} · {request.teacherName}
-              </Text>
             </View>
 
-            <Pressable onPress={onClose} style={ST.closeBtn}>
-              <Ionicons name="close" size={18} color="#64748b"/>
-            </Pressable>
+            {/* Step progress bar */}
+            <View style={ST.stepBar}>
+              {[
+                {key:"type",    label:"Type"},
+                {key:"slots",   label:"Time"},
+                {key:"rooms",   label:"Room"},
+                {key:"confirm", label:"Confirm"},
+              ].map((s,i) => {
+                const steps = ["type","slots","rooms","confirm"];
+                const cur   = steps.indexOf(step);
+                const mine  = steps.indexOf(s.key);
+                const done  = mine < cur;
+                const active= mine === cur;
+                return (
+                  <React.Fragment key={s.key}>
+                    <View style={[ST.stepDot,
+                      done   && {backgroundColor: typeColor},
+                      active && {backgroundColor: typeColor, transform:[{scale:1.15}]},
+                      !done&&!active && {backgroundColor:"rgba(255,255,255,0.1)"},
+                    ]}>
+                      {done
+                        ? <Ionicons name="checkmark" size={10} color="#000"/>
+                        : <Text style={[ST.stepDotNum,active&&{color:"#000"}]}>{i+1}</Text>
+                      }
+                    </View>
+                    {i < 3 && <View style={[ST.stepLine, done&&{backgroundColor:typeColor}]}/>}
+                  </React.Fragment>
+                );
+              })}
+            </View>
+
+            {/* Info chips — horizontal scroll, fixed */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={ST.infoChips}>
+              <View style={ST.infoChip}><Ionicons name="layers-outline" size={11} color="#f59e0b"/><Text style={ST.infoChipText}>Sem {request.semester}</Text></View>
+              <View style={ST.infoChip}><Ionicons name="calendar-outline" size={11} color="#34d399"/><Text style={ST.infoChipText}>Batch {request.admissionYear}</Text></View>
+              {request.section && request.section !== "All" && <View style={ST.infoChip}><Ionicons name="people-outline" size={11} color="#00c6ff"/><Text style={ST.infoChipText}>Sec {request.section}</Text></View>}
+              <View style={ST.infoChip}><Ionicons name="school-outline" size={11} color="#a78bfa"/><Text style={ST.infoChipText}>{request.department?.match(/\(([^)]+)\)/)?.[1]||request.department?.split(" ")[0]}</Text></View>
+              {totalSlots > 0 && <View style={[ST.infoChip,{backgroundColor:"rgba(52,211,153,0.15)",borderColor:"#34d399"}]}><Ionicons name="checkmark-circle" size={11} color="#34d399"/><Text style={[ST.infoChipText,{color:"#34d399"}]}>{totalSlots} slot{totalSlots>1?"s":""}</Text></View>}
+            </ScrollView>
+
+            {/* Divider */}
+            <View style={ST.headerDivider}/>
           </View>
 
-          {/* ── Step progress ── */}
-          <View style={ST.stepBar}>
-            {[
-              {key:"type",    label:"Type"},
-              {key:"slots",   label:"Time"},
-              {key:"rooms",   label:"Room"},
-              {key:"confirm", label:"Confirm"},
-            ].map((s,i) => {
-              const steps = ["type","slots","rooms","confirm"];
-              const cur   = steps.indexOf(step);
-              const mine  = steps.indexOf(s.key);
-              const done  = mine < cur;
-              const active= mine === cur;
-              return (
-                <React.Fragment key={s.key}>
-                  <View style={[ST.stepDot,
-                    done   && {backgroundColor: typeColor},
-                    active && {backgroundColor: typeColor, transform:[{scale:1.15}]},
-                    !done&&!active && {backgroundColor:"rgba(255,255,255,0.1)"},
-                  ]}>
-                    {done
-                      ? <Ionicons name="checkmark" size={10} color="#000"/>
-                      : <Text style={[ST.stepDotNum,active&&{color:"#000"}]}>{i+1}</Text>
-                    }
-                  </View>
-                  {i < 3 && <View style={[ST.stepLine, done&&{backgroundColor:typeColor}]}/>}
-                </React.Fragment>
-              );
-            })}
-          </View>
-
-          {/* ── Info chips ── */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            contentContainerStyle={ST.infoChips}>
-            <View style={ST.infoChip}><Ionicons name="layers-outline" size={11} color="#f59e0b"/><Text style={ST.infoChipText}>Sem {request.semester}</Text></View>
-            <View style={ST.infoChip}><Ionicons name="calendar-outline" size={11} color="#34d399"/><Text style={ST.infoChipText}>Batch {request.admissionYear}</Text></View>
-            {request.section && request.section !== "All" && <View style={ST.infoChip}><Ionicons name="people-outline" size={11} color="#00c6ff"/><Text style={ST.infoChipText}>Sec {request.section}</Text></View>}
-            <View style={ST.infoChip}><Ionicons name="school-outline" size={11} color="#a78bfa"/><Text style={ST.infoChipText}>{request.department?.match(/\(([^)]+)\)/)?.[1]||request.department?.split(" ")[0]}</Text></View>
-            {totalSlots > 0 && <View style={[ST.infoChip,{backgroundColor:"rgba(52,211,153,0.15)",borderColor:"#34d399"}]}><Ionicons name="checkmark-circle" size={11} color="#34d399"/><Text style={[ST.infoChipText,{color:"#34d399"}]}>{totalSlots} slot{totalSlots>1?"s":""}</Text></View>}
-          </ScrollView>
-
+          {/* ══ SCROLLABLE BODY ══ */}
           {loadingData ? (
             <View style={ST.loadingWrap}>
               <ActivityIndicator size="large" color={typeColor}/>
               <Text style={ST.loadingText}>Loading schedule data...</Text>
             </View>
           ) : (
-
-          <ScrollView showsVerticalScrollIndicator={false}
+          <ScrollView
+            style={ST.scrollBody}
+            showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={ST.body}>
 
@@ -467,22 +477,28 @@ This time slot cannot be selected.`
                     return (
                       <Pressable key={key}
                         disabled={!canTap}
-                        style={[ST.slotChip, {backgroundColor:bg, borderColor:border, opacity:canTap?1:0.5}]}
+                        style={[ST.slotChip, {backgroundColor:bg, borderColor:border, opacity:canTap?1:0.55}]}
                         onPress={() => toggleSlot(activeDay, slot)}>
-                        <Ionicons name={icon} size={13} color={iconC}/>
-                        <Text style={[ST.slotText, sel&&{color:dc,fontWeight:"700"}, !tFree&&{color:"#f87171",fontSize:10}]}>
-                          {slot.label}
-                        </Text>
-                        {!tFree && (
-                          <Text style={ST.slotBusyLabel} numberOfLines={1}>
-                            {String(tBusyName||"").substring(0,8)}…
+                        <View style={{alignItems:"center", gap:2}}>
+                          <Ionicons name={icon} size={13} color={iconC}/>
+                          <Text style={[ST.slotText,
+                            sel&&{color:dc,fontWeight:"700"},
+                            !tFree&&{color:"#f87171"},
+                            tFree&&!bFree&&{color:"#f59e0b"},
+                          ]}>
+                            {slot.label}
                           </Text>
-                        )}
-                        {tFree && !bFree && (
-                          <Text style={[ST.slotBusyLabel,{color:"#f59e0b"}]} numberOfLines={1}>
-                            Stu:{String(bBusyName||"").substring(0,7)}
-                          </Text>
-                        )}
+                          {!tFree && (
+                            <Text style={[ST.slotBusyReason,{color:"#f87171"}]} numberOfLines={1}>
+                              T: {String(tBusyName||"").substring(0,9)}{String(tBusyName||"").length>9?"…":""}
+                            </Text>
+                          )}
+                          {tFree && !bFree && (
+                            <Text style={[ST.slotBusyReason,{color:"#f59e0b"}]} numberOfLines={1}>
+                              S: {String(bBusyName||"").substring(0,9)}{String(bBusyName||"").length>9?"…":""}
+                            </Text>
+                          )}
+                        </View>
                       </Pressable>
                     );
                   })}
@@ -513,174 +529,129 @@ This time slot cannot be selected.`
               </View>
             )}
 
-            {/* ════ STEP 3: ROOMS ════ */}
+            {/* ════ STEP 3: ROOMS — Day-wise per-slot ════ */}
             {step === "rooms" && (
               <View>
                 <Text style={ST.stepTitle}>Assign Rooms</Text>
                 <Text style={ST.stepHint}>
                   {subjectType==="Both"
-                    ? "Select a Lecture Theater (LT) for Theory and a Lab for practical sessions"
+                    ? "Select LT (Theory) + Lab room — per day, only free rooms shown"
                     : subjectType==="Lab"
-                    ? "Select a Lab room for this practical subject"
-                    : "Select a Lecture Theater (LT) for this subject"}
+                    ? "Select a free Lab room for each day"
+                    : "Select a free Lecture Theater for each day"}
                 </Text>
 
-                {/* For "Both" — two sections */}
-                {subjectType === "Both" ? (
-                  <>
-                    {/* Theory — LT section */}
-                    <View style={[ST.roomTypeSection, {borderColor:"rgba(0,198,255,0.25)"}]}>
-                      <View style={ST.roomTypeSectionHeader}>
-                        <View style={[ST.roomTypeSectionIcon, {backgroundColor:"rgba(0,198,255,0.12)"}]}>
-                          <Ionicons name="book-outline" size={16} color="#00c6ff"/>
-                        </View>
-                        <View style={{flex:1}}>
-                          <Text style={[ST.roomTypeSectionTitle, {color:"#00c6ff"}]}>Theory — Lecture Theater</Text>
-                          <Text style={ST.roomTypeSectionSub}>Select a free LT for all {totalSlots} slot{totalSlots>1?"s":""}</Text>
-                        </View>
-                      </View>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{gap:8}}>
-                        {getFreeRooms("Theory").map(r => {
-                          const free    = isRoomFreeForAll(r.name);
-                          const selKey  = Object.keys(ltRoomPerSlot)[0];
-                          const isSelAll= Object.values(ltRoomPerSlot).length===totalSlots && Object.values(ltRoomPerSlot)[0]===r.name;
-                          const rc      = "#00c6ff";
-                          return (
-                            <Pressable key={r._id}
-                              disabled={!free}
-                              style={[ST.roomChip,
-                                !free && {backgroundColor:"rgba(248,113,113,0.1)", borderColor:"#f87171"},
-                                free && isSelAll && {backgroundColor:rc+"20",borderColor:rc+"55"},
-                                free && !isSelAll && {backgroundColor:"rgba(255,255,255,0.04)",borderColor:"rgba(255,255,255,0.1)"},
-                              ]}
-                              onPress={() => {
-                                const u={};
-                                Object.keys(selectedSlots).forEach(k=>{ u[k]=r.name; });
-                                setLtRoomPerSlot(u);
-                              }}>
-                              <Ionicons name={free?"school-outline":"close-circle"} size={11} color={free?(isSelAll?rc:"#64748b"):"#f87171"}/>
-                              <Text style={[ST.roomChipText, {color:free?(isSelAll?rc:"#94a3b8"):"#f87171"}]}>{r.name}</Text>
-                              {r.capacity>0&&free&&<Text style={[ST.roomChipCap,{color:isSelAll?rc+"99":"#374151"}]}>·{r.capacity}</Text>}
-                              {!free&&<Text style={ST.roomChipBooked}>Booked</Text>}
-                            </Pressable>
-                          );
-                        })}
-                        {getFreeRooms("Theory").length===0&&(
-                          <Text style={ST.noRoomText}>No LT rooms added yet. Add rooms in Room Timetable screen.</Text>
-                        )}
-                      </ScrollView>
-                    </View>
+                {/* Day-wise room assignment — grouped by day */}
+                {DAYS_LIST.map(day => {
+                  const daySlotsEntries = Object.entries(selectedSlots).filter(([k])=>k.startsWith(day));
+                  if (!daySlotsEntries.length) return null;
+                  const dc = DAY_COLORS[day];
 
-                    {/* Lab section */}
-                    <View style={[ST.roomTypeSection, {borderColor:"rgba(52,211,153,0.25)", marginTop:12}]}>
-                      <View style={ST.roomTypeSectionHeader}>
-                        <View style={[ST.roomTypeSectionIcon, {backgroundColor:"rgba(52,211,153,0.12)"}]}>
-                          <Ionicons name="flask-outline" size={16} color="#34d399"/>
-                        </View>
-                        <View style={{flex:1}}>
-                          <Text style={[ST.roomTypeSectionTitle, {color:"#34d399"}]}>Lab — Lab Room</Text>
-                          <Text style={ST.roomTypeSectionSub}>Select a free Lab for all {totalSlots} slot{totalSlots>1?"s":""}</Text>
-                        </View>
-                      </View>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{gap:8}}>
-                        {getFreeRooms("Lab").map(r => {
-                          const free   = isRoomFreeForAll(r.name);
-                          const isSelAll= Object.values(labRoomPerSlot).length===totalSlots && Object.values(labRoomPerSlot)[0]===r.name;
-                          const rc     = "#34d399";
-                          return (
-                            <Pressable key={r._id}
-                              disabled={!free}
-                              style={[ST.roomChip,
-                                !free && {backgroundColor:"rgba(248,113,113,0.1)", borderColor:"#f87171"},
-                                free && isSelAll && {backgroundColor:rc+"20",borderColor:rc+"55"},
-                                free && !isSelAll && {backgroundColor:"rgba(255,255,255,0.04)",borderColor:"rgba(255,255,255,0.1)"},
-                              ]}
-                              onPress={() => {
-                                const u={};
-                                Object.keys(selectedSlots).forEach(k=>{ u[k]=r.name; });
-                                setLabRoomPerSlot(u);
-                              }}>
-                              <Ionicons name={free?"flask-outline":"close-circle"} size={11} color={free?(isSelAll?rc:"#64748b"):"#f87171"}/>
-                              <Text style={[ST.roomChipText, {color:free?(isSelAll?rc:"#94a3b8"):"#f87171"}]}>{r.name}</Text>
-                              {r.capacity>0&&free&&<Text style={[ST.roomChipCap,{color:isSelAll?rc+"99":"#374151"}]}>·{r.capacity}</Text>}
-                              {!free&&<Text style={ST.roomChipBooked}>Booked</Text>}
-                            </Pressable>
-                          );
-                        })}
-                        {getFreeRooms("Lab").length===0&&(
-                          <Text style={ST.noRoomText}>No Lab rooms added. Add rooms in Room Timetable screen.</Text>
-                        )}
-                      </ScrollView>
-                    </View>
-                  </>
-                ) : (
-                  // Single type — Theory or Lab
-                  <View style={[ST.roomTypeSection, {borderColor: typeColor+"30"}]}>
-                    <View style={ST.roomTypeSectionHeader}>
-                      <View style={[ST.roomTypeSectionIcon, {backgroundColor: typeColor+"15"}]}>
-                        <Ionicons name={typeIcon} size={16} color={typeColor}/>
-                      </View>
-                      <View style={{flex:1}}>
-                        <Text style={[ST.roomTypeSectionTitle, {color:typeColor}]}>
-                          {subjectType==="Lab" ? "Lab Room" : "Lecture Theater (LT)"}
-                        </Text>
-                        <Text style={ST.roomTypeSectionSub}>
-                          Select a free room for all {totalSlots} slot{totalSlots>1?"s":""}
-                        </Text>
-                      </View>
-                    </View>
+                  // For "Both" — get theory rooms and lab rooms free on THIS day's slots
+                  const renderRoomRow = (roomType, roomColor, roomIcon, stateGetter, stateSetter, label) => {
+                    const filteredRooms = allRooms.filter(r => {
+                      if (roomType==="Lab")    return r.type==="Lab";
+                      if (roomType==="Theory") return r.type!=="Lab";
+                      return true;
+                    });
 
-                    {/* Per-slot room assignment */}
-                    {Object.entries(selectedSlots)
-                      .sort(([,a],[,b])=>a.day.localeCompare(b.day)||a.startTime.localeCompare(b.startTime))
-                      .map(([key, slot]) => {
-                        const slotRooms = getFreeRooms(subjectType);
-                        const dayColor  = DAY_COLORS[slot.day] || typeColor;
-                        return (
-                          <View key={key} style={ST.slotRoomRow}>
-                            <View style={[ST.slotRoomTimeTag,{backgroundColor:dayColor+"18"}]}>
-                              <Text style={[ST.slotRoomTimeText,{color:dayColor}]}>
-                                {DAY_SHORT_MAP[slot.day]} {TIME_SLOTS.find(t=>t.startTime===slot.startTime)?.label}
-                              </Text>
+                    return (
+                      <View style={[ST.dayRoomSection, {borderLeftColor: roomColor}]} key={roomType}>
+                        <View style={ST.dayRoomSectionHeader}>
+                          <Ionicons name={roomIcon} size={13} color={roomColor}/>
+                          <Text style={[ST.dayRoomSectionLabel, {color:roomColor}]}>{label}</Text>
+                        </View>
+
+                        {daySlotsEntries.map(([key, slot]) => {
+                          const slotLabel = TIME_SLOTS.find(t=>t.startTime===slot.startTime)?.label || slot.startTime;
+                          const currentRoom = stateGetter[key] || "";
+                          return (
+                            <View key={key} style={ST.slotRoomRow}>
+                              {/* Time badge */}
+                              <View style={[ST.slotRoomTimeTag, {backgroundColor:dc+"18"}]}>
+                                <Ionicons name="time-outline" size={10} color={dc}/>
+                                <Text style={[ST.slotRoomTimeText, {color:dc}]}>{slotLabel}</Text>
+                              </View>
+
+                              {/* Room chips for this specific slot */}
+                              <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={{gap:6, paddingBottom:2}}>
+                                {filteredRooms.map(r => {
+                                  const booked = isRoomBooked(slot.day, slot.startTime, r.name);
+                                  const isSelected = currentRoom === r.name;
+                                  const chipColor = booked ? "#f87171" : isSelected ? roomColor : "#64748b";
+                                  const chipBg    = booked ? "rgba(248,113,113,0.1)"
+                                                  : isSelected ? roomColor+"18"
+                                                  : "rgba(255,255,255,0.04)";
+                                  const chipBorder= booked ? "rgba(248,113,113,0.4)"
+                                                  : isSelected ? roomColor+"55"
+                                                  : "rgba(255,255,255,0.08)";
+                                  return (
+                                    <Pressable key={r._id}
+                                      disabled={booked}
+                                      style={[ST.roomChip, {backgroundColor:chipBg, borderColor:chipBorder}]}
+                                      onPress={()=>{
+                                        const updated = {...stateGetter, [key]: r.name};
+                                        stateSetter(updated);
+                                      }}>
+                                      <Ionicons
+                                        name={booked?"close-circle":isSelected?"checkmark-circle":roomIcon}
+                                        size={11} color={chipColor}/>
+                                      <Text style={[ST.roomChipText, {color:chipColor}]}>{r.name}</Text>
+                                      {r.capacity>0&&!booked&&(
+                                        <Text style={[ST.roomChipCap,{color:chipColor+"99"}]}>·{r.capacity}</Text>
+                                      )}
+                                      {booked&&<Text style={ST.roomChipBooked}>Booked</Text>}
+                                    </Pressable>
+                                  );
+                                })}
+                                {filteredRooms.length===0&&(
+                                  <View style={ST.noRoomChip}>
+                                    <Ionicons name="information-circle-outline" size={12} color="#374151"/>
+                                    <Text style={ST.noRoomText}>No {label} added. Go to Room Timetable.</Text>
+                                  </View>
+                                )}
+                              </ScrollView>
                             </View>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}
-                              contentContainerStyle={{gap:6}}>
-                              {slotRooms.map(r=>{
-                                const booked = isRoomBooked(slot.day, slot.startTime, r.name);
-                                const selR   = roomPerSlot[key]===r.name;
-                                const rc     = booked?"#f87171":typeColor;
-                                return (
-                                  <Pressable key={r._id}
-                                    disabled={booked}
-                                    style={[ST.roomChip,
-                                      booked&&{backgroundColor:"rgba(248,113,113,0.1)",borderColor:"#f87171"},
-                                      !booked&&selR&&{backgroundColor:typeColor+"20",borderColor:typeColor+"55"},
-                                      !booked&&!selR&&{backgroundColor:"rgba(255,255,255,0.04)",borderColor:"rgba(255,255,255,0.1)"},
-                                    ]}
-                                    onPress={()=>{
-                                      setRoomPerSlot(prev=>({...prev,[key]:r.name}));
-                                    }}>
-                                    <Ionicons name={booked?"close-circle":typeIcon} size={11} color={rc+(selR?"":"99")}/>
-                                    <Text style={[ST.roomChipText,{color:booked?"#f87171":selR?typeColor:"#94a3b8"}]}>{r.name}</Text>
-                                    {r.capacity>0&&!booked&&<Text style={ST.roomChipCap}>·{r.capacity}</Text>}
-                                    {booked&&<Text style={ST.roomChipBooked}>Booked</Text>}
-                                  </Pressable>
-                                );
-                              })}
-                              {slotRooms.length===0&&(
-                                <Text style={ST.noRoomText}>No rooms added yet</Text>
-                              )}
-                            </ScrollView>
-                          </View>
-                        );
-                      })
-                    }
-                  </View>
-                )}
+                          );
+                        })}
+                      </View>
+                    );
+                  };
 
-                <Text style={ST.skipNote}>Room assignment is optional. You can skip and assign later.</Text>
+                  return (
+                    <View key={day} style={ST.dayRoomBlock}>
+                      {/* Day header */}
+                      <View style={[ST.dayRoomHeader, {backgroundColor:dc+"12"}]}>
+                        <View style={[ST.dayRoomDot, {backgroundColor:dc}]}/>
+                        <Text style={[ST.dayRoomName, {color:dc}]}>{day}</Text>
+                        <Text style={ST.dayRoomCount}>
+                          {daySlotsEntries.length} slot{daySlotsEntries.length>1?"s":""}
+                        </Text>
+                      </View>
+
+                      {subjectType==="Both" ? (
+                        <>
+                          {renderRoomRow("Theory","#00c6ff","school-outline",
+                            ltRoomPerSlot, setLtRoomPerSlot, "Lecture Theater")}
+                          {renderRoomRow("Lab","#34d399","flask-outline",
+                            labRoomPerSlot, setLabRoomPerSlot, "Lab Room")}
+                        </>
+                      ) : (
+                        renderRoomRow(
+                          subjectType,
+                          typeColor,
+                          typeIcon,
+                          roomPerSlot,
+                          setRoomPerSlot,
+                          subjectType==="Lab" ? "Lab Room" : "Lecture Theater"
+                        )
+                      )}
+                    </View>
+                  );
+                })}
+
+                <Text style={ST.skipNote}>Room assignment is optional — you can assign later.</Text>
 
                 <Pressable style={[ST.nextBtn, {backgroundColor:typeColor}]}
                   onPress={()=>setStep("confirm")}>
@@ -786,7 +757,10 @@ This time slot cannot be selected.`
 // ── Modal Styles ───────────────────────────────────────────
 const ST = StyleSheet.create({
   overlay:          { flex:1, backgroundColor:"rgba(0,0,0,0.85)", justifyContent:"flex-end" },
-  sheet:            { backgroundColor:"#0a1220", borderTopLeftRadius:28, borderTopRightRadius:28, maxHeight:"93%", borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
+  fixedTop:         { flexShrink:0 },
+  scrollBody:       { flex:1 },
+  headerDivider:    { height:1, backgroundColor:"rgba(255,255,255,0.06)", marginTop:4 },
+  sheet:            { backgroundColor:"#0a1220", borderTopLeftRadius:28, borderTopRightRadius:28, height:"93%", borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
   handle:           { width:40, height:4, borderRadius:2, backgroundColor:"rgba(255,255,255,0.12)", alignSelf:"center", marginTop:12, marginBottom:2 },
   header:           { flexDirection:"row", alignItems:"center", paddingHorizontal:16, paddingVertical:12 },
   backBtn:          { width:36, height:36, borderRadius:12, backgroundColor:"rgba(255,255,255,0.08)", justifyContent:"center", alignItems:"center" },
@@ -871,11 +845,24 @@ const ST = StyleSheet.create({
   slotsSummaryRow:  { flexDirection:"row", alignItems:"center", gap:10, marginBottom:12, flexWrap:"wrap" },
   freeCountBadge:   { flexDirection:"row", alignItems:"center", gap:5, backgroundColor:"rgba(52,211,153,0.08)", paddingHorizontal:10, paddingVertical:6, borderRadius:20, borderWidth:1, borderColor:"rgba(52,211,153,0.2)" },
   freeCountText:    { color:"#34d399", fontSize:11, fontWeight:"700" },
+  // Slot chip vertical layout
+  slotBusyReason:   { fontSize:8, fontWeight:"700", maxWidth:54, textAlign:"center" },
+  // Day-wise room step
+  dayRoomBlock:     { backgroundColor:"rgba(255,255,255,0.03)", borderRadius:14, marginBottom:12, overflow:"hidden", borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
+  dayRoomHeader:    { flexDirection:"row", alignItems:"center", gap:10, padding:12 },
+  dayRoomDot:       { width:8, height:8, borderRadius:4 },
+  dayRoomName:      { fontSize:14, fontWeight:"800", flex:1 },
+  dayRoomCount:     { color:"#64748b", fontSize:11 },
+  dayRoomSection:   { marginHorizontal:12, marginBottom:10, borderLeftWidth:2, paddingLeft:10 },
+  dayRoomSectionHeader:{ flexDirection:"row", alignItems:"center", gap:6, marginBottom:8 },
+  dayRoomSectionLabel: { fontSize:11, fontWeight:"700" },
+  noRoomChip:       { flexDirection:"row", alignItems:"center", gap:6, paddingHorizontal:10, paddingVertical:7, borderRadius:20, borderWidth:1, borderColor:"rgba(255,255,255,0.07)", backgroundColor:"rgba(255,255,255,0.03)" },
 });
 
 
 export default function AdminSubjectRequests() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [requests,   setRequests]   = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1005,7 +992,7 @@ export default function AdminSubjectRequests() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#080d17"/>
 
-      <LinearGradient colors={["#080d17","#0f1923"]} style={styles.header}>
+      <LinearGradient colors={["#080d17","#0f1923"]} style={[styles.header, {paddingTop: insets.top + 12}]}>
         <Pressable onPress={()=>router.canGoBack()?router.back():router.replace("/admin/dashboard")} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff"/>
         </Pressable>
@@ -1088,7 +1075,7 @@ export default function AdminSubjectRequests() {
 const styles = StyleSheet.create({
   container:           { flex:1, backgroundColor:"#080d17" },
   center:              { flex:1, justifyContent:"center", alignItems:"center" },
-  header:              { flexDirection:"row", alignItems:"center", paddingHorizontal:16, paddingTop:18, paddingBottom:14 },
+  header:              { flexDirection:"row", alignItems:"center", paddingHorizontal:16, paddingBottom:14 },
   backBtn:             { width:40, height:40, borderRadius:12, backgroundColor:"rgba(255,255,255,0.08)", justifyContent:"center", alignItems:"center" },
   headerCenter:        { flex:1, alignItems:"center", gap:6 },
   headerTitle:         { color:"#fff", fontSize:18, fontWeight:"800" },
