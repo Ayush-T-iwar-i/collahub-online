@@ -16,17 +16,21 @@ export default function TeacherResult() {
           style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </Pressable>
-        <Text style={styles.headerTitle}>Results</Text>
+        <Text style={styles.headerTitle}>Student Results</Text>
         <View style={{ width:40 }} />
       </LinearGradient>
       <View style={styles.body}>
         <View style={styles.iconBox}>
-          <Ionicons name="bar-chart-outline" size={48} color="#374151" />
+          <Ionicons name="bar-chart-outline" size={48} color="#a78bfa" />
         </View>
         <Text style={styles.title}>Student Results</Text>
         <Text style={styles.sub}>
-          Student results view karne ke liye is section mein aayenge
+          View student assignment marks and performance in the Assignments section.
         </Text>
+        <Pressable style={styles.btn} onPress={() => router.push("/teacher/assignments")}>
+          <Ionicons name="document-text-outline" size={16} color="#fff" />
+          <Text style={styles.btnText}>Go to Assignments</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -38,7 +42,9 @@ const styles = StyleSheet.create({
   backBtn:     { width:40, height:40, borderRadius:12, backgroundColor:"rgba(255,255,255,0.08)", justifyContent:"center", alignItems:"center" },
   headerTitle: { color:"#fff", fontSize:18, fontWeight:"800" },
   body:        { flex:1, justifyContent:"center", alignItems:"center", padding:32, gap:16 },
-  iconBox:     { width:96, height:96, borderRadius:48, backgroundColor:"#1a2535", justifyContent:"center", alignItems:"center", marginBottom:8 },
+  iconBox:     { width:96, height:96, borderRadius:48, backgroundColor:"rgba(167,139,250,0.12)", justifyContent:"center", alignItems:"center", marginBottom:8, borderWidth:1, borderColor:"rgba(167,139,250,0.25)" },
   title:       { color:"#fff", fontSize:18, fontWeight:"800", textAlign:"center" },
   sub:         { color:"#64748b", fontSize:13, textAlign:"center", lineHeight:20 },
-});
+  btn:         { flexDirection:"row", alignItems:"center", gap:8, backgroundColor:"#7c3aed", paddingHorizontal:20, paddingVertical:12, borderRadius:12, marginTop:8 },
+  btnText:     { color:"#fff", fontSize:14, fontWeight:"700" },
+});

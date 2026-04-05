@@ -1,8 +1,9 @@
-const Attendance = require("../models/Attendance");
-const Assignment = require("../models/Assignment");
-const Submission = require("../models/Submission");
-const Subject = require("../models/Subject");
-const User = require("../models/User");
+const Attendance    = require("../models/Attendance");
+const Assignment    = require("../models/Assignment");
+const Submission    = require("../models/Submission");
+const Subject       = require("../models/Subject");
+const User          = require("../models/User");
+const SubjectRequest = require("../models/SubjectRequest");
 
 /* ================= STUDENT DASHBOARD ================= */
 const studentDashboard = async (req, res) => {
@@ -59,8 +60,8 @@ const teacherDashboard = async (req, res) => {
     if (department) studentFilter.department = department;
     const totalStudents = await User.countDocuments(studentFilter);
 
-    // Attendance marked by this teacher
-    const attendanceMarked = await Attendance.countDocuments({ teacherId });
+    // Attendance marked by this teacher (markedBy field)
+    const attendanceMarked = await Attendance.countDocuments({ markedBy: req.user.id });
 
     res.json({
       success:          true,
@@ -94,11 +95,10 @@ const adminDashboard = async (req, res) => {
     const totalAttendance  = await Attendance.countDocuments();
 
     // Pending subject requests for this college's teachers
-    const SubjectRequest = (() => { try { return require("../models/SubjectRequest"); } catch { return null; } })();
     let pendingRequests = 0;
-    if (SubjectRequest) {
+    try {
       pendingRequests = await SubjectRequest.countDocuments({ status: "pending", college });
-    }
+    } catch (e) { /* Model may not exist yet in some configurations */ }
 
     res.json({
       success: true,
@@ -119,15 +119,20 @@ const adminDashboard = async (req, res) => {
 /* ================= ADMIN TOP STUDENTS ================= */
 const adminTopStudents = async (req, res) => {
   try {
-    const students = await User.find({ role: "student" });
+    // Get admin's college to scope results properly
+    const admin   = await User.findById(req.user.id).select("college").lean();
+    const college = admin?.college || "";
 
-    let result = [];
+    const filter = { role: "student" };
+    if (college) filter.college = college;
 
-    for (let student of students) {
-      const submissions = await Submission.find({ studentId: student._id });
+    const students = await User.find(filter).select("_id name email studentId").lean();
+    const result = [];
 
+    for (const student of students) {
+      const submissions = await Submission.find({ studentId: student._id }).lean();
       const totalMarks = submissions.reduce((acc, item) => acc + (item.marks || 0), 0);
-      const average = submissions.length === 0 ? 0 : totalMarks / submissions.length;
+      const average    = submissions.length === 0 ? 0 : totalMarks / submissions.length;
 
       result.push({
         studentId: student._id,
@@ -140,10 +145,7 @@ const adminTopStudents = async (req, res) => {
 
     result.sort((a, b) => b.totalMarks - a.totalMarks);
 
-    res.json({
-      success: true,
-      data: result.slice(0, 5),
-    });
+    res.json({ success: true, data: result.slice(0, 5) });
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -83,10 +83,11 @@ const getStudents = async (req, res) => {
     const admin = await User.findById(req.user.id).select("college").lean();
     if (!admin) return res.status(404).json({ message: "Admin not found" });
 
-    const { department, admissionYear } = req.query;
+    const { department, admissionYear, semester } = req.query;
     const filter = { role: "student", college: admin.college };
     if (department)    filter.department    = department;
     if (admissionYear) filter.admissionYear = String(admissionYear);
+    if (semester)      filter.semester      = Number(semester);
 
     const students = await User.find(filter)
       .select("-password -refreshToken -otp -otpExpire -results")
@@ -147,12 +148,16 @@ const removeStudent = async (req, res) => {
 
 const updateBatchSemester = async (req, res) => {
   try {
-    const { college, department, admissionYear, newSemester } = req.body;
+    const { department, admissionYear, newSemester } = req.body;
     if (!admissionYear) return res.status(400).json({ message: "admissionYear required" });
 
+    // Always use admin's own college — never trust body for college
+    const admin    = await User.findById(req.user.id).select("college").lean();
+    const college  = admin?.college || "";
+    if (!college) return res.status(400).json({ message: "Admin college not found" });
+
     const semester = newSemester ? Number(newSemester) : getAutoSemester(admissionYear);
-    const filter   = { role: "student", admissionYear: String(admissionYear) };
-    if (college)    filter.college    = college;
+    const filter   = { role: "student", college, admissionYear: String(admissionYear) };
     if (department) filter.department = department;
 
     const result = await User.updateMany(filter, { $set: { semester } });
@@ -209,52 +214,34 @@ const getTeachers = async (req, res) => {
   }
 };
 
-// ✅ FIXED addTeacher — console.log added + better error messages
 const addTeacher = async (req, res) => {
   try {
-    // ── DEBUG: exact body dekho terminal mein ──
-    console.log("=== ADD TEACHER DEBUG ===");
-    console.log("Body received:", JSON.stringify(req.body, null, 2));
-    console.log("========================");
 
     let { name, email, password, phone, teacherId, college, department } = req.body;
 
-    // ── Field by field validation with exact error messages ──
-    if (!name || !name.trim()) {
-      console.log("FAIL: name missing");
+    // ── Field by field validation ──
+    if (!name || !name.trim())
       return res.status(400).json({ message: "Teacher name is required" });
-    }
-    if (!email || !email.trim()) {
-      console.log("FAIL: email missing");
+    if (!email || !email.trim())
       return res.status(400).json({ message: "Email is required" });
-    }
-    if (!password || !password.trim()) {
-      console.log("FAIL: password missing");
+    if (!password || !password.trim())
       return res.status(400).json({ message: "Password is required" });
-    }
-    if (password.length < 6) {
-      console.log("FAIL: password too short");
+    if (password.length < 6)
       return res.status(400).json({ message: "Password must be at least 6 characters" });
-    }
 
     email = email.toLowerCase().trim();
 
     // ── Email duplicate check ──
     const existing = await User.findOne({ email });
     if (existing) {
-      console.log("FAIL: email already exists:", email, "role:", existing.role);
       return res.status(400).json({
         message: `Email "${email}" is already registered as ${existing.role}. Please use a different email.`,
       });
     }
 
     // ── College check ──
-    if (!college || !college.trim()) {
-      console.log("FAIL: college missing");
+    if (!college || !college.trim())
       return res.status(400).json({ message: "College is required. Please re-login and try again." });
-    }
-
-    console.log("All validations passed — creating teacher...");
 
     const t = await User.create({
       name:       name.trim(),
@@ -268,8 +255,6 @@ const addTeacher = async (req, res) => {
       isEmailVerified: true,
     });
 
-    console.log("Teacher created successfully:", t._id, t.name);
-
     res.status(201).json({
       message: "Teacher added successfully",
       teacher: {
@@ -282,8 +267,6 @@ const addTeacher = async (req, res) => {
       },
     });
   } catch (err) {
-    console.log("ADD TEACHER SERVER ERROR:", err.message);
-    // MongoDB duplicate key error
     if (err.code === 11000) {
       return res.status(400).json({
         message: "A user with this email already exists.",

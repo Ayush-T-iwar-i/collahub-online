@@ -15,12 +15,10 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@react-native-async-storage/async-storage": "^2.2.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
-    "expo-clipboard": "~8.0.8",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.0",
     "express-validator": "^7.3.1",

@@ -2,47 +2,34 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable,
-  ActivityIndicator, TextInput, StatusBar, Dimensions,
+  ActivityIndicator, TextInput, StatusBar,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import API from "../../services/api";
-
-const { width } = Dimensions.get("window");
 
 const DEPT_COLORS = ["#00c6ff","#a78bfa","#34d399","#f59e0b","#f87171","#ec4899","#60a5fa"];
 const dc = (d = "") => DEPT_COLORS[d.charCodeAt(0) % DEPT_COLORS.length];
 
 export default function SuperAdminSubjects() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [subjects,    setSubjects]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState("");
-  const [college,     setCollege]     = useState("all");
-  const [typeFilter,  setTypeFilter]  = useState("all");
-  const [colleges,    setColleges]    = useState([]);
-  const [total,       setTotal]       = useState(0);
+  const [subjects,   setSubjects]   = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState("");
+  const [typeFilter, setTypeFilter] = useState("all"); // all | theory | lab
+  const [total,      setTotal]      = useState(0);
 
-  useFocusEffect(useCallback(() => {
-    loadColleges();
-    load("all", "all");
-  }, []));
+  useFocusEffect(useCallback(() => { load("all"); }, []));
 
-  const loadColleges = async () => {
-    try {
-      const r = await API.get("/super-admin/colleges");
-      setColleges((r.data?.colleges || []).map(c => typeof c === "string" ? c : c.name).filter(Boolean));
-    } catch {}
-  };
-
-  const load = async (col = college, typ = typeFilter) => {
+  const load = async (typ = typeFilter) => {
     setLoading(true);
     try {
-      const params = { limit: 200 };
-      if (col !== "all") params.college = col;
-      if (typ !== "all") params.type    = typ;
+      const params = { limit: 300 };
+      if (typ !== "all") params.type = typ;
       const r = await API.get("/super-admin/subjects", { params });
       const list = r.data?.subjects || [];
       setSubjects(list);
@@ -55,18 +42,12 @@ export default function SuperAdminSubjects() {
     }
   };
 
-  const handleCollege = (c) => {
-    setCollege(c);
-    setSearch("");
-    load(c, typeFilter);
-  };
-
   const handleType = (t) => {
     setTypeFilter(t);
-    load(college, t);
+    setSearch("");
+    load(t);
   };
 
-  // Local search filter only
   const filtered = search.trim()
     ? subjects.filter(s => {
         const q = search.toLowerCase();
@@ -78,132 +59,32 @@ export default function SuperAdminSubjects() {
       })
     : subjects;
 
-  // ── College chip label ───────────────────────────────
-  const chipLabel = (c) => {
-    if (c === "all") return "All Colleges";
-    return c.replace(/^nims\s*/i, "").split(" ").slice(0, 3).join(" ");
-  };
-
-  // ── Detect subject type ──────────────────────────────
   const getType = (item) => {
-    const t = (item.type || item.subjectType || "theory").toLowerCase();
-    if (t === "lab" || t === "practical") return "lab";
-    return "theory";
+    const t = (item.type || item.subjectType || "").toLowerCase();
+    return (t === "lab" || t === "practical") ? "lab" : "theory";
   };
 
-  // ── Header component (scrolls with list) ────────────
-  const ListHeader = () => (
-    <View style={s.listHeaderWrap}>
+  const TYPE_BTNS = [
+    { key:"all",    label:"All",     icon:"apps-outline",  color:"#a78bfa" },
+    { key:"theory", label:"Theory",  icon:"book-outline",  color:"#00c6ff" },
+    { key:"lab",    label:"Lab",     icon:"flask-outline", color:"#34d399" },
+  ];
 
-      {/* Search */}
-      <View style={s.searchBox}>
-        <Ionicons name="search" size={15} color="#64748b" />
-        <TextInput
-          style={s.searchInput}
-          placeholder="Search name, code, department..."
-          placeholderTextColor="#374151"
-          value={search}
-          onChangeText={setSearch}
-        />
-        {!!search && (
-          <Pressable onPress={() => setSearch("")} style={s.clearBtn}>
-            <Ionicons name="close-circle" size={16} color="#64748b" />
-          </Pressable>
-        )}
-      </View>
-
-      {/* ── College filter ── */}
-      <Text style={s.filterSectionLabel}>COLLEGE</Text>
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={["all", ...colleges]}
-        keyExtractor={c => c}
-        contentContainerStyle={s.chipRow}
-        renderItem={({ item: c }) => {
-          const active = college === c;
-          return (
-            <Pressable
-              onPress={() => handleCollege(c)}
-              style={[s.chip, active && s.chipActiveBlue]}>
-              {active && (
-                <Ionicons name="checkmark-circle" size={11} color="#60a5fa" style={{ marginRight: 2 }} />
-              )}
-              <Text style={[s.chipText, active && { color:"#60a5fa" }]}>
-                {chipLabel(c)}
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
-
-      {/* ── Type filter ── */}
-      <Text style={s.filterSectionLabel}>TYPE</Text>
-      <View style={s.typeRow}>
-        {[
-          { key:"all",    label:"All Types",       icon:"apps-outline",  color:"#a78bfa" },
-          { key:"theory", label:"Theory",           icon:"book-outline",  color:"#00c6ff" },
-          { key:"lab",    label:"Lab / Practical",  icon:"flask-outline", color:"#34d399" },
-        ].map(tf => {
-          const active = typeFilter === tf.key;
-          return (
-            <Pressable
-              key={tf.key}
-              onPress={() => handleType(tf.key)}
-              style={[s.typeBtn,
-                active && {
-                  backgroundColor: tf.color + "18",
-                  borderColor:     tf.color + "55",
-                }
-              ]}>
-              <View style={[s.typeBtnIcon,
-                { backgroundColor: active ? tf.color + "25" : "rgba(255,255,255,0.05)" }]}>
-                <Ionicons name={tf.icon} size={14}
-                  color={active ? tf.color : "#64748b"} />
-              </View>
-              <Text style={[s.typeBtnText, active && { color: tf.color }]}>
-                {tf.label}
-              </Text>
-              {active && (
-                <View style={[s.typeBtnDot, { backgroundColor: tf.color }]} />
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Result count */}
-      <View style={s.resultRow}>
-        <Text style={s.resultText}>
-          Showing <Text style={s.resultCount}>{filtered.length}</Text>
-          {search ? ` of ${subjects.length}` : ""} subjects
-          {college !== "all" ? ` · ${chipLabel(college)}` : ""}
-        </Text>
-      </View>
-    </View>
-  );
-
-  // ── Subject card ─────────────────────────────────────
   const renderItem = ({ item }) => {
-    const color      = dc(item.department || item.name || "");
-    const subType    = getType(item);
-    const isLab      = subType === "lab";
-    const typeColor  = isLab ? "#34d399" : "#00c6ff";
-    const typeLabel  = isLab ? "LAB" : "THEORY";
-    const typeIcon   = isLab ? "flask-outline" : "book-outline";
+    const color     = dc(item.department || item.name || "");
+    const isLab     = getType(item) === "lab";
+    const typeColor = isLab ? "#34d399" : "#00c6ff";
+    const typeLabel = isLab ? "LAB" : "THEORY";
+    const typeIcon  = isLab ? "flask-outline" : "book-outline";
 
     return (
       <View style={s.card}>
-        {/* Left: code box */}
         <View style={[s.codeBox, { backgroundColor: color+"18", borderColor: color+"35" }]}>
           <Text style={[s.codeText, { color }]} numberOfLines={2} adjustsFontSizeToFit>
             {item.code || item.subjectCode || "N/A"}
           </Text>
         </View>
-
-        {/* Middle: info */}
         <View style={s.cardBody}>
-          {/* Top row: name + type badge */}
           <View style={s.cardTopRow}>
             <Text style={s.cardName} numberOfLines={1}>{item.name || item.subjectName || "—"}</Text>
             <View style={[s.typePill, { backgroundColor: typeColor+"15", borderColor: typeColor+"40" }]}>
@@ -211,8 +92,6 @@ export default function SuperAdminSubjects() {
               <Text style={[s.typePillText, { color: typeColor }]}>{typeLabel}</Text>
             </View>
           </View>
-
-          {/* Tags row */}
           <View style={s.tagsRow}>
             {item.department && (
               <View style={[s.tag, { borderColor: color+"35", backgroundColor: color+"10" }]}>
@@ -241,7 +120,7 @@ export default function SuperAdminSubjects() {
     <View style={s.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Sticky header */}
+      {/* ── Fixed sticky header ── */}
       <LinearGradient colors={["#070d1a","#0b1422"]} style={s.header}>
         <Pressable onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
@@ -249,14 +128,59 @@ export default function SuperAdminSubjects() {
         <View style={{ flex:1 }}>
           <Text style={s.headerTitle}>All Subjects</Text>
           <Text style={s.headerSub}>
-            {loading ? "Loading..." : `${total} subjects system-wide`}
+            {loading ? "Loading..." : `${filtered.length} of ${total} subjects`}
           </Text>
         </View>
-        <Pressable onPress={() => load(college, typeFilter)} style={s.refreshBtn}>
+        <Pressable onPress={() => load(typeFilter)} style={s.refreshBtn}>
           <Ionicons name="refresh" size={17} color="#60a5fa" />
         </Pressable>
       </LinearGradient>
 
+      {/* ── Fixed filter bar (does NOT scroll) ── */}
+      <View style={s.filterBar}>
+        {/* Search */}
+        <View style={s.searchBox}>
+          <Ionicons name="search" size={14} color="#64748b" />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Search name, code, department..."
+            placeholderTextColor="#374151"
+            value={search}
+            onChangeText={setSearch}
+          />
+          {!!search && (
+            <Pressable onPress={() => setSearch("")}>
+              <Ionicons name="close-circle" size={15} color="#64748b" />
+            </Pressable>
+          )}
+        </View>
+
+        {/* Theory / Lab filter */}
+        <View style={s.typeRow}>
+          {TYPE_BTNS.map(tb => {
+            const active = typeFilter === tb.key;
+            return (
+              <Pressable
+                key={tb.key}
+                onPress={() => handleType(tb.key)}
+                style={[s.typeBtn,
+                  active && { backgroundColor: tb.color+"18", borderColor: tb.color+"55" }
+                ]}>
+                <View style={[s.typeBtnIcon,
+                  { backgroundColor: active ? tb.color+"25" : "rgba(255,255,255,0.05)" }]}>
+                  <Ionicons name={tb.icon} size={13} color={active ? tb.color : "#64748b"} />
+                </View>
+                <Text style={[s.typeBtnText, active && { color: tb.color }]}>
+                  {tb.label}
+                </Text>
+                {active && <View style={[s.activeDot, { backgroundColor: tb.color }]} />}
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* ── Scrollable list only ── */}
       {loading ? (
         <View style={s.loaderWrap}>
           <ActivityIndicator size="large" color="#60a5fa" />
@@ -268,18 +192,17 @@ export default function SuperAdminSubjects() {
           keyExtractor={(item, idx) => item._id || String(idx)}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={<ListHeader />}
           ListEmptyComponent={
             <View style={s.empty}>
               <View style={s.emptyIconWrap}>
-                <Ionicons name="book-outline" size={40} color="#374151" />
+                <Ionicons name="book-outline" size={38} color="#374151" />
               </View>
               <Text style={s.emptyTitle}>No subjects found</Text>
               <Text style={s.emptySub}>
                 {search
                   ? "Try a different search term"
                   : typeFilter !== "all"
-                    ? `No ${typeFilter} subjects in this college`
+                    ? `No ${typeFilter} subjects found`
                     : "No subjects added yet"}
               </Text>
             </View>
@@ -292,63 +215,48 @@ export default function SuperAdminSubjects() {
 }
 
 const s = StyleSheet.create({
-  container:       { flex:1, backgroundColor:"#070d1a" },
+  container:    { flex:1, backgroundColor:"#070d1a" },
 
-  // Header
-  header:          { flexDirection:"row", alignItems:"center", paddingTop:52, paddingBottom:14, paddingHorizontal:16, gap:12 },
-  backBtn:         { width:38, height:38, borderRadius:12, backgroundColor:"rgba(255,255,255,0.07)", justifyContent:"center", alignItems:"center" },
-  headerTitle:     { color:"#fff", fontSize:17, fontWeight:"800" },
-  headerSub:       { color:"#374151", fontSize:11, marginTop:1 },
-  refreshBtn:      { width:38, height:38, borderRadius:12, backgroundColor:"rgba(96,165,250,0.1)", justifyContent:"center", alignItems:"center" },
+  // Sticky header
+  header:       { flexDirection:"row", alignItems:"center", paddingBottom:14, paddingHorizontal:16, gap:12 },
+  backBtn:      { width:38, height:38, borderRadius:12, backgroundColor:"rgba(255,255,255,0.07)", justifyContent:"center", alignItems:"center" },
+  headerTitle:  { color:"#fff", fontSize:17, fontWeight:"800" },
+  headerSub:    { color:"#374151", fontSize:11, marginTop:1 },
+  refreshBtn:   { width:38, height:38, borderRadius:12, backgroundColor:"rgba(96,165,250,0.1)", justifyContent:"center", alignItems:"center" },
+
+  // Fixed filter bar
+  filterBar:    { backgroundColor:"#070d1a", paddingHorizontal:16, paddingTop:10, paddingBottom:12, borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.05)" },
+  searchBox:    { flexDirection:"row", alignItems:"center", backgroundColor:"#0f1b2d", borderRadius:12, paddingHorizontal:12, paddingVertical:10, gap:8, borderWidth:1, borderColor:"rgba(255,255,255,0.07)", marginBottom:10 },
+  searchInput:  { flex:1, color:"#fff", fontSize:13 },
+
+  // Type filter row
+  typeRow:      { flexDirection:"row", gap:8 },
+  typeBtn:      { flex:1, flexDirection:"row", alignItems:"center", gap:6, paddingHorizontal:10, paddingVertical:9, borderRadius:12, borderWidth:1, borderColor:"rgba(255,255,255,0.07)", backgroundColor:"rgba(255,255,255,0.03)", position:"relative", overflow:"hidden" },
+  typeBtnIcon:  { width:24, height:24, borderRadius:7, justifyContent:"center", alignItems:"center" },
+  typeBtnText:  { color:"#64748b", fontSize:11, fontWeight:"700", flex:1 },
+  activeDot:    { position:"absolute", top:5, right:5, width:5, height:5, borderRadius:3 },
 
   // List
-  listContent:     { paddingBottom:50 },
-  listHeaderWrap:  { paddingBottom:4 },
-
-  // Search
-  searchBox:       { flexDirection:"row", alignItems:"center", marginHorizontal:16, marginTop:12, marginBottom:6, backgroundColor:"#0f1b2d", borderRadius:13, paddingHorizontal:14, paddingVertical:11, gap:10, borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
-  searchInput:     { flex:1, color:"#fff", fontSize:13 },
-  clearBtn:        { padding:2 },
-
-  // Filter labels
-  filterSectionLabel: { color:"#374151", fontSize:9, fontWeight:"800", letterSpacing:1.5, marginLeft:16, marginTop:14, marginBottom:6 },
-
-  // College chips
-  chipRow:         { paddingHorizontal:16, gap:8, paddingVertical:2 },
-  chip:            { paddingHorizontal:12, paddingVertical:7, borderRadius:20, borderWidth:1, borderColor:"rgba(255,255,255,0.08)", backgroundColor:"rgba(255,255,255,0.04)", flexDirection:"row", alignItems:"center", gap:4 },
-  chipActiveBlue:  { borderColor:"rgba(96,165,250,0.5)", backgroundColor:"rgba(96,165,250,0.1)" },
-  chipText:        { color:"#64748b", fontSize:11, fontWeight:"600" },
-
-  // Type filter buttons
-  typeRow:         { flexDirection:"row", paddingHorizontal:16, gap:8, marginTop:2 },
-  typeBtn:         { flex:1, flexDirection:"row", alignItems:"center", gap:7, paddingHorizontal:12, paddingVertical:10, borderRadius:13, borderWidth:1, borderColor:"rgba(255,255,255,0.07)", backgroundColor:"rgba(255,255,255,0.03)", position:"relative" },
-  typeBtnIcon:     { width:26, height:26, borderRadius:8, justifyContent:"center", alignItems:"center" },
-  typeBtnText:     { color:"#64748b", fontSize:11, fontWeight:"700", flex:1 },
-  typeBtnDot:      { position:"absolute", top:6, right:6, width:5, height:5, borderRadius:3 },
-
-  // Result count
-  resultRow:       { marginHorizontal:16, marginTop:10, marginBottom:4 },
-  resultText:      { color:"#374151", fontSize:11 },
-  resultCount:     { color:"#60a5fa", fontWeight:"700" },
+  listContent:  { padding:16, paddingBottom:50 },
 
   // Cards
-  card:            { flexDirection:"row", alignItems:"center", backgroundColor:"#0f1b2d", borderRadius:15, padding:13, marginHorizontal:16, marginBottom:8, gap:12, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
-  codeBox:         { width:58, height:54, borderRadius:12, borderWidth:1, justifyContent:"center", alignItems:"center" },
-  codeText:        { fontSize:10, fontWeight:"900", textAlign:"center" },
-  cardBody:        { flex:1, gap:6 },
-  cardTopRow:      { flexDirection:"row", alignItems:"center", gap:8 },
-  cardName:        { color:"#fff", fontSize:13, fontWeight:"700", flex:1 },
-  typePill:        { flexDirection:"row", alignItems:"center", gap:4, paddingHorizontal:7, paddingVertical:3, borderRadius:8, borderWidth:1 },
-  typePillText:    { fontSize:9, fontWeight:"800" },
-  tagsRow:         { flexDirection:"row", gap:6, flexWrap:"wrap" },
-  tag:             { paddingHorizontal:7, paddingVertical:3, borderRadius:7, borderWidth:1 },
-  tagText:         { fontSize:9, fontWeight:"700" },
+  card:         { flexDirection:"row", alignItems:"center", backgroundColor:"#0f1b2d", borderRadius:14, padding:13, marginBottom:8, gap:12, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  codeBox:      { width:58, height:52, borderRadius:12, borderWidth:1, justifyContent:"center", alignItems:"center" },
+  codeText:     { fontSize:10, fontWeight:"900", textAlign:"center" },
+  cardBody:     { flex:1, gap:5 },
+  cardTopRow:   { flexDirection:"row", alignItems:"center", gap:8 },
+  cardName:     { color:"#fff", fontSize:13, fontWeight:"700", flex:1 },
+  typePill:     { flexDirection:"row", alignItems:"center", gap:4, paddingHorizontal:7, paddingVertical:3, borderRadius:8, borderWidth:1 },
+  typePillText: { fontSize:9, fontWeight:"800" },
+  tagsRow:      { flexDirection:"row", gap:6, flexWrap:"wrap" },
+  tag:          { paddingHorizontal:7, paddingVertical:3, borderRadius:7, borderWidth:1 },
+  tagText:      { fontSize:9, fontWeight:"700" },
 
-  // Empty
-  loaderWrap:      { flex:1, justifyContent:"center", alignItems:"center", gap:12 },
-  loaderText:      { color:"#374151", fontSize:13 },
-  empty:           { alignItems:"center", paddingTop:60, gap:10 },
-  emptyIconWrap:   { width:74, height:74, borderRadius:37, backgroundColor:"rgba(255,255,255,0.04)", justifyContent:"center", alignItems:"center", borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
-  emptyTitle:      { color:"#374151", fontSize:15, fontWeight:"700" },
-  emptySub:        { color:"#1f2937", fontSize:12, textAlign:"center", paddingHorizontal:30 },
+  // Empty + Loader
+  loaderWrap:   { flex:1, justifyContent:"center", alignItems:"center", gap:12 },
+  loaderText:   { color:"#374151", fontSize:13 },
+  empty:        { alignItems:"center", paddingTop:70, gap:10 },
+  emptyIconWrap:{ width:70, height:70, borderRadius:35, backgroundColor:"rgba(255,255,255,0.04)", justifyContent:"center", alignItems:"center", borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
+  emptyTitle:   { color:"#374151", fontSize:15, fontWeight:"700" },
+  emptySub:     { color:"#1f2937", fontSize:12, textAlign:"center", paddingHorizontal:30 },
 });

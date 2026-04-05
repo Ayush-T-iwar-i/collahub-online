@@ -3,11 +3,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 // ── Platform ke hisaab se URL ──
+// NOTE: For real device, set your computer's local IP below (e.g. 192.168.1.100)
+const REAL_DEVICE_IP = "10.188.33.222"; // 🔧 Change this to your PC's local IP
+
 const BASE_URL = Platform.select({
-  android: "http://10.0.2.2:5000",    // Android Emulator
-  web:     "http://localhost:5000",    // Browser (npx expo start --web)
-  ios:     "http://localhost:5000",    // iOS Simulator
-  default: "http://192.168.1.x:5000", // Real phone — apna IP lagao
+  android: "http://10.0.2.2:5000",              // Android Emulator
+  web:     "http://localhost:5000",              // Browser
+  ios:     "http://localhost:5000",              // iOS Simulator
+  default: `http://${REAL_DEVICE_IP}:5000`,      // Real phone
 });
 
 const API = axios.create({
@@ -91,11 +94,11 @@ API.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
 
-        // Sab clear karo — logout
+        // Clear all — logout
         await AsyncStorage.multiRemove([
           "accessToken", "refreshToken",
-          "studentData", "teacherData", "adminData",
-          "studentLoggedIn", "teacherLoggedIn", "adminLoggedIn",
+          "studentData", "teacherData", "adminData", "superAdminData",
+          "studentLoggedIn", "teacherLoggedIn", "adminLoggedIn", "superAdminLoggedIn",
         ]);
 
         return Promise.reject(refreshError);

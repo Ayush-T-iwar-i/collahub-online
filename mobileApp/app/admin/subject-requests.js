@@ -22,14 +22,49 @@ const STATUS_COLORS = {
 const DAYS      = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const DAY_SHORT = { Monday:"Mon", Tuesday:"Tue", Wednesday:"Wed", Thursday:"Thu", Friday:"Fri", Saturday:"Sat" };
 const DAY_COLORS= { Monday:"#00c6ff", Tuesday:"#a78bfa", Wednesday:"#34d399", Thursday:"#f59e0b", Friday:"#f87171", Saturday:"#fb923c" };
-const TIME_SLOTS = [];
-for (let h = 8; h <= 17; h++) {
-  TIME_SLOTS.push({
-    startTime: `${String(h).padStart(2,"0")}:00`,
-    endTime:   `${String(h+1).padStart(2,"0")}:00`,
-    label: `${h > 12 ? h-12 : h}:00 ${h >= 12 ? "PM" : "AM"}`,
-  });
-}
+// ── Theory: 45 min classes, 10 min break, lunch 12:50-13:50 ──
+const THEORY_SLOTS = [
+  { startTime:"09:15", endTime:"10:00", label:"9:15 AM",  duration:45 },
+  { startTime:"10:10", endTime:"10:55", label:"10:10 AM", duration:45 },
+  { startTime:"11:05", endTime:"11:50", label:"11:05 AM", duration:45 },
+  { startTime:"12:00", endTime:"12:45", label:"12:00 PM", duration:45 },
+  { startTime:"13:50", endTime:"14:35", label:"1:50 PM",  duration:45 },
+  { startTime:"14:45", endTime:"15:30", label:"2:45 PM",  duration:45 },
+  { startTime:"15:40", endTime:"16:25", label:"3:40 PM",  duration:45 },
+];
+
+// ── Lab: 90 min sessions, 10 min break, lunch 12:50-13:50 ──
+const LAB_SLOTS = [
+  { startTime:"09:15", endTime:"10:45", label:"9:15 AM",  duration:90 },
+  { startTime:"10:55", endTime:"12:25", label:"10:55 AM", duration:90 },
+  { startTime:"13:50", endTime:"15:20", label:"1:50 PM",  duration:90 },
+  { startTime:"15:30", endTime:"17:00", label:"3:30 PM",  duration:90 },
+];
+
+// ── Combined for "Both" type — all unique times ──
+const BOTH_SLOTS = [
+  { startTime:"09:15", endTime:"10:00", label:"9:15 AM",  duration:45 },
+  { startTime:"09:15", endTime:"10:45", label:"9:15 AM (Lab)", duration:90 },
+  { startTime:"10:10", endTime:"10:55", label:"10:10 AM", duration:45 },
+  { startTime:"10:55", endTime:"12:25", label:"10:55 AM (Lab)", duration:90 },
+  { startTime:"11:05", endTime:"11:50", label:"11:05 AM", duration:45 },
+  { startTime:"12:00", endTime:"12:45", label:"12:00 PM", duration:45 },
+  { startTime:"13:50", endTime:"14:35", label:"1:50 PM",  duration:45 },
+  { startTime:"13:50", endTime:"15:20", label:"1:50 PM (Lab)", duration:90 },
+  { startTime:"14:45", endTime:"15:30", label:"2:45 PM",  duration:45 },
+  { startTime:"15:30", endTime:"17:00", label:"3:30 PM (Lab)", duration:90 },
+  { startTime:"15:40", endTime:"16:25", label:"3:40 PM",  duration:45 },
+];
+
+// Helper — get slots based on subject type
+const getSlotsForType = (type) => {
+  if (type === "Lab")  return LAB_SLOTS;
+  if (type === "Both") return THEORY_SLOTS; // Both uses theory slots for base
+  return THEORY_SLOTS;
+};
+
+// Legacy alias — used in some places
+const TIME_SLOTS = THEORY_SLOTS;
 
 
 // ══════════════════════════════════════════════════════════
@@ -148,7 +183,7 @@ const TimetableModal = ({ visible, request, onClose, onSaved }) => {
 
   const toggleSlot = (day, slot) => {
     const key = `${day}_${slot.startTime}`;
-    const slotLabel = TIME_SLOTS.find(t=>t.startTime===slot.startTime)?.label || slot.startTime;
+    const slotLabel = [...THEORY_SLOTS,...LAB_SLOTS].find(t=>t.startTime===slot.startTime&&t.endTime===slot.endTime)?.label||slot.startTime || slot.startTime;
 
     // HARD BLOCK: Teacher busy — cannot select at all
     if (!isTeacherFree(day, slot.startTime)) {
@@ -392,7 +427,7 @@ This time slot cannot be selected.`
                   <View style={ST.freeCountBadge}>
                     <Ionicons name="time-outline" size={11} color="#34d399"/>
                     <Text style={ST.freeCountText}>
-                      {TIME_SLOTS.filter(s=>isTeacherFree(activeDay,s.startTime)&&isBatchFree(activeDay,s.startTime)).length} truly free slots on {DAY_SHORT_MAP[activeDay]}
+                      {getSlotsForType(subjectType).filter(s=>isTeacherFree(activeDay,s.startTime)&&isBatchFree(activeDay,s.startTime)).length} truly free slots on {DAY_SHORT_MAP[activeDay]}
                     </Text>
                   </View>
                 </View>
@@ -404,7 +439,7 @@ This time slot cannot be selected.`
                     const isActive = activeDay === day;
                     const dc = DAY_COLORS[day];
                     const selCount = Object.keys(selectedSlots).filter(k=>k.startsWith(day)).length;
-                    const busyCount = TIME_SLOTS.filter(s=>!isTeacherFree(day,s.startTime)||!isBatchFree(day,s.startTime)).length;
+                    const busyCount = getSlotsForType(subjectType).filter(s=>!isTeacherFree(day,s.startTime)||!isBatchFree(day,s.startTime)).length;
                     return (
                       <Pressable key={day}
                         style={[ST.dayTab, isActive&&{backgroundColor:dc+"20",borderColor:dc+"55"}]}
@@ -447,8 +482,13 @@ This time slot cannot be selected.`
                 </View>
 
                 {/* Time slots grid */}
+                {/* Lunch indicator */}
+                <View style={ST.lunchBar}>
+                  <Ionicons name="restaurant-outline" size={11} color="#f59e0b"/>
+                  <Text style={ST.lunchText}>12:50 – 1:50 PM  Lunch Break</Text>
+                </View>
                 <View style={ST.slotsGrid}>
-                  {TIME_SLOTS.map(slot => {
+                  {getSlotsForType(subjectType).map(slot => {
                     const key       = `${activeDay}_${slot.startTime}`;
                     const tFree     = isTeacherFree(activeDay, slot.startTime);
                     const bFree     = isBatchFree(activeDay, slot.startTime);
@@ -487,6 +527,9 @@ This time slot cannot be selected.`
                             tFree&&!bFree&&{color:"#f59e0b"},
                           ]}>
                             {slot.label}
+                          </Text>
+                          <Text style={[ST.slotDuration,{color:!tFree?"#f87171":!bFree?"#f59e0b":sel?dc+"99":"#374151"}]}>
+                            {slot.duration}m
                           </Text>
                           {!tFree && (
                             <Text style={[ST.slotBusyReason,{color:"#f87171"}]} numberOfLines={1}>
@@ -563,7 +606,7 @@ This time slot cannot be selected.`
                         </View>
 
                         {daySlotsEntries.map(([key, slot]) => {
-                          const slotLabel = TIME_SLOTS.find(t=>t.startTime===slot.startTime)?.label || slot.startTime;
+                          const slotLabel = [...THEORY_SLOTS,...LAB_SLOTS].find(t=>t.startTime===slot.startTime&&t.endTime===slot.endTime)?.label||slot.startTime || slot.startTime;
                           const currentRoom = stateGetter[key] || "";
                           return (
                             <View key={key} style={ST.slotRoomRow}>
@@ -705,7 +748,7 @@ This time slot cannot be selected.`
                         </View>
                         <View style={{flex:1,gap:4}}>
                           {daySlots.map(([key,s])=>{
-                            const slotLabel = TIME_SLOTS.find(t=>t.startTime===s.startTime)?.label;
+                            const slotLabel = [...THEORY_SLOTS,...LAB_SLOTS].find(t=>t.startTime===s.startTime&&t.endTime===s.endTime)?.label||s.startTime;
                             const r1 = subjectType==="Both" ? ltRoomPerSlot[key] : roomPerSlot[key];
                             const r2 = subjectType==="Both" ? labRoomPerSlot[key] : null;
                             return (
@@ -847,6 +890,9 @@ const ST = StyleSheet.create({
   freeCountText:    { color:"#34d399", fontSize:11, fontWeight:"700" },
   // Slot chip vertical layout
   slotBusyReason:   { fontSize:8, fontWeight:"700", maxWidth:54, textAlign:"center" },
+  slotDuration:     { fontSize:8, fontWeight:"600", textAlign:"center" },
+  lunchBar:         { flexDirection:"row", alignItems:"center", gap:7, backgroundColor:"rgba(245,158,11,0.08)", paddingHorizontal:12, paddingVertical:7, borderRadius:10, marginBottom:10, borderWidth:1, borderColor:"rgba(245,158,11,0.2)" },
+  lunchText:        { color:"#f59e0b", fontSize:11, fontWeight:"600" },
   // Day-wise room step
   dayRoomBlock:     { backgroundColor:"rgba(255,255,255,0.03)", borderRadius:14, marginBottom:12, overflow:"hidden", borderWidth:1, borderColor:"rgba(255,255,255,0.07)" },
   dayRoomHeader:    { flexDirection:"row", alignItems:"center", gap:10, padding:12 },
