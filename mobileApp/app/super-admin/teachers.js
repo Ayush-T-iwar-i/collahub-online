@@ -10,22 +10,22 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import API from "../../services/api";
 
-const COLORS = ["#00c6ff","#a78bfa","#34d399","#f59e0b","#f87171","#ec4899","#60a5fa"];
-const ac  = (n = "") => COLORS[n.charCodeAt(0) % COLORS.length];
-const ini = (n = "") => n.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase() || "?";
+const COLORS = ["#00c6ff", "#a78bfa", "#34d399", "#f59e0b", "#f87171", "#ec4899", "#60a5fa"];
+const ac = (n = "") => COLORS[n.charCodeAt(0) % COLORS.length];
+const ini = (n = "") => n.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 
 export default function SuperAdminTeachers() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [teachers,  setTeachers]  = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [search,    setSearch]    = useState("");
-  const [college,   setCollege]   = useState("all");
-  const [colleges,  setColleges]  = useState([]);
-  const [page,      setPage]      = useState(1);
-  const [total,     setTotal]     = useState(0);
-  const [fetching,  setFetching]  = useState(false);
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [college, setCollege] = useState("all");
+  const [colleges, setColleges] = useState([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [fetching, setFetching] = useState(false);
 
   useFocusEffect(useCallback(() => {
     loadColleges();
@@ -36,7 +36,7 @@ export default function SuperAdminTeachers() {
     try {
       const r = await API.get("/super-admin/colleges");
       setColleges((r.data?.colleges || []).map(c => typeof c === "string" ? c : c.name).filter(Boolean));
-    } catch {}
+    } catch { }
   };
 
   const load = async (p = 1, reset = false, col = college) => {
@@ -44,7 +44,7 @@ export default function SuperAdminTeachers() {
     setFetching(true);
     if (reset) setLoading(true);
     try {
-      const params = { role:"teacher", page:p, limit:20 };
+      const params = { role: "teacher", page: p, limit: 20 };
       if (col !== "all") params.college = col;
       const r = await API.get("/super-admin/users", { params });
       const list = r.data?.users || [];
@@ -69,33 +69,35 @@ export default function SuperAdminTeachers() {
     "Delete Teacher",
     `Delete "${item.name}"? This action cannot be undone.`,
     [
-      { text:"Cancel", style:"cancel" },
-      { text:"Delete", style:"destructive", onPress: async () => {
-        try {
-          await API.delete(`/super-admin/users/${item._id}`);
-          setTeachers(p => p.filter(t => t._id !== item._id));
-          setTotal(t => t - 1);
-        } catch (e) {
-          Alert.alert("Error", e.response?.data?.message || "Failed to delete teacher.");
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive", onPress: async () => {
+          try {
+            await API.delete(`/super-admin/users/${item._id}`);
+            setTeachers(p => p.filter(t => t._id !== item._id));
+            setTotal(t => t - 1);
+          } catch (e) {
+            Alert.alert("Error", e.response?.data?.message || "Failed to delete teacher.");
+          }
         }
-      }},
+      },
     ]
   );
 
   const filtered = search.trim()
     ? teachers.filter(t => {
-        const q = search.toLowerCase();
-        return (
-          t.name?.toLowerCase().includes(q) ||
-          t.email?.toLowerCase().includes(q) ||
-          t.department?.toLowerCase().includes(q)
-        );
-      })
+      const q = search.toLowerCase();
+      return (
+        t.name?.toLowerCase().includes(q) ||
+        t.email?.toLowerCase().includes(q) ||
+        t.department?.toLowerCase().includes(q)
+      );
+    })
     : teachers;
 
   const chipLabel = (c) => {
     if (c === "all") return "All";
-    return c.replace(/^nims\s*/i,"").split(" ").slice(0,2).join(" ");
+    return c.replace(/^nims\s*/i, "").split(" ").slice(0, 2).join(" ");
   };
 
   const renderItem = ({ item, index }) => {
@@ -103,24 +105,24 @@ export default function SuperAdminTeachers() {
     return (
       <View style={s.card}>
         <Text style={s.idx}>#{index + 1}</Text>
-        <View style={[s.av, { backgroundColor: color+"20", borderColor: color+"50" }]}>
+        <View style={[s.av, { backgroundColor: color + "20", borderColor: color + "50" }]}>
           <Text style={[s.avT, { color }]}>{ini(item.name)}</Text>
         </View>
-        <View style={{ flex:1 }}>
+        <View style={{ flex: 1 }}>
           <Text style={s.cardName} numberOfLines={1}>{item.name}</Text>
           <Text style={s.cardEmail} numberOfLines={1}>{item.email}</Text>
           <View style={s.tagsRow}>
             {item.department && (
-              <View style={[s.tag, { borderColor:"#f59e0b40", backgroundColor:"#f59e0b12" }]}>
-                <Text style={[s.tagT, { color:"#f59e0b" }]} numberOfLines={1}>
+              <View style={[s.tag, { borderColor: "#f59e0b40", backgroundColor: "#f59e0b12" }]}>
+                <Text style={[s.tagT, { color: "#f59e0b" }]} numberOfLines={1}>
                   {item.department.split("(")[0].trim()}
                 </Text>
               </View>
             )}
             {item.college && (
-              <View style={[s.tag, { borderColor:"#00c6ff40", backgroundColor:"#00c6ff12" }]}>
-                <Text style={[s.tagT, { color:"#00c6ff" }]} numberOfLines={1}>
-                  {item.college.replace(/^nims\s*/i,"").split(" ").slice(0,2).join(" ")}
+              <View style={[s.tag, { borderColor: "#00c6ff40", backgroundColor: "#00c6ff12" }]}>
+                <Text style={[s.tagT, { color: "#00c6ff" }]} numberOfLines={1}>
+                  {item.college.replace(/^nims\s*/i, "").split(" ").slice(0, 2).join(" ")}
                 </Text>
               </View>
             )}
@@ -138,11 +140,11 @@ export default function SuperAdminTeachers() {
       <StatusBar barStyle="light-content" />
 
       {/* ── Sticky header ── */}
-      <LinearGradient colors={["#070d1a","#0b1422"]} style={s.header}>
+      <LinearGradient colors={["#070d1a", "#0b1422"]} style={[s.header, { paddingTop: insets.top + 14 }]}>
         <Pressable onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </Pressable>
-        <View style={{ flex:1 }}>
+        <View style={{ flex: 1 }}>
           <Text style={s.headerTitle}>All Teachers</Text>
           <Text style={s.headerSub}>{total} teachers across all colleges</Text>
         </View>
@@ -180,8 +182,8 @@ export default function SuperAdminTeachers() {
               <Pressable
                 onPress={() => handleCollege(c)}
                 style={[s.chip, active && s.chipActiveAmber]}>
-                {active && <Ionicons name="checkmark-circle" size={11} color="#f59e0b" style={{ marginRight:2 }} />}
-                <Text style={[s.chipText, active && { color:"#f59e0b" }]}>
+                {active && <Ionicons name="checkmark-circle" size={11} color="#f59e0b" style={{ marginRight: 2 }} />}
+                <Text style={[s.chipText, active && { color: "#f59e0b" }]}>
                   {chipLabel(c)}
                 </Text>
               </Pressable>
@@ -202,11 +204,11 @@ export default function SuperAdminTeachers() {
           keyExtractor={i => i._id}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
-          onEndReached={() => { if (teachers.length < total) load(page+1, false, college); }}
+          onEndReached={() => { if (teachers.length < total) load(page + 1, false, college); }}
           onEndReachedThreshold={0.4}
           ListFooterComponent={
             fetching && !loading
-              ? <ActivityIndicator color="#f59e0b" style={{ marginVertical:14 }} />
+              ? <ActivityIndicator color="#f59e0b" style={{ marginVertical: 14 }} />
               : null
           }
           ListEmptyComponent={
@@ -228,146 +230,34 @@ export default function SuperAdminTeachers() {
 }
 
 const s = StyleSheet.create({
-  container:       { flex:1, backgroundColor:"#070d1a" },
-  header:          { flexDirection:"row", alignItems:"center", paddingBottom:14, paddingHorizontal:16, gap:12 },
-  backBtn:         { width:38, height:38, borderRadius:12, backgroundColor:"rgba(255,255,255,0.07)", justifyContent:"center", alignItems:"center" },
-  headerTitle:     { color:"#fff", fontSize:17, fontWeight:"800" },
-  headerSub:       { color:"#374151", fontSize:11, marginTop:1 },
-  refreshBtn:      { width:38, height:38, borderRadius:12, backgroundColor:"rgba(245,158,11,0.1)", justifyContent:"center", alignItems:"center" },
-  filterBar:       { backgroundColor:"#070d1a", paddingHorizontal:16, paddingTop:10, paddingBottom:10, borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.05)" },
-  searchBox:       { flexDirection:"row", alignItems:"center", backgroundColor:"#0f1b2d", borderRadius:12, paddingHorizontal:12, paddingVertical:10, gap:8, borderWidth:1, borderColor:"rgba(255,255,255,0.07)", marginBottom:10 },
-  searchInput:     { flex:1, color:"#fff", fontSize:13 },
-  chipRow:         { gap:8, paddingVertical:2 },
-  chip:            { flexDirection:"row", alignItems:"center", paddingHorizontal:12, paddingVertical:7, borderRadius:20, borderWidth:1, borderColor:"rgba(255,255,255,0.08)", backgroundColor:"rgba(255,255,255,0.04)", gap:3 },
-  chipActiveAmber: { borderColor:"rgba(245,158,11,0.5)", backgroundColor:"rgba(245,158,11,0.1)" },
-  chipText:        { color:"#64748b", fontSize:11, fontWeight:"600" },
-  listContent:     { padding:16, paddingBottom:50 },
-  card:            { flexDirection:"row", alignItems:"center", backgroundColor:"#0f1b2d", borderRadius:14, padding:12, marginBottom:8, gap:10, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
-  idx:             { color:"#1f2937", fontSize:10, fontWeight:"700", width:20, textAlign:"center" },
-  av:              { width:42, height:42, borderRadius:21, justifyContent:"center", alignItems:"center", borderWidth:1.5 },
-  avT:             { fontSize:13, fontWeight:"800" },
-  cardName:        { color:"#fff", fontSize:13, fontWeight:"700" },
-  cardEmail:       { color:"#64748b", fontSize:11, marginTop:2 },
-  tagsRow:         { flexDirection:"row", gap:6, marginTop:5, flexWrap:"wrap" },
-  tag:             { paddingHorizontal:7, paddingVertical:2, borderRadius:7, borderWidth:1 },
-  tagT:            { fontSize:9, fontWeight:"700" },
-  delBtn:          { width:30, height:30, borderRadius:9, backgroundColor:"rgba(248,113,113,0.1)", justifyContent:"center", alignItems:"center" },
-  loaderWrap:      { flex:1, justifyContent:"center", alignItems:"center", gap:12 },
-  loaderText:      { color:"#374151", fontSize:13 },
-  empty:           { alignItems:"center", paddingTop:70, gap:10 },
-  emptyIconWrap:   { width:70, height:70, borderRadius:35, backgroundColor:"rgba(255,255,255,0.04)", justifyContent:"center", alignItems:"center", borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
-  emptyTitle:      { color:"#374151", fontSize:15, fontWeight:"700" },
-  emptySub:        { color:"#1f2937", fontSize:12, textAlign:"center", paddingHorizontal:30 },
-});      <FlatList
-        data={filtered}
-        keyExtractor={i => i._id}
-        contentContainerStyle={s.listContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onEndReached={() => { if (teachers.length < total) load(page + 1); }}
-        onEndReachedThreshold={0.4}
-        ListHeaderComponent={() => (
-          <View>
-            {/* Header — scrolls with list */}
-            <LinearGradient colors={["#070d1a","#0a1628"]} style={[s.header, {paddingTop: insets.top + 14}]}>
-              <Pressable onPress={() => router.back()} style={s.back}>
-                <Ionicons name="arrow-back" size={20} color="#fff" />
-              </Pressable>
-              <View style={{ flex: 1 }}>
-                <Text style={s.title}>All Teachers</Text>
-                <Text style={s.sub}>{total} teachers across all colleges</Text>
-              </View>
-              <Pressable onPress={() => load(1, true)} style={s.refreshBtn}>
-                <Ionicons name="refresh" size={18} color="#f59e0b" />
-              </Pressable>
-            </LinearGradient>
-
-            {/* Search */}
-            <View style={s.searchRow}>
-              <Ionicons name="search" size={14} color="#64748b" />
-              <TextInput
-                style={s.searchInput}
-                placeholder="Search name, email, department..."
-                placeholderTextColor="#374151"
-                value={search}
-                onChangeText={setSearch}
-              />
-              {!!search && (
-                <Pressable onPress={() => setSearch("")}>
-                  <Ionicons name="close-circle" size={15} color="#64748b" />
-                </Pressable>
-              )}
-            </View>
-
-            {/* College filter */}
-            <View style={s.filterWrap}>
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                data={["all", ...colleges]}
-                keyExtractor={c => c}
-                contentContainerStyle={s.filterRow}
-                renderItem={({ item: c }) => (
-                  <Pressable
-                    onPress={() => setCollege(c)}
-                    style={[s.chip, college === c && s.chipA]}>
-                    <Text style={[s.chipT, college === c && { color:"#f59e0b" }]}>
-                      {c === "all" ? "All Colleges" : c.replace("Nims ","").split(" ").slice(0,3).join(" ")}
-                    </Text>
-                  </Pressable>
-                )}
-              />
-            </View>
-          </View>
-        )}
-        ListFooterComponent={
-          fetching && !loading
-            ? <ActivityIndicator color="#f59e0b" style={{ marginVertical: 14 }} />
-            : null
-        }
-        ListEmptyComponent={
-          loading
-            ? <ActivityIndicator size="large" color="#f59e0b" style={{ marginTop: 50 }} />
-            : <View style={s.empty}>
-                <Ionicons name="person-outline" size={44} color="#1f2937" />
-                <Text style={s.emptyT}>No teachers found</Text>
-              </View>
-        }
-        renderItem={renderItem}
-      />
-    </View>
-  );
-}
-
-const s = StyleSheet.create({
-  container:       { flex:1, backgroundColor:"#070d1a" },
-  header:          { flexDirection:"row", alignItems:"center", paddingBottom:14, paddingHorizontal:16, gap:12 },
-  backBtn:         { width:38, height:38, borderRadius:12, backgroundColor:"rgba(255,255,255,0.07)", justifyContent:"center", alignItems:"center" },
-  headerTitle:     { color:"#fff", fontSize:17, fontWeight:"800" },
-  headerSub:       { color:"#374151", fontSize:11, marginTop:1 },
-  refreshBtn:      { width:38, height:38, borderRadius:12, backgroundColor:"rgba(245,158,11,0.1)", justifyContent:"center", alignItems:"center" },
-  filterBar:       { backgroundColor:"#070d1a", paddingHorizontal:16, paddingTop:10, paddingBottom:10, borderBottomWidth:1, borderBottomColor:"rgba(255,255,255,0.05)" },
-  searchBox:       { flexDirection:"row", alignItems:"center", backgroundColor:"#0f1b2d", borderRadius:12, paddingHorizontal:12, paddingVertical:10, gap:8, borderWidth:1, borderColor:"rgba(255,255,255,0.07)", marginBottom:10 },
-  searchInput:     { flex:1, color:"#fff", fontSize:13 },
-  chipRow:         { gap:8, paddingVertical:2 },
-  chip:            { flexDirection:"row", alignItems:"center", paddingHorizontal:12, paddingVertical:7, borderRadius:20, borderWidth:1, borderColor:"rgba(255,255,255,0.08)", backgroundColor:"rgba(255,255,255,0.04)", gap:3 },
-  chipActiveAmber: { borderColor:"rgba(245,158,11,0.5)", backgroundColor:"rgba(245,158,11,0.1)" },
-  chipText:        { color:"#64748b", fontSize:11, fontWeight:"600" },
-  listContent:     { padding:16, paddingBottom:50 },
-  card:            { flexDirection:"row", alignItems:"center", backgroundColor:"#0f1b2d", borderRadius:14, padding:12, marginBottom:8, gap:10, borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
-  idx:             { color:"#1f2937", fontSize:10, fontWeight:"700", width:20, textAlign:"center" },
-  av:              { width:42, height:42, borderRadius:21, justifyContent:"center", alignItems:"center", borderWidth:1.5 },
-  avT:             { fontSize:13, fontWeight:"800" },
-  cardName:        { color:"#fff", fontSize:13, fontWeight:"700" },
-  cardEmail:       { color:"#64748b", fontSize:11, marginTop:2 },
-  tagsRow:         { flexDirection:"row", gap:6, marginTop:5, flexWrap:"wrap" },
-  tag:             { paddingHorizontal:7, paddingVertical:2, borderRadius:7, borderWidth:1 },
-  tagT:            { fontSize:9, fontWeight:"700" },
-  delBtn:          { width:30, height:30, borderRadius:9, backgroundColor:"rgba(248,113,113,0.1)", justifyContent:"center", alignItems:"center" },
-  loaderWrap:      { flex:1, justifyContent:"center", alignItems:"center", gap:12 },
-  loaderText:      { color:"#374151", fontSize:13 },
-  empty:           { alignItems:"center", paddingTop:70, gap:10 },
-  emptyIconWrap:   { width:70, height:70, borderRadius:35, backgroundColor:"rgba(255,255,255,0.04)", justifyContent:"center", alignItems:"center", borderWidth:1, borderColor:"rgba(255,255,255,0.06)" },
-  emptyTitle:      { color:"#374151", fontSize:15, fontWeight:"700" },
-  emptySub:        { color:"#1f2937", fontSize:12, textAlign:"center", paddingHorizontal:30 },
+  container: { flex: 1, backgroundColor: "#070d1a" },
+  header: { flexDirection: "row", alignItems: "center", paddingBottom: 14, paddingHorizontal: 16, gap: 12 },
+  backBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.07)", justifyContent: "center", alignItems: "center" },
+  headerTitle: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  headerSub: { color: "#374151", fontSize: 11, marginTop: 1 },
+  refreshBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: "rgba(245,158,11,0.1)", justifyContent: "center", alignItems: "center" },
+  filterBar: { backgroundColor: "#070d1a", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
+  searchBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#0f1b2d", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.07)", marginBottom: 10 },
+  searchInput: { flex: 1, color: "#fff", fontSize: 13 },
+  chipRow: { gap: 8, paddingVertical: 2 },
+  chip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)", gap: 3 },
+  chipActiveAmber: { borderColor: "rgba(245,158,11,0.5)", backgroundColor: "rgba(245,158,11,0.1)" },
+  chipText: { color: "#64748b", fontSize: 11, fontWeight: "600" },
+  listContent: { padding: 16, paddingBottom: 50 },
+  card: { flexDirection: "row", alignItems: "center", backgroundColor: "#0f1b2d", borderRadius: 14, padding: 12, marginBottom: 8, gap: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  idx: { color: "#1f2937", fontSize: 10, fontWeight: "700", width: 20, textAlign: "center" },
+  av: { width: 42, height: 42, borderRadius: 21, justifyContent: "center", alignItems: "center", borderWidth: 1.5 },
+  avT: { fontSize: 13, fontWeight: "800" },
+  cardName: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  cardEmail: { color: "#64748b", fontSize: 11, marginTop: 2 },
+  tagsRow: { flexDirection: "row", gap: 6, marginTop: 5, flexWrap: "wrap" },
+  tag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, borderWidth: 1 },
+  tagT: { fontSize: 9, fontWeight: "700" },
+  delBtn: { width: 30, height: 30, borderRadius: 9, backgroundColor: "rgba(248,113,113,0.1)", justifyContent: "center", alignItems: "center" },
+  loaderWrap: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
+  loaderText: { color: "#374151", fontSize: 13 },
+  empty: { alignItems: "center", paddingTop: 70, gap: 10 },
+  emptyIconWrap: { width: 70, height: 70, borderRadius: 35, backgroundColor: "rgba(255,255,255,0.04)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  emptyTitle: { color: "#374151", fontSize: 15, fontWeight: "700" },
+  emptySub: { color: "#1f2937", fontSize: 12, textAlign: "center", paddingHorizontal: 30 },
 });

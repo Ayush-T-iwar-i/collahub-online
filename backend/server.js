@@ -19,6 +19,7 @@ const allowedOrigins = [
   "http://localhost:8082",
   "http://localhost:5000",
   "http://10.0.2.2:5000",
+  "https://collahub.up.railway.app"
   // ✅ Apna production domain yahan add karo jab deploy karo:
   // "https://yourdomain.com",
   // "https://your-railway-app.railway.app",

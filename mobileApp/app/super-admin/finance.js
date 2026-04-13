@@ -88,7 +88,7 @@ export default function SuperAdminFinance(){
 
           <View style={s.noteCard}>
             <Ionicons name="information-circle" size={16} color="#60a5fa"/>
-            <Text style={s.noteText}>Finance module full implementation aane wali hai. Tab yahan detailed fee collection, pending dues, aur payment history dikhega.</Text>
+            <Text style={s.noteText}>Full implementation of the finance model is coming, and it will then display detailed fee collections, pending dues, and payment history.</Text>
           </View>
         </ScrollView>
       )}

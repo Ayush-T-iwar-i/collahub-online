@@ -135,7 +135,7 @@ export default function SuperAdminAnnouncements(){
                     value={form.title} onChangeText={v=>setForm(p=>({...p,title:v}))}/>
                 </View>
                 <Text style={s.fieldLabel}>Message *</Text>
-                <TextInput style={s.textarea} placeholder="Message likhein..." placeholderTextColor="#374151"
+                <TextInput style={s.textarea} placeholder="Message please..." placeholderTextColor="#374151"
                   value={form.message} onChangeText={v=>setForm(p=>({...p,message:v}))}
                   multiline maxLength={500} textAlignVertical="top"/>
                 <Text style={s.charCount}>{form.message.length}/500</Text>
