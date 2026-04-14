@@ -112,21 +112,18 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ── MongoDB injection protection ──────────────────────────
 // npm install express-mongo-sanitize
+// ── MongoDB injection protection ──────────────────────────
+// Disabled temporarily due to Express query bug
+
+/*
 try {
   const mongoSanitize = require("express-mongo-sanitize");
-
-  app.use(
-    mongoSanitize({
-      replaceWith: "_", // safer
-    })
-  );
-
+  app.use(mongoSanitize());
   console.log("✅ MongoDB sanitize active");
 } catch {
-  console.warn(
-    "⚠️ express-mongo-sanitize not installed. Run: npm install express-mongo-sanitize"
-  );
+  console.warn("⚠️ express-mongo-sanitize not installed");
 }
+*/
 
 // ── Logger ────────────────────────────────────────────────
 app.use(logger);
