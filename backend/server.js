@@ -114,10 +114,18 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // npm install express-mongo-sanitize
 try {
   const mongoSanitize = require("express-mongo-sanitize");
-  app.use(mongoSanitize());
+
+  app.use(
+    mongoSanitize({
+      replaceWith: "_", // safer
+    })
+  );
+
   console.log("✅ MongoDB sanitize active");
 } catch {
-  console.warn("⚠️  express-mongo-sanitize not installed. Run: npm install express-mongo-sanitize");
+  console.warn(
+    "⚠️ express-mongo-sanitize not installed. Run: npm install express-mongo-sanitize"
+  );
 }
 
 // ── Logger ────────────────────────────────────────────────
