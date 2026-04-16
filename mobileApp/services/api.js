@@ -6,16 +6,13 @@ import { Platform } from "react-native";
 // NOTE: For real device, set your computer's local IP below (e.g. 192.168.1.100)
 const REAL_DEVICE_IP = "10.188.33.222"; // 🔧 Change this to your PC's local IP
 
-const BASE_URL = Platform.select({
-  android: "http://10.0.2.2:5000",              // Android Emulator
-  web:     "http://localhost:5000",              // Browser
-  ios:     "http://localhost:5000",              // iOS Simulator
-  default: `http://${REAL_DEVICE_IP}:5000`,      // Real phone
-});
+// 🌐 Production API URL
+const BASE_URL = "https://collahub.up.railway.app";
+
 
 const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json",
   },
