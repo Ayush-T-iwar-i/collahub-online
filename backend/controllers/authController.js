@@ -2,7 +2,7 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
-const sendEmail = require("../utils/sendEmail");
+const { sendOtpEmail } = require("../utils/sendEmail");
 
 const generateAccessToken = (user) => {
   return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "15m" });
@@ -44,7 +44,7 @@ exports.sendEmailOtp = async (req, res) => {
       );
     }
 
-    await sendEmail(email, `Your CollaHub OTP is: ${otp}\n\nValid for 10 minutes. Do not share it.`);
+  await sendOtpEmail(email, otp, "register");
     res.json({ success: true, message: "OTP sent to email" });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to send OTP" });
@@ -173,10 +173,7 @@ exports.login = async (req, res) => {
 
     // Send OTP email
     try {
-      await sendEmail(
-        email,
-        `CollaHub Login OTP: ${otp}\n\nValid for 10 minutes.\nDo not share this OTP with anyone.\n\n- CollaHub Team`
-      );
+      await sendOtpEmail(email, otp, "login");
     } catch (emailErr) {
       // Dev fallback — print OTP in terminal if email fails
       console.error("Email send failed:", emailErr.message);
@@ -307,7 +304,7 @@ exports.forgotPassword = async (req, res) => {
     user.otp       = otp;
     user.otpExpire = Date.now() + 5 * 60 * 1000;
     await user.save();
-    await sendEmail(email, `Your password reset OTP is: ${otp}`);
+    await sendOtpEmail(email, otp, "reset");
     res.json({ success: true, message: "OTP sent to email" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
