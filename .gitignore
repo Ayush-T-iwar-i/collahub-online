@@ -1,10 +1,21 @@
-node_modules/
-backend/node_modules/
-mobileApp/node_modules/
-
+# Environment variables — KABHI COMMIT MAT KARO
 .env
-backend/.env
-mobileApp/.env
+.env.local
+.env.production
+.env.staging
 
-.expo
-.expo-shared
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Uploads (local files)
+uploads/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

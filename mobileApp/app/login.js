@@ -25,7 +25,7 @@ export default function LoginScreen() {
   const [emailFocus, setEmailFocus] = useState(false);
   const [passFocus,  setPassFocus]  = useState(false);
 
-  // Step 1 — Email + Password check → OTP bhejo
+  // Step 1 — Email + Password check → Send OTP
   const handleLogin = async () => {
     const trimEmail = email.trim().toLowerCase();
     const trimPass  = password.trim();
@@ -43,9 +43,9 @@ export default function LoginScreen() {
       });
 
       if (res.data.success) {
-        const role = res.data.role; // Backend se role aata hai
+        const role = res.data.role; // Role from backend
 
-        // OTP screen pe bhejo — email aur role saath mein
+        // Navigate to OTP screen with email and role
         router.push({
           pathname: "/verify-otp",
           params: {

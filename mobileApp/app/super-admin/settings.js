@@ -26,7 +26,7 @@ export default function SuperAdminSettings(){
 
   const toggleMaintenance=(val)=>{
     Alert.alert(val?"Enable Maintenance?":"Disable Maintenance?",
-      val?"Sab users ko maintenance mode message dikhega aur naye logins block honge.":"System normal mode mein wapas aa jayega.",[
+      val?"All users will see maintenance mode message and new logins will be blocked.":"System will return to normal mode.",[
       {text:"Cancel",style:"cancel"},
       {text:"Confirm",onPress:async()=>{
         try{await API.post("/super-admin/"+(val?"shutdown":"restore"));setMaintenanceMode(val);}
@@ -36,7 +36,7 @@ export default function SuperAdminSettings(){
   };
 
   const handleLogout=async()=>{
-    Alert.alert("Logout","Super Admin logout karna chahte ho?",[
+    Alert.alert("Logout","Do you want to logout Super Admin?",[
       {text:"Cancel",style:"cancel"},
       {text:"Logout",style:"destructive",onPress:async()=>{
         try{await API.post("/auth/logout");}catch{}
@@ -61,7 +61,7 @@ export default function SuperAdminSettings(){
     {
       title:"Data Management",
       items:[
-        {icon:"cloud-upload",label:"Export All Data",sub:"Download system-wide CSV/Excel",color:"#00c6ff",onPress:()=>Alert.alert("Coming Soon","Export feature aane wali hai")},
+        {icon:"cloud-upload",label:"Export All Data",sub:"Download system-wide CSV/Excel",color:"#00c6ff",onPress:()=>Alert.alert("Coming Soon","Export feature coming soon")},
         {icon:"cloud-download",label:"Backup Database",sub:"Manual DB backup trigger",color:"#a78bfa",onPress:()=>Alert.alert("Coming Soon","Backup feature aane wali hai")},
         {icon:"trash",label:"Clear Old Logs",sub:"Purge logs older than 90 days",color:"#fb923c",onPress:()=>Alert.alert("Coming Soon","Log purge feature aane wali hai")},
       ]

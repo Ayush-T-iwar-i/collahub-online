@@ -18,14 +18,14 @@ export default function ForgotPassword() {
   const [loading,     setLoading]     = useState(false);
 
   const handleSendOtp = async () => {
-    if (!email.trim()) { Alert.alert("Error", "Email enter karo"); return; }
+    if (!email.trim()) { Alert.alert("Error", "Please enter email"); return; }
     setLoading(true);
     try {
       await API.post("/auth/forgot-password", { email: email.trim().toLowerCase() });
       Alert.alert("OTP Sent", "Check your email for OTP");
       setStep(2);
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Kuch gadbad hui");
+      Alert.alert("Error", e.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -33,11 +33,11 @@ export default function ForgotPassword() {
 
   const handleReset = async () => {
     if (!otp.trim() || !newPassword.trim()) {
-      Alert.alert("Error", "OTP aur naya password dono required hain");
+      Alert.alert("Error", "Both OTP and new password are required");
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert("Error", "Password kam se kam 6 characters ka hona chahiye");
+      Alert.alert("Error", "Password must be at least 6 characters");
       return;
     }
     setLoading(true);
@@ -47,7 +47,7 @@ export default function ForgotPassword() {
         otp: otp.trim(),
         newPassword,
       });
-      Alert.alert("Success", "Password reset ho gaya! Ab login karo", [
+      Alert.alert("Success", "Password reset successfully! Now login", [
         { text: "OK", onPress: () => router.replace("/login") },
       ]);
     } catch (e) {
@@ -75,8 +75,8 @@ export default function ForgotPassword() {
         <Text style={styles.title}>Reset Password</Text>
         <Text style={styles.sub}>
           {step === 1
-            ? "Apna registered email enter karo — OTP bhejenge"
-            : "OTP aur naya password enter karo"
+            ? "Enter your registered email — we will send OTP"
+            : "Enter OTP and new password"
           }
         </Text>
 
@@ -151,7 +151,7 @@ export default function ForgotPassword() {
 
           {step === 2 && (
             <Pressable onPress={() => setStep(1)} style={styles.backStep}>
-              <Text style={styles.backStepText}>← Email change karo</Text>
+              <Text style={styles.backStepText}>← Change email</Text>
             </Pressable>
           )}
         </View>
