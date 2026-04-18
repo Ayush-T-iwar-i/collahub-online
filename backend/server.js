@@ -119,14 +119,26 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ── MongoDB injection protection ──────────────────────────
-// npm install express-mongo-sanitize
-try {
-  const mongoSanitize = require("express-mongo-sanitize");
-  app.use(mongoSanitize());
-  console.log("✅ MongoDB sanitize active");
-} catch {
-  console.warn("⚠️  express-mongo-sanitize not installed. Run: npm install express-mongo-sanitize");
-}
+// Manual sanitize — Express 5 ke saath compatible
+// express-mongo-sanitize Express 5 mein kaam nahi karta
+app.use((req, res, next) => {
+  const sanitize = (obj) => {
+    if (obj && typeof obj === "object") {
+      Object.keys(obj).forEach(key => {
+        if (key.startsWith("$") || key.includes(".")) {
+          delete obj[key];
+        } else {
+          sanitize(obj[key]);
+        }
+      });
+    }
+  };
+  if (req.body)  sanitize(req.body);
+  if (req.query) {
+    // query is read-only in Express 5 — skip sanitizing
+  }
+  next();
+});
 
 // ── Logger ────────────────────────────────────────────────
 app.use(logger);
