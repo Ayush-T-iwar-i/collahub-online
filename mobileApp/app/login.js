@@ -31,7 +31,7 @@ export default function LoginScreen() {
     const trimPass  = password.trim();
 
     if (!trimEmail || !trimPass) {
-      Alert.alert("Error", "Email aur password dono required hain");
+      Alert.alert("Error", "Both email and password are required");
       return;
     }
 

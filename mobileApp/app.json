@@ -1,41 +1,63 @@
 {
   "expo": {
-    "name": "mobileApp",
-    "slug": "mobileApp",
+    "name": "CollaHub",
+    "slug": "collahub",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "mobileapp",
-    "userInterfaceStyle": "automatic",
+    "scheme": "collahub",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#080d17"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nims.collahub"
     },
     "android": {
+      "package": "com.nims.collahub",
+      "versionCode": 1,
+      "minSdkVersion": 24,
+      "targetSdkVersion": 34,
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
-      }
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#080d17"
+      },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#ffffff",
-          "resizeMode": "contain",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#080d17",
+          "image": "./assets/splash.png",
+          "resizeMode": "contain"
         }
       ],
       "expo-video",
       "@react-native-community/datetimepicker"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "666def6a-0a50-4366-b338-eb29dd5d48f3"
+      }
     }
   }
 }

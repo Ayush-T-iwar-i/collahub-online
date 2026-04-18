@@ -2,30 +2,45 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-// ── Platform ke hisaab se URL ──
-// NOTE: For real device, set your computer's local IP below (e.g. 192.168.1.100)
-const REAL_DEVICE_IP = "10.188.33.222"; // 🔧 Change this to your PC's local IP
+// ══════════════════════════════════════════════════════════
+// ✅ SIRF YE 1 LINE CHANGE KARO — apna Railway URL daalo
+// ══════════════════════════════════════════════════════════
+const RAILWAY_URL = "https://collahub.up.railway.app"; // ✅ Railway URL
+// Example: "https://collahub-backend-production.railway.app"
 
-// 🌐 Production API URL
-const BASE_URL = "https://collahub.up.railway.app";
+// Local development IP (jab Railway use na karo)
+const LOCAL_IP = "10.188.33.222";
 
+// ── Auto URL select ───────────────────────────────────────
+const BASE_URL = (() => {
+  // Production — Railway URL set hai
+  if (RAILWAY_URL && !RAILWAY_URL.includes("YOUR-APP-NAME")) {
+    return RAILWAY_URL;
+  }
+  // Local development fallback
+  switch (Platform.OS) {
+    case "android": return "http://10.0.2.2:5000";
+    case "ios":     return "http://localhost:5000";
+    case "web":     return "http://localhost:5000";
+    default:        return `http://${LOCAL_IP}:5000`;
+  }
+})();
 
+// Debug log — apne terminal mein dikhega
+if (__DEV__) console.log("🌐 API →", BASE_URL);
+
+// ── Axios instance ────────────────────────────────────────
 const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  timeout: 30000, // 30s — Railway cold start handle kare
+  headers: { "Content-Type": "application/json" },
 });
 
-// ── Request interceptor: attach token + cache fix ──
+// ── Request: token attach ─────────────────────────────────
 API.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem("accessToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    // ✅ 304 cache fix
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     config.headers["Cache-Control"] = "no-cache";
     config.headers["Pragma"]        = "no-cache";
     return config;
@@ -33,72 +48,65 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ── Response interceptor: auto refresh token ──
+// ── Response: auto token refresh ──────────────────────────
 let isRefreshing = false;
 let failedQueue  = [];
 
 const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) prom.reject(error);
-    else prom.resolve(token);
-  });
+  failedQueue.forEach((p) => error ? p.reject(error) : p.resolve(token));
   failedQueue = [];
 };
 
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const orig = error.config;
 
+    // Network error — server tak pahuncha hi nahi
+    if (!error.response) {
+      return Promise.reject(
+        new Error("Server se connect nahi ho pa raha. Internet check karo ya Railway URL verify karo.")
+      );
+    }
+
+    // 401 — token expired, refresh try karo
     if (
       error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !originalRequest.url?.includes("refresh-token") &&
-      !originalRequest.url?.includes("login")
+      !orig._retry &&
+      !orig.url?.includes("refresh-token") &&
+      !orig.url?.includes("login")
     ) {
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return API(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
+        return new Promise((resolve, reject) => failedQueue.push({ resolve, reject }))
+          .then((token) => { orig.headers.Authorization = `Bearer ${token}`; return API(orig); })
+          .catch((e) => Promise.reject(e));
       }
 
-      originalRequest._retry = true;
-      isRefreshing            = true;
+      orig._retry   = true;
+      isRefreshing  = true;
 
       try {
         const refreshToken = await AsyncStorage.getItem("refreshToken");
         if (!refreshToken) throw new Error("No refresh token");
 
-        const res = await axios.post(
-          `${API.defaults.baseURL}/auth/refresh-token`,
-          { token: refreshToken }
-        );
-
+        const res      = await axios.post(`${BASE_URL}/auth/refresh-token`, { token: refreshToken }, { timeout: 30000 });
         const newToken = res.data.accessToken;
-        await AsyncStorage.setItem("accessToken", newToken);
 
+        await AsyncStorage.setItem("accessToken", newToken);
         API.defaults.headers.common.Authorization = `Bearer ${newToken}`;
         processQueue(null, newToken);
 
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return API(originalRequest);
+        orig.headers.Authorization = `Bearer ${newToken}`;
+        return API(orig);
 
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-
-        // Clear all — logout
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
         await AsyncStorage.multiRemove([
           "accessToken", "refreshToken",
           "studentData", "teacherData", "adminData", "superAdminData",
           "studentLoggedIn", "teacherLoggedIn", "adminLoggedIn", "superAdminLoggedIn",
         ]);
-
-        return Promise.reject(refreshError);
+        return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;
       }
