@@ -13,6 +13,9 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 const ENV  = process.env.NODE_ENV || "development";
 
+// ── Trust Proxy — Railway ke liye ZARURI hai ─────────────
+app.set("trust proxy", 1);
+
 // ── DB Connect ────────────────────────────────────────────
 connectDB();
 
