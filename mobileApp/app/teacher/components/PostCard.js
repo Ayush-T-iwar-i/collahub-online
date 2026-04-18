@@ -18,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Video, ResizeMode } from "expo-av";
 import { Audio } from "expo-av";
-import API from "../services/api";
+import API from "../../../services/api";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 

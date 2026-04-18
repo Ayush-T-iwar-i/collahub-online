@@ -10,7 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import API from "../../services/api";
 import SafeImage from "../../components/SafeImage";
-import PostCard from "../../components/PostCard";
+import PostCard from "../teacher/components/PostCard";
 
 const { width } = Dimensions.get("window");
 

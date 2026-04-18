@@ -14,7 +14,7 @@ import { useNavigation, useRouter, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import API from "../../services/api";
-import PostCard from "../../components/PostCard";
+import PostCard from "../teacher/components/PostCard";
 
 const { width } = Dimensions.get("window");
 const IS_WEB = Platform.OS === "web";
@@ -414,74 +414,7 @@ const CommentModal = ({ post, visible, onClose, onCommentAdded }) => {
 };
 
 // ── Post Card ─────────────────────────────────────────────
-const PostCard = ({ item, onLike, onCommentPress }) => {
-  const authorName   = item.authorName||item.author?.name||"Unknown";
-  const authorRole   = (item.authorRole||item.author?.role||"teacher").toLowerCase();
-  const caption      = item.caption||item.content||"";
-  const likeCount    = item.likeCount??(item.likes?.length??0);
-  const commentCount = item.commentCount??(item.comments?.length??0);
-  const isLiked      = item.isLiked??false;
-  const catColor     = CAT_COLORS[item.category]||"#64748b";
-  const roleColor    = ROLE_COLORS[authorRole]||"#64748b";
-  const initials     = authorName.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?";
-  const isNote       = item.postType==="note";
 
-  return (
-    <View style={[styles.postCard, isNote&&styles.noteCard]}>
-      {isNote && (
-        <View style={styles.noteBadgeRow}>
-          <Ionicons name="document-text" size={12} color="#00c6ff"/>
-          <Text style={styles.noteBadgeText}>STUDY NOTE</Text>
-        </View>
-      )}
-      <View style={styles.postHeader}>
-        <View style={[styles.postAvatar,{backgroundColor:roleColor+"22"}]}>
-          <Text style={[styles.postAvatarText,{color:roleColor}]}>{initials}</Text>
-        </View>
-        <View style={styles.postAuthorInfo}>
-          <Text style={styles.postAuthorName}>{authorName}</Text>
-          <View style={styles.postMeta}>
-            <View style={[styles.roleBadge,{backgroundColor:roleColor+"20"}]}>
-              <Text style={[styles.roleBadgeText,{color:roleColor}]}>{authorRole.toUpperCase()}</Text>
-            </View>
-            <Text style={styles.postTime}>{item.createdAt?timeAgo(item.createdAt):""}</Text>
-          </View>
-        </View>
-        {item.category && (
-          <View style={[styles.catBadge,{backgroundColor:catColor+"20"}]}>
-            <Text style={[styles.catBadgeText,{color:catColor}]}>{item.category}</Text>
-          </View>
-        )}
-      </View>
-      {!!item.title && <Text style={[styles.postTitle, isNote&&{color:"#00c6ff"}]}>{item.title}</Text>}
-      {!!caption && <Text style={styles.postContent}>{caption}</Text>}
-      {item.mediaType==="image"&&!!item.mediaUrl && (
-        <Image source={{uri:item.mediaUrl}} style={styles.postImage} resizeMode="cover"/>
-      )}
-      {(item.mediaType==="audio"||item.mediaType==="document"||item.mediaType==="video") && (
-        <View style={styles.mediaBanner}>
-          <Ionicons name={item.mediaType==="audio"?"musical-notes":item.mediaType==="video"?"videocam":"document-text"}
-            size={18} color={item.mediaType==="audio"?"#34d399":"#a78bfa"}/>
-          <Text style={styles.mediaBannerText}>{item.mediaType.charAt(0).toUpperCase()+item.mediaType.slice(1)} Attachment</Text>
-        </View>
-      )}
-      {!item.mediaType&&!!item.image && (
-        <Image source={{uri:item.image}} style={styles.postImage} resizeMode="cover"/>
-      )}
-      <View style={styles.postFooter}>
-        <Pressable style={styles.footerBtn} onPress={()=>onLike(item)}>
-          <Ionicons name={isLiked?"heart":"heart-outline"} size={21} color={isLiked?"#f87171":"#64748b"}/>
-          <Text style={[styles.footerCount, isLiked&&{color:"#f87171"}]}>{likeCount}</Text>
-        </Pressable>
-        <Pressable style={styles.footerBtn} onPress={()=>onCommentPress(item)}>
-          <Ionicons name="chatbubble-outline" size={19} color="#64748b"/>
-          <Text style={styles.footerCount}>{commentCount}</Text>
-        </Pressable>
-        <Ionicons name="share-social-outline" size={18} color="#374151"/>
-      </View>
-    </View>
-  );
-};
 
 // ═══════════════════════════════════════════════════════════
 // MAIN DASHBOARD
