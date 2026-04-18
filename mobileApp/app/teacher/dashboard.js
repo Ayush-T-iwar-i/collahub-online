@@ -14,6 +14,7 @@ import { useNavigation, useRouter, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import API from "../../services/api";
+import PostCard from "../../components/PostCard";
 
 const { width } = Dimensions.get("window");
 const IS_WEB = Platform.OS === "web";

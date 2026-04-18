@@ -58,7 +58,7 @@ export default function ManageColleges() {
       const res = await API.get("/super-admin/colleges");
       setColleges(res.data?.colleges || []);
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Load nahi hua");
+      Alert.alert("Error", e.response?.data?.message || "Failed to load");
     } finally {
       setLoading(false);
     }
@@ -68,16 +68,16 @@ export default function ManageColleges() {
 
   // ── Add college ──
   const handleAdd = async () => {
-    if (!form.name.trim()) { Alert.alert("Required", "College naam daalo"); return; }
+    if (!form.name.trim()) { Alert.alert("Required", "Enter college name"); return; }
     setSaving(true);
     try {
       await API.post("/super-admin/colleges", form);
-      Alert.alert("✅ Done!", `"${form.name}" add ho gaya!`);
+      Alert.alert("✅ Done!", `"${form.name}" has been added!`);
       setModal(false);
       setForm(EMPTY_FORM);
       loadColleges();
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Add nahi hua");
+      Alert.alert("Error", e.response?.data?.message || "Failed to add");
     } finally {
       setSaving(false);
     }
@@ -85,18 +85,18 @@ export default function ManageColleges() {
 
   // ── Update college ──
   const handleUpdate = async () => {
-    if (!form.name.trim()) { Alert.alert("Required", "College naam daalo"); return; }
+    if (!form.name.trim()) { Alert.alert("Required", "Enter college name"); return; }
     setSaving(true);
     try {
       await API.put(`/super-admin/colleges/${encodeURIComponent(editOldName)}`, form);
-      Alert.alert("✅ Done!", "College update ho gaya!");
+      Alert.alert("✅ Done!", "College updated successfully!");
       setModal(false);
       setForm(EMPTY_FORM);
       setEditMode(false);
       setEditOldName("");
       loadColleges();
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Update nahi hua");
+      Alert.alert("Error", e.response?.data?.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -105,8 +105,8 @@ export default function ManageColleges() {
   // ── Delete college ──
   const handleDelete = (college) => {
     Alert.alert(
-      "College Delete Karo",
-      `"${college.name}" delete karna chahte ho?\n\nStudents: ${college.students}\nTeachers: ${college.teachers}\nAdmins: ${college.admins}`,
+      "Delete College",
+      `Are you sure you want to delete "${college.name}"?\n\nStudents: ${college.students}\nTeachers: ${college.teachers}\nAdmins: ${college.admins}`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -114,11 +114,11 @@ export default function ManageColleges() {
           onPress: async () => {
             try {
               await API.delete(`/super-admin/colleges/${encodeURIComponent(college.name)}`);
-              Alert.alert("✅ Done!", "College delete ho gaya!");
+              Alert.alert("✅ Done!", "College deleted successfully!");
               setDetail(null);
               loadColleges();
             } catch (e) {
-              Alert.alert("Error", e.response?.data?.message || "Delete nahi hua");
+              Alert.alert("Error", e.response?.data?.message || "Failed to delete");
             }
           },
         },
@@ -202,7 +202,7 @@ export default function ManageColleges() {
       {/* ── Search ── */}
       <View style={styles.searchBox}>
         <Ionicons name="search" size={15} color="#374151" />
-        <TextInput style={styles.searchInput} placeholder="College naam search karo..."
+        <TextInput style={styles.searchInput} placeholder="Search for colleges..."
           placeholderTextColor="#1f2937" value={search} onChangeText={setSearch} />
         {search ? <Pressable onPress={() => setSearch("")}><Ionicons name="close-circle" size={16} color="#374151" /></Pressable> : null}
       </View>
@@ -234,11 +234,11 @@ export default function ManageColleges() {
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Ionicons name="business-outline" size={52} color="#1f2937" />
-                <Text style={styles.emptyTitle}>Koi college nahi mila</Text>
-                <Text style={styles.emptySub}>+ button se nayi college add karo</Text>
+                <Text style={styles.emptyTitle}>No colleges found</Text>
+                <Text style={styles.emptySub}>Add a new college using the + button</Text>
                 <Pressable style={styles.addFirstBtn}
                   onPress={() => { setEditMode(false); setForm(EMPTY_FORM); setModal(true); }}>
-                  <Text style={styles.addFirstBtnText}>+ Pehla College Add Karo</Text>
+                  <Text style={styles.addFirstBtnText}>+ Add First College</Text>
                 </Pressable>
               </View>
             }
@@ -254,7 +254,7 @@ export default function ManageColleges() {
           <ScrollView contentContainerStyle={styles.modalBox} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>
-              {editMode ? "Edit Your College Here" : "Add New Collage"}
+              {editMode ? "Edit College" : "Add New College"}
             </Text>
 
             {/* Preset suggestions (only on add) */}
@@ -274,7 +274,7 @@ export default function ManageColleges() {
             )}
 
             {/* College Name */}
-            <Text style={styles.fieldLabel}>College Naam <Text style={{ color: "#f87171" }}>*</Text></Text>
+            <Text style={styles.fieldLabel}>College Name <Text style={{ color: "#f87171" }}>*</Text></Text>
             <TextInput style={styles.input}
               placeholder="e.g. Nims Institute of Engineering and Technology"
               placeholderTextColor="#374151"
@@ -305,7 +305,7 @@ export default function ManageColleges() {
             {/* Address */}
             <Text style={styles.fieldLabel}>Address</Text>
             <TextInput style={[styles.input, { height: 70 }]}
-              placeholder="College ka address"
+              placeholder="Enter college address"
               placeholderTextColor="#374151"
               multiline
               value={form.address}
@@ -351,7 +351,7 @@ export default function ManageColleges() {
                 disabled={saving}>
                 {saving
                   ? <ActivityIndicator size="small" color="#000" />
-                  : <Text style={styles.confirmBtnText}>{editMode ? "Please Update" : "Add Here"}</Text>}
+                  : <Text style={styles.confirmBtnText}>{editMode ? "Save Changes" : "Add College"}</Text>}
               </Pressable>
             </View>
           </ScrollView>

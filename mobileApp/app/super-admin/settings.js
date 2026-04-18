@@ -62,8 +62,8 @@ export default function SuperAdminSettings(){
       title:"Data Management",
       items:[
         {icon:"cloud-upload",label:"Export All Data",sub:"Download system-wide CSV/Excel",color:"#00c6ff",onPress:()=>Alert.alert("Coming Soon","Export feature coming soon")},
-        {icon:"cloud-download",label:"Backup Database",sub:"Manual DB backup trigger",color:"#a78bfa",onPress:()=>Alert.alert("Coming Soon","Backup feature aane wali hai")},
-        {icon:"trash",label:"Clear Old Logs",sub:"Purge logs older than 90 days",color:"#fb923c",onPress:()=>Alert.alert("Coming Soon","Log purge feature aane wali hai")},
+        {icon:"cloud-download",label:"Backup Database",sub:"Manual DB backup trigger",color:"#a78bfa",onPress:()=>Alert.alert("Coming Soon","Backup feature coming soon")},
+        {icon:"trash",label:"Clear Old Logs",sub:"Purge logs older than 90 days",color:"#fb923c",onPress:()=>Alert.alert("Coming Soon","Log purge feature coming soon")},
       ]
     },
     {

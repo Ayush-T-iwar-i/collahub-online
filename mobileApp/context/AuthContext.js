@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect, useContext } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import API from "../services/api";
 
 const AuthContext = createContext();
 
@@ -8,14 +9,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Android Emulator URL
-  const API = "http://10.0.2.2:5000";
-
   // ================= AUTO LOGIN =================
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const token = await AsyncStorage.getItem("token");
+        const token = await AsyncStorage.getItem("accessToken");
         const savedUser = await AsyncStorage.getItem("user");
 
         if (token && savedUser) {
@@ -38,27 +36,26 @@ export const AuthProvider = ({ children }) => {
   // ================= LOGIN =================
   const login = async (email, password) => {
     try {
-      const res = await axios.post(`${API}/login`, {
+      const res = await API.post("/auth/login", {
         email,
         password,
       });
 
-      const { accessToken, user } = res.data;
+      const { accessToken, refreshToken, role } = res.data;
 
       if (!accessToken) {
         throw new Error("No token received from server");
       }
 
-      await AsyncStorage.setItem("token", accessToken);
-      await AsyncStorage.setItem("user", JSON.stringify(user));
+      await AsyncStorage.setItem("accessToken", accessToken);
+      if (refreshToken) await AsyncStorage.setItem("refreshToken", refreshToken);
+      await AsyncStorage.setItem("userRole", role || "student");
 
       axios.defaults.headers.common[
         "Authorization"
       ] = `Bearer ${accessToken}`;
 
-      setUser(user);
-
-      return { success: true };
+      return { success: true, role, accessToken, refreshToken };
     } catch (error) {
       console.log("LOGIN ERROR:", error.response?.data || error.message);
 
@@ -73,7 +70,7 @@ export const AuthProvider = ({ children }) => {
   // ================= REGISTER =================
   const register = async (name, email, password) => {
     try {
-      const res = await axios.post(`${API}/register`, {
+      const res = await API.post("/auth/register", {
         name,
         email,
         password,
@@ -91,8 +88,13 @@ export const AuthProvider = ({ children }) => {
 
   // ================= LOGOUT =================
   const logout = async () => {
-    await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("user");
+    await AsyncStorage.removeItem("accessToken");
+    await AsyncStorage.removeItem("refreshToken");
+    await AsyncStorage.removeItem("userRole");
+    await AsyncStorage.multiRemove([
+      "studentData", "teacherData", "adminData", "superAdminData",
+      "studentLoggedIn", "teacherLoggedIn", "adminLoggedIn", "superAdminLoggedIn",
+    ]);
     delete axios.defaults.headers.common["Authorization"];
     setUser(null);
   };
