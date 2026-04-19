@@ -96,7 +96,7 @@ export default function StudentDashboard() {
   const handleLogout = async () => {
     try { await API.post("/auth/logout"); } catch {}
     await AsyncStorage.multiRemove(["accessToken", "refreshToken", "studentData", "studentLoggedIn"]);
-    router.replace("/");
+    router.replace("/login");
   };
 
   const ini = studentData?.name?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "S";
