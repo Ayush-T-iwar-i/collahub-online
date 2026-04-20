@@ -322,7 +322,7 @@ export default function ViewAttendance() {
       text += "\n";
     });
     await Clipboard.setStringAsync(text);
-    Alert.alert("✅ Copied", "Defaulter list clipboard pe copy ho gaya!");
+    Alert.alert("✅ Copied", "Defaulter list copied to clipboard!");
   };
 
   const stats = (() => {
@@ -463,7 +463,7 @@ export default function ViewAttendance() {
                 <Ionicons name="people-outline" size={40} color="#374151" />
               </View>
               <Text style={styles.emptyTitle}>No students found</Text>
-              <Text style={styles.emptySub}>Filter change karo ya pull to refresh karo</Text>
+              <Text style={styles.emptySub}>Change filter or pull to refresh</Text>
             </View>
           )}
           renderItem={({ item }) => {

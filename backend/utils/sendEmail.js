@@ -1,5 +1,5 @@
 // utils/sendEmail.js
-// ✅ Resend use karo — Railway pe Gmail SMTP blocked hai
+// ✅ Use Resend — Railway pe Gmail SMTP blocked hai
 // Setup: npm install resend
 
 const { Resend } = require("resend");

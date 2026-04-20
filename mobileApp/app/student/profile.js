@@ -167,7 +167,7 @@ export default function StudentProfile() {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, { mimeType: "image/png", dialogTitle: "Student ID Card" });
         } else {
-          Alert.alert("Saved!", "ID Card save ho gaya");
+          Alert.alert("Saved!", "ID Card saved");
         }
       }
     } catch (e) {

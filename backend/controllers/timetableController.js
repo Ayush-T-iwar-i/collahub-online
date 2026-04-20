@@ -19,7 +19,7 @@ function collegeMatches(c1, c2) {
 }
 
 // ══════════════════════════════════════════════
-// TEACHER: Schedule save/update karo
+// TEACHER: Save or update schedule
 // POST /timetable/save
 // ══════════════════════════════════════════════
 exports.saveTeacherSchedule = async (req, res) => {

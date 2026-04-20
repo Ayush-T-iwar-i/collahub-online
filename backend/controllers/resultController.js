@@ -5,7 +5,7 @@ const User       = require("../models/User");
 const PDFDocument = require("pdfkit");
 
 // ─────────────────────────────────────────────
-// HELPER: Grade calculate karo percentage se
+// HELPER: Calculate grade from percentage
 // ─────────────────────────────────────────────
 const getGrade = (percentage) => {
   if (percentage >= 90) return "A+";
@@ -28,7 +28,7 @@ const calcSemFromYear = (admissionYear) => {
   if (!admission || isNaN(admission)) return 1;
 
   let yearsCompleted = currentYear - admission;
-  if (currentMonth < 7) yearsCompleted -= 1; // July se pehle naya year nahi
+  if (currentMonth < 7) yearsCompleted -= 1; // New year does not start before July
 
   const sem = (yearsCompleted * 2) + 1;
   return Math.min(Math.max(sem, 1), 8);
@@ -76,7 +76,7 @@ exports.getStudentResult = async (req, res) => {
       ? 0
       : (overallTotal / overallCount).toFixed(2);
 
-    // ── Semester results bhi attach karo ──
+    // ── Also attach semester results ──
     const student = await User.findById(studentId)
       .select("name studentId semester admissionYear results isPromoted");
 
@@ -119,7 +119,7 @@ exports.uploadResult = async (req, res) => {
     if (!student)
       return res.status(404).json({ message: "Student not found" });
 
-    // ── Result save/update karo ──
+    // ── Save or update result ──
     const existingIndex = student.results.findIndex(
       (r) => r.semester === Number(semester)
     );

@@ -69,7 +69,7 @@ API.interceptors.response.use(
       );
     }
 
-    // 401 — token expired, refresh try karo
+    // 401 — token expired, try refresh
     if (
       error.response?.status === 401 &&
       !orig._retry &&

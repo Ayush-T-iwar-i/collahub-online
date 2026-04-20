@@ -166,7 +166,7 @@ exports.login = async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ success: false, message: "Invalid password" });
 
-    // ✅ OTP — DB mein save karo (Railway restarts pe bhi survive karega)
+    // ✅ Save OTP to DB (Railway restarts pe bhi survive karega)
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp       = otp;
     user.otpExpire = new Date(Date.now() + 10 * 60 * 1000);
@@ -178,7 +178,7 @@ exports.login = async (req, res) => {
       console.log(`✅ OTP sent to ${email} [${user.role}]`);
     } catch (emailErr) {
       console.error("❌ Email send failed:", emailErr.message);
-      // Dev fallback — OTP terminal mein print karo
+      // Dev fallback — Print OTP in terminal
       console.log(`\n🔐 DEV OTP for ${email} [${user.role}]: ${otp}\n`);
     }
 
@@ -207,7 +207,7 @@ exports.loginVerifyOtp = async (req, res) => {
 
     email = email.toLowerCase().trim();
 
-    // ✅ DB se OTP verify karo
+    // ✅ Verify OTP from DB
     const user = await User.findOne({ email });
 
     if (!user || !user.otp)
@@ -222,7 +222,7 @@ exports.loginVerifyOtp = async (req, res) => {
     if (user.otp !== otp.toString().trim())
       return res.status(400).json({ success: false, message: "Invalid OTP" });
 
-    // ✅ OTP verified — clear karo, tokens do
+    // ✅ OTP verified — clear OTP and issue tokens
     user.otp       = undefined;
     user.otpExpire = undefined;
 

@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════
 // BiometricLog.js  —  backend/models/BiometricLog.js
-// Essl device se aane wali har punch log store hoti hai
+// Every punch log coming from Essl device is stored here
 // ══════════════════════════════════════════════════════
 
 const mongoose = require("mongoose");
@@ -29,8 +29,8 @@ const BiometricLogSchema = new mongoose.Schema(
     verifyMode:    { type: String, default: "Face" }, // Face / Fingerprint / Card / PIN
 
     // Status
-    matched:       { type: Boolean, default: false }, // User match hua ya nahi
-    processed:     { type: Boolean, default: false }, // Attendance record create hua
+    matched:       { type: Boolean, default: false }, // User matched or not
+    processed:     { type: Boolean, default: false }, // Attendance record created
 
     // Raw payload from device (debugging ke liye)
     rawPayload:    { type: mongoose.Schema.Types.Mixed },

@@ -162,7 +162,7 @@ export default function TeacherProfile() {
         }
         Alert.alert("✅", "Profile photo updated!");
       } else {
-        Alert.alert("Note", "Upload ho gaya lekin URL nahi mila");
+        Alert.alert("Note", "Upload successful but URL not received");
       }
     } catch (e) {
       Alert.alert("Error", "Photo upload failed");
@@ -194,7 +194,7 @@ export default function TeacherProfile() {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, { mimeType: "image/png", dialogTitle: "Teacher ID Card" });
         } else {
-          Alert.alert("Saved!", "ID Card save ho gaya");
+          Alert.alert("Saved!", "ID Card saved");
         }
       }
     } catch (e) {
@@ -449,7 +449,7 @@ export default function TeacherProfile() {
             </LinearGradient>
           </Pressable>
           <Text style={styles.downloadHint}>
-            {IS_WEB ? "Browser se PNG download hogi" : "Share ya gallery mein save karo"}
+            {IS_WEB ? "Browser se PNG download hogi" : "Save to share or gallery"}
           </Text>
         </View>
       </Animated.ScrollView>

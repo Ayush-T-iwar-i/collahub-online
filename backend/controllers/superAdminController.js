@@ -296,11 +296,11 @@ exports.deleteCollege = async (req, res) => {
     if (total > 0) {
       return res.status(400).json({
         success: false,
-        message: `Cannot delete college — ${total} users abhi bhi is college mein hain (${students} students, ${teachers} teachers, ${admins} admins). Please delete all users first.`,
+        message: `Cannot delete college — ${total} users are still in this college (${students} students, ${teachers} teachers, ${admins} admins). Please delete all users first.`,
       });
     }
 
-    res.json({ success: true, message: `"${collegeName}" successfully delete ho gaya.` });
+    res.json({ success: true, message: `"${collegeName}" successfully deleted.` });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

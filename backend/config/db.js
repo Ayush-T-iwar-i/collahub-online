@@ -10,7 +10,7 @@ const connectDB = async () => {
 
   if (!uri) {
     console.error("❌ MONGO_URI not found in .env file!");
-    process.exit(1); // Server band kar do agar DB URI hi nahi hai
+    process.exit(1); // Exit server if DB URI is not available
   }
 
   try {
@@ -26,7 +26,7 @@ const connectDB = async () => {
 
   } catch (error) {
     console.error("❌ Database Connection Failed:", error.message);
-    process.exit(1); // App start hi mat karo agar DB connect nahi hua
+    process.exit(1); // Do not start app if DB connection fails
   }
 };
 

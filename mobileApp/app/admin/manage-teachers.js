@@ -314,7 +314,7 @@ export default function ManageTeachers() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#080d17" />
 
-      {/* SINGLE FLATLIST — sab kuch scroll hota hai */}
+      {/* SINGLE FLATLIST — everything scrolls */}
       <FlatList
         data={filtered}
         keyExtractor={i => i._id}

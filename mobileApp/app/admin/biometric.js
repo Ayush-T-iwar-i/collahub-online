@@ -308,7 +308,7 @@ export default function BiometricGate() {
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Ionicons name="scan-circle-outline" size={48} color="#1f2937" />
-                <Text style={styles.emptyText}>Aaj koi gate entry nahi</Text>
+                <Text style={styles.emptyText}>No gate entries today</Text>
                 <Text style={styles.emptySub}>Device se data aane par yahan dikhega</Text>
               </View>
             }
@@ -320,7 +320,7 @@ export default function BiometricGate() {
       <Modal visible={enrollModal} transparent animationType="slide">
         <View style={styles.overlay}>
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Student Enroll Karo</Text>
+            <Text style={styles.modalTitle}>Enroll Student</Text>
             <View style={styles.modalInfo}>
               <Ionicons name="hardware-chip-outline" size={16} color="#f59e0b" />
               <Text style={styles.modalInfoText}>

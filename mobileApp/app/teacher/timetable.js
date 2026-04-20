@@ -1,5 +1,5 @@
 // app/teacher/timetable.js
-// ✅ FIX: Teacher khud timetable set nahi kar sakta
+// ✅ FIX: Teacher cannot set their own timetable
 // Sirf admin-assigned timetable dikhta hai SubjectRequest se
 import React, { useState, useCallback } from "react";
 import {

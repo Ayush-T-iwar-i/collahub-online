@@ -146,7 +146,7 @@ export default function SuperAdminStudents() {
     <View style={s.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* SINGLE FLATLIST — sab kuch scroll hota hai */}
+      {/* SINGLE FLATLIST — everything scrolls */}
       <FlatList
         data={filtered}
         keyExtractor={i => i._id}

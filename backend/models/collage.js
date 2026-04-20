@@ -14,7 +14,7 @@ const subjectSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Same code+college+dept+sem duplicate nahi hoga
+// Same code+college+dept+sem will not be duplicated
 subjectSchema.index(
   { code:1, college:1, department:1, semester:1 },
   { unique:true }

@@ -58,7 +58,7 @@ export default function ManageColleges() {
       const res = await API.get("/super-admin/colleges");
       setColleges(res.data?.colleges || []);
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Load nahi hua");
+      Alert.alert("Error", e.response?.data?.message || "Failed to load");
     } finally {
       setLoading(false);
     }
@@ -72,12 +72,12 @@ export default function ManageColleges() {
     setSaving(true);
     try {
       await API.post("/super-admin/colleges", form);
-      Alert.alert("✅ Done!", `"${form.name}" add ho gaya!`);
+      Alert.alert("✅ Done!", `"${form.name}" was added!`);
       setModal(false);
       setForm(EMPTY_FORM);
       loadColleges();
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Add nahi hua");
+      Alert.alert("Error", e.response?.data?.message || "Failed to add");
     } finally {
       setSaving(false);
     }
@@ -89,14 +89,14 @@ export default function ManageColleges() {
     setSaving(true);
     try {
       await API.put(`/super-admin/colleges/${encodeURIComponent(editOldName)}`, form);
-      Alert.alert("✅ Done!", "College update ho gaya!");
+      Alert.alert("✅ Done!", "College updated!");
       setModal(false);
       setForm(EMPTY_FORM);
       setEditMode(false);
       setEditOldName("");
       loadColleges();
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "Update nahi hua");
+      Alert.alert("Error", e.response?.data?.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -105,7 +105,7 @@ export default function ManageColleges() {
   // ── Delete college ──
   const handleDelete = (college) => {
     Alert.alert(
-      "College Delete Karo",
+      "Delete College",
       `"${college.name}" delete karna chahte ho?\n\nStudents: ${college.students}\nTeachers: ${college.teachers}\nAdmins: ${college.admins}`,
       [
         { text: "Cancel", style: "cancel" },
@@ -114,11 +114,11 @@ export default function ManageColleges() {
           onPress: async () => {
             try {
               await API.delete(`/super-admin/colleges/${encodeURIComponent(college.name)}`);
-              Alert.alert("✅ Done!", "College delete ho gaya!");
+              Alert.alert("✅ Done!", "College deleted!");
               setDetail(null);
               loadColleges();
             } catch (e) {
-              Alert.alert("Error", e.response?.data?.message || "Delete nahi hua");
+              Alert.alert("Error", e.response?.data?.message || "Failed to delete");
             }
           },
         },
@@ -202,7 +202,7 @@ export default function ManageColleges() {
       {/* ── Search ── */}
       <View style={styles.searchBox}>
         <Ionicons name="search" size={15} color="#374151" />
-        <TextInput style={styles.searchInput} placeholder="College naam search karo..."
+        <TextInput style={styles.searchInput} placeholder="Search college name..."
           placeholderTextColor="#1f2937" value={search} onChangeText={setSearch} />
         {search ? <Pressable onPress={() => setSearch("")}><Ionicons name="close-circle" size={16} color="#374151" /></Pressable> : null}
       </View>
@@ -234,11 +234,11 @@ export default function ManageColleges() {
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Ionicons name="business-outline" size={52} color="#1f2937" />
-                <Text style={styles.emptyTitle}>Koi college nahi mila</Text>
-                <Text style={styles.emptySub}>+ button se nayi college add karo</Text>
+                <Text style={styles.emptyTitle}>No colleges found</Text>
+                <Text style={styles.emptySub}>Add new college using + button</Text>
                 <Pressable style={styles.addFirstBtn}
                   onPress={() => { setEditMode(false); setForm(EMPTY_FORM); setModal(true); }}>
-                  <Text style={styles.addFirstBtnText}>+ Pehla College Add Karo</Text>
+                  <Text style={styles.addFirstBtnText}>+ Add First College</Text>
                 </Pressable>
               </View>
             }

@@ -3,7 +3,7 @@
 //
 // Essl / FingerTec device ADMS Push Protocol support
 //
-// Device setup karo:
+// Device setup:
 //   Device Menu → Comm → ADMS → Server Address = [CollaHub server IP]
 //                               Port            = 5000 (ya jo bhi port ho)
 //                               Protocol        = HTTP
@@ -18,8 +18,8 @@ const User         = require("../models/User");
 
 // ─────────────────────────────────────────────────────────
 //  Helper: punchType detect karna (time-based logic)
-//  Essl device sirf "IN" ya "OUT" bhejta hai kabhi kabhi,
-//  warna hum time se guess karte hain
+//  Essl device sometimes sends only "IN" or "OUT"
+//  otherwise we guess from time
 // ─────────────────────────────────────────────────────────
 function detectPunchType(rawType, punchTime) {
   // Agar device ne explicitly bheja
@@ -55,7 +55,7 @@ async function matchStudent(deviceUserId) {
     }).select("_id name studentId college department semester section role");
   }
 
-  // Try: phone number match (kuch colleges phone as ID use karte hain)
+  // Try: phone number match (some colleges use phone as ID)
   if (!user) {
     user = await User.findOne({ phone: id, role: "student" })
       .select("_id name studentId college department semester section role");
@@ -87,12 +87,12 @@ exports.handleEsslPush = async (req, res) => {
     const rawData   = body.Data || body.data || "";
     const stamp     = body.Stamp || body.stamp || "";
 
-    // Heartbeat — device sirf ping karta hai, koi data nahi
+    // Heartbeat — device only pings, no data
     if (!rawData && table !== "ATTLOG") {
       return res.send("OK");
     }
 
-    // Parse multiple lines (ek push mein multiple logs aa sakte hain)
+    // Parse multiple lines (multiple logs can come in one push)
     const lines = rawData.split("\n").filter(l => l.trim());
     const results = [];
 
@@ -123,10 +123,10 @@ exports.handleEsslPush = async (req, res) => {
       });
       if (existing) continue; // duplicate skip
 
-      // Student match karo
+      // Match student
       const student = await matchStudent(deviceUserId);
 
-      // Log save karo
+      // Save log
       const log = await BiometricLog.create({
         deviceSerial:  sn,
         deviceLabel:   "Main Gate",
@@ -148,14 +148,14 @@ exports.handleEsslPush = async (req, res) => {
 
       results.push(log._id);
 
-      // Agar student match hua — optional: attendance record bhi create karo
+      // If student matched — optional: also create attendance record
       if (student && punchType === "CheckIn") {
         await autoMarkAttendance(student, punchTime, sn);
         await BiometricLog.findByIdAndUpdate(log._id, { processed: true });
       }
     }
 
-    // Essl device ko yeh response chahiye hota hai
+    // Essl device expects this response
     res.set("Content-Type", "text/plain");
     res.send(`OK: ${results.length} logs saved`);
 
@@ -168,11 +168,11 @@ exports.handleEsslPush = async (req, res) => {
 
 // ──────────────────────────────────────────────────────────
 //  Auto mark attendance when student punches CheckIn
-//  (Optional — enable/disable kar sakte ho)
+//  (Optional — enable/disable as needed)
 // ──────────────────────────────────────────────────────────
 async function autoMarkAttendance(student, punchTime, deviceSerial) {
   try {
-    // Check karo aaj pehle se attendance hai ya nahi
+    // Check if attendance already exists for today
     const Attendance = require("../models/Attendance") ||
                        require("../models/AttendanceModel");
     if (!Attendance) return;
@@ -205,7 +205,7 @@ async function autoMarkAttendance(student, punchTime, deviceSerial) {
       markedAt:      new Date(),
     });
   } catch (e) {
-    // Silently fail — attendance model structure alag ho sakti hai
+    // Silently fail — attendance model structure may differ
     console.log("Auto-attendance note:", e.message);
   }
 }
@@ -306,7 +306,7 @@ exports.getStudentHistory = async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // 5. MANUAL DEVICE PULL — Essl SDK se directly fetch karo
 //    POST /biometric/pull  { deviceIp, devicePort }
-//    (Jab device push nahi karta, tab manually pull karo)
+//    (When device does not push, manually pull)
 // ══════════════════════════════════════════════════════════════
 exports.manualPull = async (req, res) => {
   try {
@@ -316,7 +316,7 @@ exports.manualPull = async (req, res) => {
     // node-zklib use karo (npm install node-zklib)
     let ZKLib;
     try { ZKLib = require("node-zklib"); }
-    catch { return res.status(500).json({ message: "node-zklib install karo: npm install node-zklib" }); }
+    catch { return res.status(500).json({ message: "install node-zklib: npm install node-zklib" }); }
 
     const device = new ZKLib(deviceIp, devicePort, 10000, 4000);
     await device.createSocket();
@@ -377,11 +377,11 @@ exports.enrollMapping = async (req, res) => {
   try {
     const { deviceUserId, studentId } = req.body;
     if (!deviceUserId || !studentId) {
-      return res.status(400).json({ message: "deviceUserId aur studentId dono chahiye" });
+      return res.status(400).json({ message: "deviceUserId and studentId both required" });
     }
 
     const student = await User.findOne({ studentId, role: "student" });
-    if (!student) return res.status(404).json({ message: "Student nahi mila" });
+    if (!student) return res.status(404).json({ message: "Student not found" });
 
     // Update all unmatched logs for this deviceUserId
     const result = await BiometricLog.updateMany(

@@ -18,7 +18,7 @@ const {
 } = require("../controllers/biometricController");
 
 // ── PUBLIC routes (Essl device ke liye — no auth) ──
-// Device yahan push karta hai — auth nahi laga sakte
+// Device pushes here — cannot add auth
 router.post("/push",    handleEsslPush); // Essl ADMS push
 router.get( "/ping",    heartbeat);      // Device heartbeat check
 router.get( "/",        heartbeat);      // Essl GET ping bhi karta hai
@@ -29,7 +29,7 @@ router.get( "/unmatched",         verifyToken, authorizeRoles("admin","super-adm
 router.post("/pull",              verifyToken, authorizeRoles("admin","super-admin"), manualPull);
 router.post("/enroll",            verifyToken, authorizeRoles("admin","super-admin"), enrollMapping);
 
-// Student apna khud ka history dekh sakta hai
+// Student can view their own history
 router.get( "/student/:studentId", verifyToken, getStudentHistory);
 
 // Teacher Attendance (admin only)

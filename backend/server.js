@@ -13,7 +13,7 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 const ENV  = process.env.NODE_ENV || "development";
 
-// ── Trust Proxy — Railway ke liye ZARURI hai ─────────────
+// ── Trust Proxy — is ESSENTIAL for Railway ─────────────
 app.set("trust proxy", 1);
 
 // ── DB Connect ────────────────────────────────────────────
@@ -120,7 +120,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ── MongoDB injection protection ──────────────────────────
 // Manual sanitize — Express 5 ke saath compatible
-// express-mongo-sanitize Express 5 mein kaam nahi karta
+// express-mongo-sanitize Express 5 mein does not work
 app.use((req, res, next) => {
   const sanitize = (obj) => {
     if (obj && typeof obj === "object") {
