@@ -119,7 +119,7 @@ export default function CustomDrawer(props) {
               "accessToken", "refreshToken",
               "studentData", "studentEmail", "studentLoggedIn",
             ]);
-            router.replace("/(auth)/student-login");
+            router.replace("/login");
           },
         },
       ]

@@ -16,42 +16,8 @@ const { width } = Dimensions.get("window");
 const IS_WEB = Platform.OS === "web";
 
 // ─────────────────────────────────────────────
-//  Animated Info Row
+//  Helper Functions
 // ─────────────────────────────────────────────
-const InfoRow = ({ icon, label, value, color = "#00c6ff", delay = 0, last = false }) => {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(anim, { toValue: 1, duration: 450, delay, useNativeDriver: true }).start();
-  }, []);
-  return (
-    <Animated.View style={[
-      styles.infoRow,
-      !last && styles.infoRowBorder,
-      {
-        opacity: anim,
-        transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
-      },
-    ]}>
-      <View style={[styles.infoIconWrap, { backgroundColor: color + "18" }]}>
-        <Ionicons name={icon} size={16} color={color} />
-      </View>
-      <View style={styles.infoContent}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue} numberOfLines={2}>{value || "—"}</Text>
-      </View>
-    </Animated.View>
-  );
-};
-
-const SectionHead = ({ icon, title, color = "#00c6ff" }) => (
-  <View style={styles.sectionHead}>
-    <View style={[styles.sectionHeadIcon, { backgroundColor: color + "18" }]}>
-      <Ionicons name={icon} size={15} color={color} />
-    </View>
-    <Text style={styles.sectionHeadText}>{title}</Text>
-  </View>
-);
-
 const deptShort = (dept = "") =>
   dept.match(/\(([^)]+)\)/)?.[1] ||
   dept.split(" ").filter(w => w.length > 2)[0]?.toUpperCase() ||
@@ -68,6 +34,7 @@ export default function StudentProfile() {
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [imageModal, setImageModal] = useState(false);
+  const [previewImageModal, setPreviewImageModal] = useState(false);
 
   // ── Load ──
   useFocusEffect(useCallback(() => {
@@ -146,59 +113,55 @@ export default function StudentProfile() {
 
   // ── Download ID card ──
   const downloadCard = async () => {
-  setDownloading(true);
+    setDownloading(true);
 
-  try {
-    if (IS_WEB) {
-      const html2canvas = (await import("html2canvas")).default;
-      const el = document.getElementById("student-id-card");
+    try {
+      if (IS_WEB) {
+        const html2canvas = (await import("html2canvas")).default;
+        const el = document.getElementById("student-id-card");
 
-      if (!el) {
-        Alert.alert("Error", "ID card element not found");
-        return;
+        if (!el) {
+          Alert.alert("Error", "ID card not found");
+          return;
+        }
+
+        const canvas = await html2canvas(el, {
+          backgroundColor: "#0c1f3f",
+          scale: 2,
+        });
+
+        const link = document.createElement("a");
+        link.download = `${student?.studentId || "student"}-id-card.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } else {
+        const { captureRef } = await import("react-native-view-shot");
+        const MediaLibrary = await import("expo-media-library");
+
+        const permission = await MediaLibrary.requestPermissionsAsync();
+
+        if (!permission.granted) {
+          Alert.alert("Permission Required", "Please allow gallery permission");
+          return;
+        }
+
+        const uri = await captureRef(cardRef.current, {
+          format: "png",
+          quality: 1,
+        });
+
+        await MediaLibrary.saveToLibraryAsync(uri);
+
+        Alert.alert("Success", "ID Card saved to Gallery successfully");
       }
-
-      const canvas = await html2canvas(el, {
-        backgroundColor: "#0c1f3f",
-        scale: 2,
-      });
-
-      const link = document.createElement("a");
-      link.download = `${student?.studentId || "student"}-id-card.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-
-    } else {
-      const { captureRef } = await import("react-native-view-shot");
-      const MediaLibrary = await import("expo-media-library");
-
-      // Permission lena zaroori hai
-      const permission = await MediaLibrary.requestPermissionsAsync();
-
-      if (!permission.granted) {
-        Alert.alert("Permission Denied", "Gallery access permission required");
-        return;
-      }
-
-      // Convert view to image
-      const uri = await captureRef(cardRef.current, {
-        format: "png",
-        quality: 1,
-      });
-
-      // Save to gallery
-      await MediaLibrary.saveToLibraryAsync(uri);
-
-      Alert.alert("Success", "ID Card saved to Gallery!");
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Failed to save ID Card");
+    } finally {
+      setDownloading(false);
     }
+  };
 
-  } catch (error) {
-    console.log(error);
-    Alert.alert("Error", "Download failed. Please try again.");
-  } finally {
-    setDownloading(false);
-  }
-};
   if (!student) return (
     <View style={styles.loader}>
       <ActivityIndicator size="large" color="#00c6ff" />
@@ -212,6 +175,41 @@ export default function StudentProfile() {
   const heroH = scrollY.interpolate({ inputRange: [0, 120], outputRange: [300, 170], extrapolate: "clamp" });
   const avatarSc = scrollY.interpolate({ inputRange: [0, 100], outputRange: [1, 0.72], extrapolate: "clamp" });
   const nameFade = scrollY.interpolate({ inputRange: [50, 110], outputRange: [1, 0], extrapolate: "clamp" });
+
+  // Animated Info Row Component
+  const InfoRow = ({ icon, label, value, color = "#00c6ff", delay = 0, last = false }) => {
+    const anim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+      Animated.timing(anim, { toValue: 1, duration: 450, delay, useNativeDriver: true }).start();
+    }, []);
+    return (
+      <Animated.View style={[
+        styles.infoRow,
+        !last && styles.infoRowBorder,
+        {
+          opacity: anim,
+          transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
+        },
+      ]}>
+        <View style={[styles.infoIconWrap, { backgroundColor: color + "18" }]}>
+          <Ionicons name={icon} size={16} color={color} />
+        </View>
+        <View style={styles.infoContent}>
+          <Text style={styles.infoLabel}>{label}</Text>
+          <Text style={styles.infoValue} numberOfLines={2}>{value || "—"}</Text>
+        </View>
+      </Animated.View>
+    );
+  };
+
+  const SectionHead = ({ icon, title, color = "#00c6ff" }) => (
+    <View style={styles.sectionHead}>
+      <View style={[styles.sectionHeadIcon, { backgroundColor: color + "18" }]}>
+        <Ionicons name={icon} size={15} color={color} />
+      </View>
+      <Text style={styles.sectionHeadText}>{title}</Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -244,15 +242,24 @@ export default function StudentProfile() {
           <Animated.View style={[styles.avatarWrap, { transform: [{ scale: avatarSc }] }]}>
             <View style={styles.avatarRingOuter}>
               <View style={styles.avatarRingInner}>
-                <Image source={{ uri: imgSrc }} style={styles.avatarImg} />
+                <Pressable onPress={() => setPreviewImageModal(true)}>
+                  <Image source={{ uri: imgSrc }} style={styles.avatarImg} />
+                </Pressable>
               </View>
             </View>
-            {uploading
-              ? <View style={styles.uploadingOverlay}><ActivityIndicator size="small" color="#fff" /></View>
-              : <Pressable style={styles.cameraFab} onPress={() => setImageModal(true)}>
+
+            {uploading ? (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            ) : (
+              <Pressable
+                style={styles.cameraFab}
+                onPress={() => setImageModal(true)}
+              >
                 <MaterialIcons name="camera-alt" size={13} color="#fff" />
               </Pressable>
-            }
+            )}
           </Animated.View>
 
           <Animated.View style={[styles.heroNameWrap, { opacity: nameFade }]}>
@@ -468,29 +475,85 @@ export default function StudentProfile() {
         </View>
       </Animated.ScrollView>
 
-      {/* ══ PROFILE IMAGE MODAL ══ */}
-      <Modal visible={imageModal} transparent animationType="fade">
-        <Pressable style={styles.imgModalBg} onPress={() => setImageModal(false)}>
+      {/* ══ FULL IMAGE PREVIEW MODAL ══ */}
+      <Modal
+        visible={previewImageModal}
+        transparent
+        animationType="fade"
+      >
+        <Pressable
+          style={styles.fullImageModalBg}
+          onPress={() => setPreviewImageModal(false)}
+        >
+          <Image
+            source={{ uri: imgSrc }}
+            style={styles.fullImagePreview}
+          />
+        </Pressable>
+      </Modal>
+
+      {/* ══ PROFILE IMAGE CHANGE MODAL ══ */}
+      <Modal
+        visible={imageModal}
+        transparent
+        animationType="fade"
+      >
+        <Pressable
+          style={styles.imgModalBg}
+          onPress={() => setImageModal(false)}
+        >
           <View style={styles.imgModalCard}>
-            <Text style={styles.imgModalTitle}>change profile photo</Text>
+            <Text style={styles.imgModalTitle}>
+              Change Profile Photo
+            </Text>
+
             <View style={styles.imgPreviewWrap}>
-              <Image source={{ uri: imgSrc }} style={styles.imgPreview} />
+              <Image
+                source={{ uri: imgSrc }}
+                style={styles.imgPreview}
+              />
+
               {uploading && (
                 <View style={styles.imgUploadingOverlay}>
-                  <ActivityIndicator size="large" color="#00c6ff" />
-                  <Text style={styles.imgUploadingText}>Uploading...</Text>
+                  <ActivityIndicator
+                    size="large"
+                    color="#00c6ff"
+                  />
+                  <Text style={styles.imgUploadingText}>
+                    Uploading...
+                  </Text>
                 </View>
               )}
             </View>
-            <Pressable style={styles.imgPickBtn} onPress={changeProfileImage}>
-              <LinearGradient colors={["#0072ff", "#00c6ff"]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.imgPickGrad}>
-                <Ionicons name="image-outline" size={17} color="#fff" />
-                <Text style={styles.imgPickText}>Select from Gallery</Text>
+
+            <Pressable
+              style={styles.imgPickBtn}
+              onPress={changeProfileImage}
+            >
+              <LinearGradient
+                colors={["#0072ff", "#00c6ff"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.imgPickGrad}
+              >
+                <Ionicons
+                  name="image-outline"
+                  size={17}
+                  color="#fff"
+                />
+                <Text style={styles.imgPickText}>
+                  Select from Gallery
+                </Text>
               </LinearGradient>
             </Pressable>
-            <Pressable style={styles.imgCancelBtn} onPress={() => setImageModal(false)}>
-              <Text style={styles.imgCancelText}>Cancel</Text>
+
+            <Pressable
+              style={styles.imgCancelBtn}
+              onPress={() => setImageModal(false)}
+            >
+              <Text style={styles.imgCancelText}>
+                Cancel
+              </Text>
             </Pressable>
           </View>
         </Pressable>
@@ -604,4 +667,7 @@ const styles = StyleSheet.create({
   imgPickText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   imgCancelBtn: { paddingVertical: 12, width: "100%", alignItems: "center" },
   imgCancelText: { color: "#4b5563", fontWeight: "600", fontSize: 14 },
+  // Full image preview modal
+  fullImageModalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
+  fullImagePreview: { width: "90%", height: "70%", resizeMode: "contain", borderRadius: 16 },
 });
