@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import API from "../../services/api";
 import SafeImage from "../../components/SafeImage";
+import PostCard from "../teacher/components/PostCard";
 
 const { width } = Dimensions.get("window");
 
@@ -68,80 +69,8 @@ const MenuCard = ({ icon, label, subtitle, color, onPress, badge }) => (
   </Pressable>
 );
 
-// ── Post Card ──
-const PostCard = ({ item, onLike, onPress }) => {
-  const roleColor = ROLE_COLORS[item.authorRole] || "#64748b";
-  const catColor  = CAT_COLORS[item.category]    || "#64748b";
-  const initials  = item.authorName
-    ?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 
-  return (
-    <View style={styles.postCard}>
-      <View style={styles.postHeader}>
-        <View style={[styles.postAvatar, { backgroundColor: roleColor + "22", borderColor: roleColor + "44" }]}>
-          <Text style={[styles.postAvatarText, { color: roleColor }]}>{initials}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.postAuthorName}>{item.authorName || "Admin"}</Text>
-          <View style={styles.postMeta}>
-            <View style={[styles.rolePill, { backgroundColor: roleColor + "20" }]}>
-              <Text style={[styles.rolePillText, { color: roleColor }]}>
-                {(item.authorRole || "admin").toUpperCase()}
-              </Text>
-            </View>
-            <Text style={styles.postTime}>{item.createdAt ? timeAgo(item.createdAt) : ""}</Text>
-          </View>
-        </View>
-        <View style={[styles.catPill, { backgroundColor: catColor + "18", borderColor: catColor + "40" }]}>
-          <Text style={[styles.catPillText, { color: catColor }]}>{item.category || "General"}</Text>
-        </View>
-      </View>
 
-      {!!(item.caption || item.content) && (
-        <Text style={styles.postCaption} numberOfLines={4}>
-          {item.caption || item.content}
-        </Text>
-      )}
-
-      {/* ✅ SafeImage */}
-      {item.mediaType === "image" && !!item.mediaUrl && (
-        <SafeImage uri={item.mediaUrl} style={styles.postImage} size={undefined} />
-      )}
-      {item.mediaType === "video" && (
-        <View style={styles.mediaBanner}>
-          <Ionicons name="play-circle" size={18} color="#a78bfa" />
-          <Text style={styles.mediaBannerText}>Video attached</Text>
-        </View>
-      )}
-      {item.mediaType === "audio" && (
-        <View style={styles.mediaBanner}>
-          <Ionicons name="musical-notes" size={18} color="#34d399" />
-          <Text style={styles.mediaBannerText}>Audio attached</Text>
-        </View>
-      )}
-
-      <View style={styles.postActions}>
-        <Pressable style={styles.actionBtn} onPress={() => onLike(item)}>
-          <Ionicons
-            name={item.isLiked ? "heart" : "heart-outline"}
-            size={20}
-            color={item.isLiked ? "#f87171" : "#64748b"}
-          />
-          <Text style={[styles.actionCount, item.isLiked && { color: "#f87171" }]}>
-            {item.likeCount || 0}
-          </Text>
-        </Pressable>
-        <Pressable style={styles.actionBtn} onPress={onPress}>
-          <Ionicons name="chatbubble-outline" size={19} color="#64748b" />
-          <Text style={styles.actionCount}>{item.commentCount || 0}</Text>
-        </Pressable>
-        <Pressable style={styles.actionBtn} onPress={onPress}>
-          <Ionicons name="share-social-outline" size={19} color="#64748b" />
-        </Pressable>
-      </View>
-    </View>
-  );
-};
 
 // ══════════════════════════════════════════════════════════
 export default function AdminDashboard() {

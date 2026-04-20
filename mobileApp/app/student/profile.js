@@ -146,37 +146,59 @@ export default function StudentProfile() {
 
   // ── Download ID card ──
   const downloadCard = async () => {
-    setDownloading(true);
-    try {
-      if (IS_WEB) {
-        const html2canvas = (await import("html2canvas")).default;
-        const el = document.getElementById("student-id-card");
-        if (!el) { Alert.alert("Error", "id card element not found"); return; }
-        const canvas = await html2canvas(el, { backgroundColor: "#0c1f3f", scale: 2 });
-        const link = document.createElement("a");
-        link.download = `${student?.studentId || "student"}-id-card.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      } else {
-        const { captureRef } = await import("react-native-view-shot");
-        const { default: FileSystem } = await import("expo-file-system");
-        const { default: Sharing } = await import("expo-sharing");
-        const uri = await captureRef(cardRef.current, { format: "png", quality: 1 });
-        const fileUri = FileSystem.documentDirectory + `${student?.studentId || "student"}-id-card.png`;
-        await FileSystem.copyAsync({ from: uri, to: fileUri });
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(fileUri, { mimeType: "image/png", dialogTitle: "Student ID Card" });
-        } else {
-          Alert.alert("Saved!", "ID Card saved");
-        }
-      }
-    } catch (e) {
-      Alert.alert("Error", "The download failed. Please try again..");
-    } finally {
-      setDownloading(false);
-    }
-  };
+  setDownloading(true);
 
+  try {
+    if (IS_WEB) {
+      const html2canvas = (await import("html2canvas")).default;
+      const el = document.getElementById("student-id-card");
+
+      if (!el) {
+        Alert.alert("Error", "ID card element not found");
+        return;
+      }
+
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#0c1f3f",
+        scale: 2,
+      });
+
+      const link = document.createElement("a");
+      link.download = `${student?.studentId || "student"}-id-card.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+
+    } else {
+      const { captureRef } = await import("react-native-view-shot");
+      const MediaLibrary = await import("expo-media-library");
+
+      // Permission lena zaroori hai
+      const permission = await MediaLibrary.requestPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert("Permission Denied", "Gallery access permission required");
+        return;
+      }
+
+      // Convert view to image
+      const uri = await captureRef(cardRef.current, {
+        format: "png",
+        quality: 1,
+      });
+
+      // Save to gallery
+      await MediaLibrary.saveToLibraryAsync(uri);
+
+      Alert.alert("Success", "ID Card saved to Gallery!");
+    }
+
+  } catch (error) {
+    console.log(error);
+    Alert.alert("Error", "Download failed. Please try again.");
+  } finally {
+    setDownloading(false);
+  }
+};
   if (!student) return (
     <View style={styles.loader}>
       <ActivityIndicator size="large" color="#00c6ff" />

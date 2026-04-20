@@ -10,7 +10,7 @@
       "icon": "./assets/icon.png",
       "splash": {
         "image": "./assets/splash.png",
-        "resizeMode": "contain",
+        "resizeMode": "cover",
         "backgroundColor": "#080d17"
       },
       "ios": {
@@ -42,7 +42,7 @@
           {
             "backgroundColor": "#080d17",
             "image": "./assets/splash.png",
-            "resizeMode": "contain"
+            "resizeMode": "cover"
           }
         ],
         "expo-video"

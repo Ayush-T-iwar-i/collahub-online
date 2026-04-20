@@ -1,46 +1,41 @@
- {
-    "cli": {
-      "version": ">= 7.0.0"
-    },
-    "build": {
-      "development": {
-        "developmentClient": true,
-        "distribution": "internal",
-        "channel": "development",
-        "android": {
-          "buildType": "apk"
-        }
-      },
-      "preview": {
-        "distribution": "internal",
-        "channel": "preview",
-        "android": {
-          "buildType": "apk"
-        },
-        "env": {
-          "NODE_ENV": "production"
-        }
-      },
-      "production": {
-        "distribution": "store",
-        "channel": "production",
-        "android": {
-          "buildType": "app-bundle"
-        },
-        "ios": {
-          "simulator": false
-        },
-        "env": {
-          "NODE_ENV": "production"
-        }
+{
+  "cli": {
+    "version": ">= 7.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "android": {
+        "buildType": "apk"
       }
     },
-    "submit": {
-      "production": {
-        "android": {
-          "serviceAccountKeyPath": "./google-play-key.json",
-          "track": "internal"
-        }
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "channel": "production",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "simulator": false
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-key.json",
+        "track": "internal"
       }
     }
   }
+}
