@@ -2,9 +2,6 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
-// ══════════════════════════════════════════════════════════
-// ✅ UPDATE THIS LINE ONLY — Add your Railway URL
-// ══════════════════════════════════════════════════════════
 const RAILWAY_URL = "https://collahub.up.railway.app"; // ✅ Railway URL
 // Example: "https://collahub-backend-production.railway.app"
 
@@ -26,15 +23,16 @@ const BASE_URL = (() => {
   }
 })();
 
-// Debug log — shows in your terminal
 if (__DEV__) console.log("🌐 API →", BASE_URL);
 
 // ── Axios instance ────────────────────────────────────────
 const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, // 30s — Railway cold start handle kare
+  timeout: 30000,
   headers: { "Content-Type": "application/json" },
 });
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ── Request: token attach ─────────────────────────────────
 API.interceptors.request.use(
@@ -62,7 +60,25 @@ API.interceptors.response.use(
   async (error) => {
     const orig = error.config;
 
-    // Network error — couldn't reach server
+    if (!orig) {
+      return Promise.reject(error);
+    }
+
+    const status = error.response?.status;
+    const message = String(error.response?.data?.message || error.message || "").toLowerCase();
+    const isTemporaryError =
+      [429, 502, 503, 504].includes(status) ||
+      message.includes("high traffic") ||
+      message.includes("temporar") ||
+      message.includes("timeout") ||
+      (!error.response && message.includes("network"));
+
+    if (isTemporaryError && !orig._temporaryRetried) {
+      orig._temporaryRetried = true;
+      await sleep(1000);
+      return API(orig);
+    }
+
     if (!error.response) {
       return Promise.reject(
         new Error("Cannot connect to server. Check internet or verify Railway URL.")

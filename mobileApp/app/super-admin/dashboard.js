@@ -1,4 +1,4 @@
-// app/super-admin/dashboard.js
+﻿// app/super-admin/dashboard.js
 import React, { useState, useRef, useCallback } from "react";
 import {
   View, Text, StyleSheet, Pressable, ScrollView,
@@ -20,7 +20,7 @@ const StatCard = ({ icon, label, value, color, onPress }) => (
       <View style={[s.statIcon, { backgroundColor: color + "22" }]}>
         <Ionicons name={icon} size={18} color={color} />
       </View>
-      <Text style={[s.statVal, { color }]}>{value ?? "—"}</Text>
+      <Text style={[s.statVal, { color }]}>{value ?? "â€”"}</Text>
       <Text style={s.statLabel}>{label}</Text>
       <View style={[s.statArrow, { backgroundColor: color + "18" }]}>
         <Ionicons name="arrow-forward" size={10} color={color} />
@@ -216,8 +216,8 @@ export default function SuperAdminDashboard() {
         <LinearGradient colors={["#7f1d1d","#b91c1c"]}
           start={{x:0,y:0}} end={{x:1,y:1}} style={s.welcome}>
           <View style={{flex:1}}>
-            <Text style={s.welcomeHi}>Hello, {data?.name?.split(" ")[0] || "Super Admin"} 👋</Text>
-            <Text style={s.welcomeSub}>Super Administrator · COLLAहUB</Text>
+            <Text style={s.welcomeHi}>Hello, {data?.name?.split(" ")[0] || "Super Admin"} ðŸ‘‹</Text>
+            <Text style={s.welcomeSub}>Super Administrator Â· COLLAHUB</Text>
             <View style={s.welcomeBadge}>
               <Ionicons name="star" size={10} color="#fca5a5" />
               <Text style={s.welcomeBadgeText}>FULL SYSTEM ACCESS</Text>
@@ -314,7 +314,7 @@ export default function SuperAdminDashboard() {
         ))}
       </View>
 
-      {/* ── Shutdown Modal ── */}
+      {/* â”€â”€ Shutdown Modal â”€â”€ */}
       <Modal visible={sdModal} transparent animationType="fade"
         onRequestClose={() => !sdLoading && setSdModal(false)}>
         <View style={s.overlay}>
@@ -358,7 +358,7 @@ export default function SuperAdminDashboard() {
         </View>
       </Modal>
 
-      {/* ── Add Admin Modal ── */}
+      {/* â”€â”€ Add Admin Modal â”€â”€ */}
       <Modal visible={aaModal} transparent animationType="slide"
         onRequestClose={()=>!aaLoading&&setAaModal(false)}>
         <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":"height"}>
@@ -430,7 +430,7 @@ export default function SuperAdminDashboard() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── Broadcast Modal ── */}
+      {/* â”€â”€ Broadcast Modal â”€â”€ */}
       <Modal visible={bcModal} transparent animationType="slide"
         onRequestClose={()=>!bcLoading&&setBcModal(false)}>
         <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":"height"}>

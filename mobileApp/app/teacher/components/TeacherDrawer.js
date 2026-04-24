@@ -1,4 +1,4 @@
-// app/teacher/_drawer.js  (ya jo bhi drawer file hai)
+﻿// app/teacher/_drawer.js  (ya jo bhi drawer file hai)
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, Image, Pressable,
@@ -11,7 +11,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
-// ── SafeImage — web + native safe, no blob URLs ──
+// â”€â”€ SafeImage â€” web + native safe, no blob URLs â”€â”€
 const SafeImage = ({ uri, size = 44, initials = "?", color = "#a78bfa", style }) => {
   const [hasError, setHasError] = React.useState(false);
   const isValid = uri && !hasError &&
@@ -80,7 +80,7 @@ export default function TeacherDrawer(props) {
         if (raw) {
           const d = JSON.parse(raw);
           setTeacher(d);
-          // ✅ Only Cloudinary URLs — no blob:
+          // âœ… Only Cloudinary URLs â€” no blob:
           const img = d.profileImage;
           setProfileImage(img && img.startsWith("http") ? img : null);
         }
@@ -127,13 +127,13 @@ export default function TeacherDrawer(props) {
       showsVerticalScrollIndicator={false}>
       <View style={styles.container}>
 
-        {/* ── Header ── */}
+        {/* â”€â”€ Header â”€â”€ */}
         <View style={styles.header}>
           <LinearGradient colors={["#0a1628","#1a1500","#091520"]} style={StyleSheet.absoluteFillObject} />
 
           <Pressable onPress={() => router.push("/teacher/profile")} style={styles.avatarArea}>
             <View style={styles.avatarRing}>
-              {/* ✅ SafeImage — no blob: errors ever */}
+              {/* âœ… SafeImage â€” no blob: errors ever */}
               <SafeImage
                 uri={profileImage}
                 size={80}
@@ -146,7 +146,7 @@ export default function TeacherDrawer(props) {
           </Pressable>
 
           <Text style={styles.name} numberOfLines={1}>{teacher?.name || "Teacher"}</Text>
-          <Text style={styles.teacherId}>{teacher?.teacherId || "—"}</Text>
+          <Text style={styles.teacherId}>{teacher?.teacherId || "â€”"}</Text>
 
           {teacher?.department && (
             <View style={styles.deptBadge}>
@@ -161,7 +161,7 @@ export default function TeacherDrawer(props) {
           )}
         </View>
 
-        {/* ── Menu ── */}
+        {/* â”€â”€ Menu â”€â”€ */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionLabel}>MAIN</Text>
           {mainMenu.map((item, i) => (
@@ -180,7 +180,7 @@ export default function TeacherDrawer(props) {
 
         <View style={styles.divider} />
 
-        {/* ── Logout ── */}
+        {/* â”€â”€ Logout â”€â”€ */}
         <Pressable onPress={handleLogout} style={styles.logoutBtn}>
           <View style={styles.logoutIcon}>
             <Ionicons name="log-out-outline" size={18} color="#f87171" />
@@ -189,11 +189,11 @@ export default function TeacherDrawer(props) {
           <Ionicons name="chevron-forward" size={13} color="#7f1d1d" />
         </Pressable>
 
-        {/* ── Footer ── */}
+        {/* â”€â”€ Footer â”€â”€ */}
         <View style={styles.footer}>
           <View style={styles.footerBadge}>
             <View style={styles.footerDot} />
-            <Text style={styles.footerText}>COLLAहUB v1.0.0</Text>
+            <Text style={styles.footerText}>COLLAHUB v1.0.0</Text>
           </View>
         </View>
       </View>

@@ -1,6 +1,5 @@
 // app/teacher/timetable.js
-// ✅ FIX: Teacher cannot set their own timetable
-// Sirf admin-assigned timetable dikhta hai SubjectRequest se
+// Teachers can only view admin-assigned timetables.
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable,

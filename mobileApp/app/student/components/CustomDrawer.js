@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+﻿import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { BlurView } from "expo-blur";
 
 const { width } = Dimensions.get("window");
 
-// ── Single animated menu item ──
+// â”€â”€ Single animated menu item â”€â”€
 const MenuItem = ({ icon, label, accent, onPress, index }) => {
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -67,7 +67,7 @@ const MenuItem = ({ icon, label, accent, onPress, index }) => {
   );
 };
 
-// ── Section divider ──
+// â”€â”€ Section divider â”€â”€
 const SectionLabel = ({ label }) => (
   <Text style={styles.sectionLabel}>{label}</Text>
 );
@@ -167,7 +167,7 @@ const imageSource = isValidUri(localImage)
     >
       <View style={styles.container}>
 
-        {/* ── HEADER ── */}
+        {/* â”€â”€ HEADER â”€â”€ */}
         <Animated.View style={[styles.header, {
           opacity: headerAnim,
           transform: [{ translateY: headerTranslateY }],
@@ -200,7 +200,7 @@ const imageSource = isValidUri(localImage)
             {student?.name || "Student"}
           </Text>
           <Text style={styles.studentId} numberOfLines={1}>
-            {student?.studentId || "ID: —"}
+            {student?.studentId || "ID: â€”"}
           </Text>
 
           {/* Info badges */}
@@ -226,12 +226,12 @@ const imageSource = isValidUri(localImage)
           {/* College */}
           {student?.college && (
             <Text style={styles.college} numberOfLines={1}>
-              🏫 {student.college}
+              ðŸ« {student.college}
             </Text>
           )}
         </Animated.View>
 
-        {/* ── MENU ── */}
+        {/* â”€â”€ MENU â”€â”€ */}
         <View style={styles.menuSection}>
           <SectionLabel label="MAIN" />
           {mainMenu.map((item, i) => (
@@ -258,10 +258,10 @@ const imageSource = isValidUri(localImage)
           ))}
         </View>
 
-        {/* ── DIVIDER ── */}
+        {/* â”€â”€ DIVIDER â”€â”€ */}
         <View style={styles.divider} />
 
-        {/* ── LOGOUT ── */}
+        {/* â”€â”€ LOGOUT â”€â”€ */}
         <Pressable onPress={handleLogout} style={({ pressed }) => [
           styles.logoutBtn,
           pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
@@ -273,11 +273,11 @@ const imageSource = isValidUri(localImage)
           <Ionicons name="chevron-forward" size={13} color="#7f1d1d" />
         </Pressable>
 
-        {/* ── FOOTER ── */}
+        {/* â”€â”€ FOOTER â”€â”€ */}
         <View style={styles.footer}>
           <View style={styles.footerBadge}>
             <View style={styles.footerDot} />
-            <Text style={styles.footerText}>COLLAहUB v1.0.0</Text>
+            <Text style={styles.footerText}>COLLAHUB v1.0.0</Text>
           </View>
         </View>
 

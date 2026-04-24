@@ -1,6 +1,5 @@
 // app/index.js
-// ✅ App khulte hi check karta hai — user logged in hai ya nahi
-// Agar hai → seedha dashboard, nahi → login screen
+// Checks persisted auth state and redirects to the correct role dashboard.
 
 import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
@@ -16,8 +15,8 @@ const ROLE_MAP = {
 };
 
 export default function Index() {
-  const [checking,  setChecking]  = useState(true);  // AsyncStorage check ho raha hai
-  const [redirect,  setRedirect]  = useState(null);  // Kahan bhejein
+  const [checking,  setChecking]  = useState(true);
+  const [redirect,  setRedirect]  = useState(null);
 
   useEffect(() => {
     checkLoginStatus();
@@ -25,21 +24,17 @@ export default function Index() {
 
   const checkLoginStatus = async () => {
     try {
-      // Pehle accessToken check karo — hai ya nahi
       const token = await AsyncStorage.getItem("accessToken");
 
       if (!token) {
-        // Token nahi — login pe bhejo
         setRedirect("/login");
         setChecking(false);
         return;
       }
 
-      // Token hai — kaunsa role logged in hai?
       for (const [role, config] of Object.entries(ROLE_MAP)) {
         const isLoggedIn = await AsyncStorage.getItem(config.loggedInKey);
         if (isLoggedIn === "true") {
-          // Is role ka data bhi check karo
           const dataKey = role === "super-admin" ? "superAdminData"
                         : role === "admin"       ? "adminData"
                         : role === "teacher"     ? "teacherData"
@@ -47,7 +42,6 @@ export default function Index() {
 
           const userData = await AsyncStorage.getItem(dataKey);
           if (userData) {
-            // ✅ Logged in — seedha dashboard
             setRedirect(config.route);
             setChecking(false);
             return;
@@ -55,19 +49,16 @@ export default function Index() {
         }
       }
 
-      // Token hai but koi role match nahi — login pe bhejo
       setRedirect("/login");
       setChecking(false);
 
     } catch (e) {
-      // Koi error aaye — safe side pe login
       console.log("Auth check error:", e.message);
       setRedirect("/login");
       setChecking(false);
     }
   };
 
-  // AsyncStorage check ho raha hai — loading show karo
   if (checking) {
     return (
       <View style={styles.container}>
@@ -76,7 +67,6 @@ export default function Index() {
     );
   }
 
-  // Redirect karo
   return <Redirect href={redirect} />;
 }
 

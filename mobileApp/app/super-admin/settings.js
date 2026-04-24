@@ -1,4 +1,4 @@
-// app/super-admin/settings.js
+﻿// app/super-admin/settings.js
 import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Switch, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -69,10 +69,10 @@ export default function SuperAdminSettings(){
     {
       title:"About",
       items:[
-        {icon:"information-circle",label:"App Version",sub:"COLLAहUB v1.0.0",color:"#64748b",onPress:()=>{}},
+        {icon:"information-circle",label:"App Version",sub:"COLLAHUB v1.0.0",color:"#64748b",onPress:()=>{}},
         {icon:"globe",label:"Backend Status",sub:"Check server health",color:"#34d399",onPress:async()=>{
-          try{await API.get("/health");Alert.alert("✅ Online","Backend server is running fine!");}
-          catch{Alert.alert("❌ Offline","Could not connect to backend");}
+          try{await API.get("/health");Alert.alert("âœ… Online","Backend server is running fine!");}
+          catch{Alert.alert("âŒ Offline","Could not connect to backend");}
         }},
         {icon:"document-text",label:"Privacy Policy",sub:"Terms & conditions",color:"#64748b",onPress:()=>Alert.alert("Coming Soon","")},
       ]

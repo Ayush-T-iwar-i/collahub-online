@@ -103,9 +103,9 @@ export default function StudentProfile() {
         await AsyncStorage.setItem("studentData", JSON.stringify(d));
         setStudent(d);
       }
-      Alert.alert("✅", "Profile photo updated!");
+      Alert.alert("Success", "Profile photo updated.");
     } catch (e) {
-      Alert.alert("Note", "Photo locale set — server sync will happen later");
+      Alert.alert("Notice", "Photo saved locally. Server sync will continue in the background.");
     } finally {
       setUploading(false);
     }
@@ -141,7 +141,7 @@ export default function StudentProfile() {
         const permission = await MediaLibrary.requestPermissionsAsync();
 
         if (!permission.granted) {
-          Alert.alert("Permission Required", "Please allow gallery permission");
+          Alert.alert("Permission Required", "Please allow media library access to save the ID card.");
           return;
         }
 
@@ -152,11 +152,11 @@ export default function StudentProfile() {
 
         await MediaLibrary.saveToLibraryAsync(uri);
 
-        Alert.alert("Success", "ID Card saved to Gallery successfully");
+        Alert.alert("Success", "ID card saved to your gallery.");
       }
     } catch (error) {
-      console.log(error);
-      Alert.alert("Error", "Failed to save ID Card");
+      console.log("ID card download failed:", error);
+      Alert.alert("Error", "Failed to save ID card. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -165,7 +165,7 @@ export default function StudentProfile() {
   if (!student) return (
     <View style={styles.loader}>
       <ActivityIndicator size="large" color="#00c6ff" />
-      <Text style={styles.loaderText}>Loading profile....</Text>
+      <Text style={styles.loaderText}>Loading profile...</Text>
     </View>
   );
 
@@ -393,7 +393,7 @@ export default function StudentProfile() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.idCollegeName} numberOfLines={1}>{student.college || "College"}</Text>
-                  <Text style={styles.idCollegeSub}>COLLAहUB Academic System</Text>
+                  <Text style={styles.idCollegeSub}>COLLAHUB Academic System</Text>
                 </View>
                 <View style={styles.idTypeBadge}>
                   <Text style={styles.idTypeText}>STUDENT</Text>
@@ -446,7 +446,7 @@ export default function StudentProfile() {
                       ? new Date(student.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })
                       : "—"}
                   </Text>
-                  <Text style={styles.idWatermark}>COLLAहUB</Text>
+                  <Text style={styles.idWatermark}>COLLAHUB</Text>
                 </View>
               </View>
 
@@ -470,7 +470,7 @@ export default function StudentProfile() {
             </LinearGradient>
           </Pressable>
           <Text style={styles.downloadHint}>
-            {IS_WEB ? "Png will be downloaded from browser" : "Share or save to gallery"}
+            {IS_WEB ? "PNG download starts from your browser." : "Saved to your gallery for sharing and printing."}
           </Text>
         </View>
       </Animated.ScrollView>
@@ -595,8 +595,8 @@ const styles = StyleSheet.create({
   sectionHeadIcon: { width: 32, height: 32, borderRadius: 10, justifyContent: "center", alignItems: "center" },
   sectionHeadText: { color: "#cbd5e1", fontSize: 14, fontWeight: "700", letterSpacing: 0.3 },
   // Academic
-  acadRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
-  acadBox: { flex: 1, borderRadius: 16, padding: 12, alignItems: "center", gap: 6, borderWidth: 1 },
+  acadRow: { flexDirection: "row", gap: 10, marginBottom: 14, flexWrap: "wrap" },
+  acadBox: { flexGrow: 1, flexBasis: "30%", minWidth: 92, borderRadius: 16, padding: 12, alignItems: "center", gap: 6, borderWidth: 1 },
   acadCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },
   acadCircleNum: { color: "#00c6ff", fontSize: 20, fontWeight: "900" },
   acadBoxTitle: { color: "#fff", fontSize: 11, fontWeight: "700", textAlign: "center" },
@@ -628,10 +628,10 @@ const styles = StyleSheet.create({
   idCollegeSub: { color: "#fcfcfcce", fontSize: 9, marginTop: 1 },
   idTypeBadge: { backgroundColor: "rgba(0,198,255,0.12)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "rgba(0,198,255,0.25)" },
   idTypeText: { color: "#00c6ff", fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
-  idBody: { flexDirection: "row", gap: 14, padding: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)" },
+  idBody: { flexDirection: "row", gap: 14, padding: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)", flexWrap: "wrap" },
   idPhotoFrame: { width: 78, height: 78, borderRadius: 14, overflow: "hidden", borderWidth: 2, borderColor: "rgba(0,198,255,0.3)" },
   idPhoto: { width: "100%", height: "100%" },
-  idDetails: { flex: 1 },
+  idDetails: { flex: 1, minWidth: 170 },
   idName: { color: "#fff", fontSize: 15, fontWeight: "800", marginBottom: 3 },
   idStudentId: { color: "#00c6ff", fontSize: 11, fontWeight: "700", marginBottom: 8 },
   idDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.07)", marginBottom: 8 },
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
   idBadgesRow: { flexDirection: "row", gap: 5, flexWrap: "wrap", marginTop: 4 },
   idBadge: { backgroundColor: "rgba(0,198,255,0.15)", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
   idBadgeText: { color: "#00c6ff", fontSize: 9, fontWeight: "700" },
-  idFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14 },
+  idFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, gap: 12, flexWrap: "wrap" },
   idQrWrap: { backgroundColor: "rgba(255,255,255,0.04)", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
   idFooterRight: { alignItems: "flex-end", gap: 5 },
   idValidBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(52,211,153,0.12)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },

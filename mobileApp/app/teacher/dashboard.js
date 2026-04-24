@@ -1,4 +1,4 @@
-// app/teacher/dashboard.js
+﻿// app/teacher/dashboard.js
 import React, { useState, useRef, useCallback } from "react";
 import {
   View, Text, StyleSheet, Image, Pressable,
@@ -40,7 +40,7 @@ const timeAgo = (date) => {
   return `${Math.floor(h/24)}d ago`;
 };
 
-// ── SafeImage — no blob crashes ───────────────────────────
+// â”€â”€ SafeImage â€” no blob crashes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SafeImage = ({ uri, size=44, initials="?", color="#f59e0b", style }) => {
   const [err, setErr] = React.useState(false);
   const ok = uri && !err && (uri.startsWith("http://") || uri.startsWith("https://"));
@@ -58,19 +58,19 @@ const SafeImage = ({ uri, size=44, initials="?", color="#f59e0b", style }) => {
   );
 };
 
-// ── Stat Card ─────────────────────────────────────────────
+// â”€â”€ Stat Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const StatCard = ({ icon, label, value, color, sub }) => (
   <View style={[styles.statCard, { borderLeftColor:color }]}>
     <View style={[styles.statIcon, { backgroundColor:color+"22" }]}>
       <Ionicons name={icon} size={20} color={color}/>
     </View>
-    <Text style={[styles.statValue, { color }]}>{value ?? "—"}</Text>
+    <Text style={[styles.statValue, { color }]}>{value ?? "â€”"}</Text>
     <Text style={styles.statLabel}>{label}</Text>
     {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
   </View>
 );
 
-// ── Quick Card ────────────────────────────────────────────
+// â”€â”€ Quick Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const QuickCard = ({ icon, label, color, onPress, badge }) => (
   <Pressable onPress={onPress} style={styles.quickCard}>
     <LinearGradient colors={[color+"33",color+"11"]} style={styles.quickGrad}>
@@ -87,7 +87,7 @@ const QuickCard = ({ icon, label, color, onPress, badge }) => (
   </Pressable>
 );
 
-// ── Today Classes ─────────────────────────────────────────
+// â”€â”€ Today Classes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TodayClasses = ({ timetable }) => {
   const todayName  = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
   const todaySlots = (timetable?.[todayName] || []).sort((a,b)=>(a.startTime||"").localeCompare(b.startTime||""));
@@ -107,7 +107,7 @@ const TodayClasses = ({ timetable }) => {
       {todaySlots.length === 0 ? (
         <View style={styles.noClassBox}>
           <Ionicons name="cafe-outline" size={22} color="#374151"/>
-          <Text style={styles.noClassText}>No classes today 🎉</Text>
+          <Text style={styles.noClassText}>No classes today ðŸŽ‰</Text>
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
@@ -119,7 +119,7 @@ const TodayClasses = ({ timetable }) => {
                 <Text style={styles.classSubject} numberOfLines={1}>{slot.subjectName}</Text>
                 <View style={styles.classInfoRow}>
                   <Ionicons name="time-outline" size={12} color="#64748b"/>
-                  <Text style={styles.classTime}>{slot.startTime} — {slot.endTime}</Text>
+                  <Text style={styles.classTime}>{slot.startTime} â€” {slot.endTime}</Text>
                 </View>
                 {slot.room && (
                   <View style={styles.classInfoRow}>
@@ -130,7 +130,7 @@ const TodayClasses = ({ timetable }) => {
                 <View style={styles.classInfoRow}>
                   <Ionicons name="people-outline" size={12} color="#64748b"/>
                   <Text style={styles.classMeta}>
-                    Sem {slot.semester}{slot.section&&slot.section!=="All"?` · Sec ${slot.section}`:""}
+                    Sem {slot.semester}{slot.section&&slot.section!=="All"?` Â· Sec ${slot.section}`:""}
                   </Text>
                 </View>
               </View>
@@ -142,7 +142,7 @@ const TodayClasses = ({ timetable }) => {
   );
 };
 
-// ── Create Post Modal ─────────────────────────────────────
+// â”€â”€ Create Post Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CreatePostModal = ({ visible, onClose, teacherData, onPosted }) => {
   const [caption,   setCaption]   = useState("");
   const [title,     setTitle]     = useState("");
@@ -335,7 +335,7 @@ const CreatePostModal = ({ visible, onClose, teacherData, onPosted }) => {
   );
 };
 
-// ── Comment Modal ─────────────────────────────────────────
+// â”€â”€ Comment Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CommentModal = ({ post, visible, onClose, onCommentAdded }) => {
   const [comments, setComments] = useState([]);
   const [text,     setText]     = useState("");
@@ -373,7 +373,7 @@ const CommentModal = ({ post, visible, onClose, onCommentAdded }) => {
             </View>
             {loading ? <ActivityIndicator color="#f59e0b" style={{margin:20}}/> : (
               <ScrollView style={{maxHeight:300}} contentContainerStyle={{padding:16}} showsVerticalScrollIndicator={false}>
-                {comments.length===0 && <Text style={styles.noComments}>No comments yet 💬</Text>}
+                {comments.length===0 && <Text style={styles.noComments}>No comments yet ðŸ’¬</Text>}
                 {comments.map((c,i)=>{
                   const rc=ROLE_COLORS[c.userRole]||"#64748b";
                   const ci=c.userName?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"?";
@@ -413,12 +413,12 @@ const CommentModal = ({ post, visible, onClose, onCommentAdded }) => {
   );
 };
 
-// ── Post Card ─────────────────────────────────────────────
+// â”€â”€ Post Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MAIN DASHBOARD
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 export default function TeacherDashboard() {
   const navigation = useNavigation();
   const router     = useRouter();
@@ -446,7 +446,7 @@ export default function TeacherDashboard() {
       try {
         const d = JSON.parse(raw);
         setTeacherData(d);
-        // ✅ Only Cloudinary URLs
+        // âœ… Only Cloudinary URLs
         const img = d.profileImage;
         setProfileImage(img && img.startsWith("http") ? img : null);
       } catch {}
@@ -523,10 +523,10 @@ export default function TeacherDashboard() {
           <Ionicons name="menu" size={24} color="#fff"/>
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>COLLAहUB</Text>
+          <Text style={styles.headerTitle}>COLLAHUB</Text>
           <Text style={styles.headerSub}>Teacher Portal</Text>
         </View>
-        {/* ✅ SafeImage — no blob crash */}
+        {/* âœ… SafeImage â€” no blob crash */}
         <Pressable onPress={() => router.push("/teacher/profile")}>
           <SafeImage
             uri={profileImage}
@@ -550,7 +550,7 @@ export default function TeacherDashboard() {
             <LinearGradient colors={["#f59e0b","#d97706"]}
               start={{x:0,y:0}} end={{x:1,y:1}} style={styles.welcomeCard}>
               <View style={{flex:1}}>
-                <Text style={styles.welcomeHi}>Hello, {teacherData?.name?.split(" ")[0]||"Teacher"} 👨‍🏫</Text>
+                <Text style={styles.welcomeHi}>Hello, {teacherData?.name?.split(" ")[0]||"Teacher"} ðŸ‘¨â€ðŸ«</Text>
                 {teacherData?.teacherId && (
                   <View style={styles.idBadge}>
                     <Ionicons name="card-outline" size={11} color="rgba(0,0,0,0.55)"/>
@@ -565,7 +565,7 @@ export default function TeacherDashboard() {
                 )}
               </View>
               <View style={styles.welcomeRight}>
-                {/* ✅ SafeImage in welcome card too */}
+                {/* âœ… SafeImage in welcome card too */}
                 <SafeImage
                   uri={profileImage}
                   size={60}
@@ -589,7 +589,7 @@ export default function TeacherDashboard() {
             {/* Today's classes */}
             <TodayClasses timetable={timetable}/>
 
-            {/* Quick Access — 8 cards */}
+            {/* Quick Access â€” 8 cards */}
             <Text style={styles.sectionTitle}>Quick Access</Text>
             <View style={styles.quickGrid}>
               {quickLinks.map((q,i) => (

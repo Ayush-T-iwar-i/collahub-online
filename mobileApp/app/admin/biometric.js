@@ -1,9 +1,9 @@
-// ══════════════════════════════════════════════════════════════
-// admin-biometric.js  →  app/admin/biometric.js
+﻿// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// admin-biometric.js  â†’  app/admin/biometric.js
 //
 // Live gate attendance dashboard
 // Essl device se aane wale real-time punch logs
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -18,37 +18,37 @@ import API from "../../services/api";
 
 const IS_WEB = Platform.OS === "web";
 
-// ─────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  Helpers
-// ─────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fmtTime = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 };
 const fmtDate = (iso) => {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
   return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 };
 const initials = (name = "") =>
   name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 
-// ─────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  Stat Card
-// ─────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const StatCard = ({ icon, label, value, color }) => (
   <LinearGradient colors={[color + "18", color + "06"]}
     style={[styles.statCard, { borderColor: color + "30" }]}>
     <View style={[styles.statIcon, { backgroundColor: color + "18" }]}>
       <Ionicons name={icon} size={18} color={color} />
     </View>
-    <Text style={[styles.statVal, { color }]}>{value ?? "—"}</Text>
+    <Text style={[styles.statVal, { color }]}>{value ?? "â€”"}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </LinearGradient>
 );
 
-// ─────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  Log Row
-// ─────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LogRow = ({ item, onEnroll }) => {
   const isIn  = item.punchType === "CheckIn";
   const color = isIn ? "#34d399" : "#f87171";
@@ -69,11 +69,11 @@ const LogRow = ({ item, onEnroll }) => {
         </Text>
         <Text style={styles.logMeta} numberOfLines={1}>
           {item.matched
-            ? `${item.studentId} · ${item.department?.split("(")[0]?.trim() || "—"}`
-            : "Student not found — Please enroll"}
+            ? `${item.studentId} Â· ${item.department?.split("(")[0]?.trim() || "â€”"}`
+            : "Student not found â€” Please enroll"}
         </Text>
         {item.matched && item.section && (
-          <Text style={styles.logSub}>Sem {item.semester} · Sec {item.section}</Text>
+          <Text style={styles.logSub}>Sem {item.semester} Â· Sec {item.section}</Text>
         )}
       </View>
 
@@ -106,9 +106,9 @@ const LogRow = ({ item, onEnroll }) => {
   );
 };
 
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MAIN SCREEN
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 export default function BiometricGate() {
   const router = useRouter();
 
@@ -134,7 +134,7 @@ export default function BiometricGate() {
 
   const intervalRef = useRef(null);
 
-  // ── Fetch logs ──
+  // â”€â”€ Fetch logs â”€â”€
   const fetchLogs = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
@@ -168,7 +168,7 @@ export default function BiometricGate() {
     return () => clearInterval(intervalRef.current);
   }, [autoRefresh, fetchLogs]);
 
-  // ── Enroll ──
+  // â”€â”€ Enroll â”€â”€
   const handleEnroll = async () => {
     if (!enrollInput.trim()) { Alert.alert("Error", "Enter Student ID"); return; }
     setEnrollLoading(true);
@@ -177,7 +177,7 @@ export default function BiometricGate() {
         deviceUserId: enrollLog.deviceUserId,
         studentId:    enrollInput.trim().toUpperCase(),
       });
-      Alert.alert("✅ Done!", res.data.message);
+      Alert.alert("âœ… Done!", res.data.message);
       setEnrollModal(false);
       setEnrollInput("");
       fetchLogs();
@@ -188,13 +188,13 @@ export default function BiometricGate() {
     }
   };
 
-  // ── Manual Pull ──
+  // â”€â”€ Manual Pull â”€â”€
   const handlePull = async () => {
     if (!deviceIp.trim()) { Alert.alert("Error", "Device IP daalo"); return; }
     setPulling(true);
     try {
       const res = await API.post("/biometric/pull", { deviceIp: deviceIp.trim() });
-      Alert.alert("✅ Done!", `${res.data.saved} new entries saved`);
+      Alert.alert("âœ… Done!", `${res.data.saved} new entries saved`);
       setPullModal(false);
       fetchLogs();
     } catch (e) {
@@ -204,7 +204,7 @@ export default function BiometricGate() {
     }
   };
 
-  // ── Filtered list ──
+  // â”€â”€ Filtered list â”€â”€
   const filtered = logs.filter(l => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -220,7 +220,7 @@ export default function BiometricGate() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#070d1a" />
 
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <LinearGradient colors={["#070d1a", "#0b1a30"]} style={styles.header}>
         <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace("/admin/dashboard")} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
@@ -228,8 +228,8 @@ export default function BiometricGate() {
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Gate Attendance</Text>
           <Text style={styles.headerSub}>
-            {autoRefresh ? `Live • Auto-refresh ON` : "Auto-refresh OFF"}
-            {lastUpdated ? ` • ${fmtTime(lastUpdated)}` : ""}
+            {autoRefresh ? `Live â€¢ Auto-refresh ON` : "Auto-refresh OFF"}
+            {lastUpdated ? ` â€¢ ${fmtTime(lastUpdated)}` : ""}
           </Text>
         </View>
         <Pressable onPress={() => setAutoRefresh(p => !p)}
@@ -242,7 +242,7 @@ export default function BiometricGate() {
         </Pressable>
       </LinearGradient>
 
-      {/* ── Stats Row ── */}
+      {/* â”€â”€ Stats Row â”€â”€ */}
       {stats && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.statsRow}>
@@ -253,7 +253,7 @@ export default function BiometricGate() {
         </ScrollView>
       )}
 
-      {/* ── Search ── */}
+      {/* â”€â”€ Search â”€â”€ */}
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={15} color="#374151" />
@@ -270,7 +270,7 @@ export default function BiometricGate() {
         </Pressable>
       </View>
 
-      {/* ── Filter Chips ── */}
+      {/* â”€â”€ Filter Chips â”€â”€ */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}>
         {[
@@ -291,7 +291,7 @@ export default function BiometricGate() {
 
       <Text style={styles.countText}>{filtered.length} entries</Text>
 
-      {/* ── Log List ── */}
+      {/* â”€â”€ Log List â”€â”€ */}
       {loading
         ? <ActivityIndicator size="large" color="#00c6ff" style={{ marginTop: 40 }} />
         : (
@@ -316,7 +316,7 @@ export default function BiometricGate() {
         )
       }
 
-      {/* ═══ ENROLL MODAL ═══ */}
+      {/* â•â•â• ENROLL MODAL â•â•â• */}
       <Modal visible={enrollModal} transparent animationType="slide">
         <View style={styles.overlay}>
           <View style={styles.modal}>
@@ -330,7 +330,7 @@ export default function BiometricGate() {
               </Text>
             </View>
             <Text style={styles.modalSub}>
-              Link this device ID to your COLLAहUB student
+              Link this device ID to your COLLAHUB student
             </Text>
             <TextInput
               style={styles.modalInput}
@@ -355,7 +355,7 @@ export default function BiometricGate() {
         </View>
       </Modal>
 
-      {/* ═══ MANUAL PULL MODAL ═══ */}
+      {/* â•â•â• MANUAL PULL MODAL â•â•â• */}
       <Modal visible={pullModal} transparent animationType="slide">
         <View style={styles.overlay}>
           <View style={styles.modal}>

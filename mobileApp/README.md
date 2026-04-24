@@ -1,21 +1,21 @@
- #############COLLAहUB####################
-# 🎓 COLLAहUB, COLLAहUB — College Management & Attendance App
+﻿ #############COLLAHUB####################
+# ðŸŽ“ COLLAHUB, COLLAHUB â€” College Management & Attendance App
 
 <div align="center">
 
-![COLLAहUB](https://img.shields.io/badge/COLLAहUB-College%20Management-6366f1?style=for-the-badge)
+![COLLAHUB](https://img.shields.io/badge/COLLAHUB-College%20Management-6366f1?style=for-the-badge)
 ![React Native](https://img.shields.io/badge/React_Native-Expo-0ea5e9?style=flat-square&logo=react)
 ![Node.js](https://img.shields.io/badge/Node.js-Express-22c55e?style=flat-square&logo=node.js)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-4ade80?style=flat-square&logo=mongodb)
 ![JWT](https://img.shields.io/badge/Auth-JWT-f59e0b?style=flat-square)
 
-**A full-stack mobile application for managing college attendance, results, assignments, timetable, and notices — across three roles: Student, Teacher, and Admin.**
+**A full-stack mobile application for managing college attendance, results, assignments, timetable, and notices â€” across three roles: Student, Teacher, and Admin.**
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## ðŸ“‹ Table of Contents
 
 1. [Project Overview](#-project-overview)
 2. [Features by Role](#-features-by-role)
@@ -36,27 +36,27 @@
 
 ---
 
-## 🌟 Project Overview
+## ðŸŒŸ Project Overview
 
-**COLLAहUB** is a comprehensive college management system that digitizes the entire academic workflow of an institution. It supports three distinct user roles — Student, Teacher, and Admin — each with their own dedicated interface, navigation, and features.
+**COLLAHUB** is a comprehensive college management system that digitizes the entire academic workflow of an institution. It supports three distinct user roles â€” Student, Teacher, and Admin â€” each with their own dedicated interface, navigation, and features.
 
 The application is built with a **dark-themed glassmorphism UI**, role-specific color schemes, smooth animations, and a clean component architecture.
 
 ### What problem does it solve?
-- Manual attendance registers → **Digital attendance marking**
-- Paper result sheets → **Online result upload with auto-semester promotion**
-- Notice boards → **Digital announcement system**
-- Manual timetables → **Dynamic timetable management**
-- Spreadsheet-based student data → **Searchable, filterable student management**
+- Manual attendance registers â†’ **Digital attendance marking**
+- Paper result sheets â†’ **Online result upload with auto-semester promotion**
+- Notice boards â†’ **Digital announcement system**
+- Manual timetables â†’ **Dynamic timetable management**
+- Spreadsheet-based student data â†’ **Searchable, filterable student management**
 
 ---
 
-## ✨ Features by Role
+## âœ¨ Features by Role
 
-### 🧑‍🎓 Student
+### ðŸ§‘â€ðŸŽ“ Student
 | Feature | Details |
 |---------|---------|
-| Email OTP Registration | Secure 3-step signup: Email → OTP → Fill Details |
+| Email OTP Registration | Secure 3-step signup: Email â†’ OTP â†’ Fill Details |
 | Attendance Tracking | Subject-wise percentage with progress bars |
 | Timetable View | Day-wise class schedule |
 | Assignment Submission | Submit and track assignment status |
@@ -66,23 +66,23 @@ The application is built with a **dark-themed glassmorphism UI**, role-specific 
 | Notice Board | View college-wide announcements |
 | Forgot Password | 3-step OTP-based password reset |
 
-### 👨‍🏫 Teacher
+### ðŸ‘¨â€ðŸ« Teacher
 | Feature | Details |
 |---------|---------|
 | Email OTP Registration | Secure signup with email verification |
-| Mark Attendance | Today's schedule → Select class → Mark students |
+| Mark Attendance | Today's schedule â†’ Select class â†’ Mark students |
 | View Students | Department and semester filtered student list |
 | Create Assignments | Assign tasks with due dates and marks |
 | Subject Ranking | View top performers per subject |
 | Notice Board | View college announcements |
 | Forgot Password | 3-step OTP password reset |
 
-### 🛡️ Admin
+### ðŸ›¡ï¸ Admin
 | Feature | Details |
 |---------|---------|
 | Secret Key Registration | Protected admin registration |
-| Dashboard | Institution-wide stats — students, teachers, subjects |
-| Manage Students | College → Department → Student drill-down (Full CRUD) |
+| Dashboard | Institution-wide stats â€” students, teachers, subjects |
+| Manage Students | College â†’ Department â†’ Student drill-down (Full CRUD) |
 | Manage Teachers | Add, edit, delete teacher accounts |
 | Manage Subjects | Subject CRUD with department and semester mapping |
 | Manage Timetable | Day-wise class schedule management |
@@ -92,7 +92,7 @@ The application is built with a **dark-themed glassmorphism UI**, role-specific 
 
 ---
 
-## 🛠️ Tech Stack
+## ðŸ› ï¸ Tech Stack
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
@@ -110,157 +110,157 @@ The application is built with a **dark-themed glassmorphism UI**, role-specific 
 
 ---
 
-## 📁 Project Structure
+## ðŸ“ Project Structure
 
 ```
 collageAtt/
-│
-├── README.md
-│
-├── mobileApp/                          # React Native Frontend (Expo)
-│   ├── app/
-│   │   ├── index.js                    # Landing page — role selection
-│   │   ├── verify-otp.js               # OTP verification screen
-│   │   │
-│   │   ├── (auth)/                     # Grouped auth screens
-│   │   │   ├── _layout.js              # Auth layout (stack)
-│   │   │   ├── student-login.js        # Student login — cyan theme
-│   │   │   └── teacher-login.js        # Teacher login — amber theme
-│   │   │
-│   │   ├── student/                    # All student screens
-│   │   │   ├── _layout.js              # Drawer navigator
-│   │   │   ├── dashboard.js            # Home: stats + notices + timetable
-│   │   │   ├── register.js             # 3-step registration flow
-│   │   │   ├── forgot.js               # Forgot password (3 steps)
-│   │   │   ├── profile.js              # Profile + Digital ID card
-│   │   │   ├── timetable.js            # Weekly class schedule
-│   │   │   ├── notes.js                # Study notes
-│   │   │   └── attendance/
-│   │   │       └── [subject].js        # Subject-wise attendance detail
-│   │   │
-│   │   ├── teacher/                    # All teacher screens
-│   │   │   ├── _layout.js              # Drawer navigator
-│   │   │   ├── dashboard.js            # Home: classes + student count
-│   │   │   ├── register.js             # Teacher registration
-│   │   │   ├── forgot.js               # Forgot password
-│   │   │   ├── profile.js              # Teacher profile
-│   │   │   ├── mark-attendance.js      # Select class → mark attendance
-│   │   │   └── students.js             # Student list with filters
-│   │   │
-│   │   └── admin/                      # All admin screens
-│   │       ├── _layout.js              # Stack navigator
-│   │       ├── login.js                # Admin login — purple theme
-│   │       ├── register.js             # Admin register (secret key)
-│   │       ├── forgot.js               # Forgot password
-│   │       ├── dashboard.js            # Stats + management cards
-│   │       ├── manage-students.js      # Drill-down: College→Dept→Students
-│   │       ├── manage-teachers.js      # Teacher CRUD
-│   │       ├── manage-subjects.js      # Subject CRUD
-│   │       ├── manage-timetable.js     # Timetable CRUD + day filter
-│   │       ├── view-attendance.js      # All records + stats
-│   │       └── post-notice.js          # Post and manage notices
-│   │
-│   ├── services/
-│   │   └── api.js                      # Axios instance with auto token refresh
-│   │
-│   ├── components/
-│   │   ├── CustomDrawer.js             # Student custom drawer UI
-│   │   └── TeacherDrawer.js            # Teacher custom drawer UI
-│   │
-│   └── assets/                         # Images, icons, splash
-│
-└── backend/                            # Node.js + Express Backend
-    ├── server.js                       # Entry point + route mounting
-    ├── .env                            # Environment variables
-    │
-    ├── models/
-    │   ├── User.js                     # Unified model: student + teacher + admin
-    │   ├── Subject.js                  # Academic subject
-    │   ├── Assignment.js               # Assignment created by teacher
-    │   ├── Submission.js               # Student's assignment submission
-    │   ├── Timetable.js                # Class schedule entry
-    │   └── Result.js                   # Legacy result model
-    │
-    ├── controllers/
-    │   ├── authController.js           # Register, Login, OTP, Token refresh
-    │   ├── userController.js           # Profile CRUD, Students/Teachers list
-    │   ├── adminController.js          # Admin auth + Add student/teacher
-    │   ├── resultController.js         # Results, PDF, Certificate, Semester auto-update
-    │   ├── attendanceController.js     # Mark and fetch attendance records
-    │   ├── assignmentController.js     # Assignment CRUD + submissions
-    │   ├── timetableController.js      # Timetable CRUD
-    │   ├── subjectController.js        # Subject CRUD
-    │   ├── noticeController.js         # Notice board CRUD
-    │   └── dashboardController.js      # Dashboard statistics
-    │
-    ├── routes/
-    │   ├── authRoutes.js
-    │   ├── adminRoutes.js
-    │   ├── studentTeacherRoutes.js
-    │   ├── resultRoutes.js
-    │   ├── subjectRoutes.js
-    │   ├── timetableRoutes.js
-    │   ├── noticeRoutes.js
-    │   └── assignmentRoutes.js
-    │
-    └── middleware/
-        ├── authMiddleware.js           # verifyToken, isStudent, isTeacher guards
-        └── uploadMiddleware.js         # Multer configuration for file uploads
+â”‚
+â”œâ”€â”€ README.md
+â”‚
+â”œâ”€â”€ mobileApp/                          # React Native Frontend (Expo)
+â”‚   â”œâ”€â”€ app/
+â”‚   â”‚   â”œâ”€â”€ index.js                    # Landing page â€” role selection
+â”‚   â”‚   â”œâ”€â”€ verify-otp.js               # OTP verification screen
+â”‚   â”‚   â”‚
+â”‚   â”‚   â”œâ”€â”€ (auth)/                     # Grouped auth screens
+â”‚   â”‚   â”‚   â”œâ”€â”€ _layout.js              # Auth layout (stack)
+â”‚   â”‚   â”‚   â”œâ”€â”€ student-login.js        # Student login â€” cyan theme
+â”‚   â”‚   â”‚   â””â”€â”€ teacher-login.js        # Teacher login â€” amber theme
+â”‚   â”‚   â”‚
+â”‚   â”‚   â”œâ”€â”€ student/                    # All student screens
+â”‚   â”‚   â”‚   â”œâ”€â”€ _layout.js              # Drawer navigator
+â”‚   â”‚   â”‚   â”œâ”€â”€ dashboard.js            # Home: stats + notices + timetable
+â”‚   â”‚   â”‚   â”œâ”€â”€ register.js             # 3-step registration flow
+â”‚   â”‚   â”‚   â”œâ”€â”€ forgot.js               # Forgot password (3 steps)
+â”‚   â”‚   â”‚   â”œâ”€â”€ profile.js              # Profile + Digital ID card
+â”‚   â”‚   â”‚   â”œâ”€â”€ timetable.js            # Weekly class schedule
+â”‚   â”‚   â”‚   â”œâ”€â”€ notes.js                # Study notes
+â”‚   â”‚   â”‚   â””â”€â”€ attendance/
+â”‚   â”‚   â”‚       â””â”€â”€ [subject].js        # Subject-wise attendance detail
+â”‚   â”‚   â”‚
+â”‚   â”‚   â”œâ”€â”€ teacher/                    # All teacher screens
+â”‚   â”‚   â”‚   â”œâ”€â”€ _layout.js              # Drawer navigator
+â”‚   â”‚   â”‚   â”œâ”€â”€ dashboard.js            # Home: classes + student count
+â”‚   â”‚   â”‚   â”œâ”€â”€ register.js             # Teacher registration
+â”‚   â”‚   â”‚   â”œâ”€â”€ forgot.js               # Forgot password
+â”‚   â”‚   â”‚   â”œâ”€â”€ profile.js              # Teacher profile
+â”‚   â”‚   â”‚   â”œâ”€â”€ mark-attendance.js      # Select class â†’ mark attendance
+â”‚   â”‚   â”‚   â””â”€â”€ students.js             # Student list with filters
+â”‚   â”‚   â”‚
+â”‚   â”‚   â””â”€â”€ admin/                      # All admin screens
+â”‚   â”‚       â”œâ”€â”€ _layout.js              # Stack navigator
+â”‚   â”‚       â”œâ”€â”€ login.js                # Admin login â€” purple theme
+â”‚   â”‚       â”œâ”€â”€ register.js             # Admin register (secret key)
+â”‚   â”‚       â”œâ”€â”€ forgot.js               # Forgot password
+â”‚   â”‚       â”œâ”€â”€ dashboard.js            # Stats + management cards
+â”‚   â”‚       â”œâ”€â”€ manage-students.js      # Drill-down: Collegeâ†’Deptâ†’Students
+â”‚   â”‚       â”œâ”€â”€ manage-teachers.js      # Teacher CRUD
+â”‚   â”‚       â”œâ”€â”€ manage-subjects.js      # Subject CRUD
+â”‚   â”‚       â”œâ”€â”€ manage-timetable.js     # Timetable CRUD + day filter
+â”‚   â”‚       â”œâ”€â”€ view-attendance.js      # All records + stats
+â”‚   â”‚       â””â”€â”€ post-notice.js          # Post and manage notices
+â”‚   â”‚
+â”‚   â”œâ”€â”€ services/
+â”‚   â”‚   â””â”€â”€ api.js                      # Axios instance with auto token refresh
+â”‚   â”‚
+â”‚   â”œâ”€â”€ components/
+â”‚   â”‚   â”œâ”€â”€ CustomDrawer.js             # Student custom drawer UI
+â”‚   â”‚   â””â”€â”€ TeacherDrawer.js            # Teacher custom drawer UI
+â”‚   â”‚
+â”‚   â””â”€â”€ assets/                         # Images, icons, splash
+â”‚
+â””â”€â”€ backend/                            # Node.js + Express Backend
+    â”œâ”€â”€ server.js                       # Entry point + route mounting
+    â”œâ”€â”€ .env                            # Environment variables
+    â”‚
+    â”œâ”€â”€ models/
+    â”‚   â”œâ”€â”€ User.js                     # Unified model: student + teacher + admin
+    â”‚   â”œâ”€â”€ Subject.js                  # Academic subject
+    â”‚   â”œâ”€â”€ Assignment.js               # Assignment created by teacher
+    â”‚   â”œâ”€â”€ Submission.js               # Student's assignment submission
+    â”‚   â”œâ”€â”€ Timetable.js                # Class schedule entry
+    â”‚   â””â”€â”€ Result.js                   # Legacy result model
+    â”‚
+    â”œâ”€â”€ controllers/
+    â”‚   â”œâ”€â”€ authController.js           # Register, Login, OTP, Token refresh
+    â”‚   â”œâ”€â”€ userController.js           # Profile CRUD, Students/Teachers list
+    â”‚   â”œâ”€â”€ adminController.js          # Admin auth + Add student/teacher
+    â”‚   â”œâ”€â”€ resultController.js         # Results, PDF, Certificate, Semester auto-update
+    â”‚   â”œâ”€â”€ attendanceController.js     # Mark and fetch attendance records
+    â”‚   â”œâ”€â”€ assignmentController.js     # Assignment CRUD + submissions
+    â”‚   â”œâ”€â”€ timetableController.js      # Timetable CRUD
+    â”‚   â”œâ”€â”€ subjectController.js        # Subject CRUD
+    â”‚   â”œâ”€â”€ noticeController.js         # Notice board CRUD
+    â”‚   â””â”€â”€ dashboardController.js      # Dashboard statistics
+    â”‚
+    â”œâ”€â”€ routes/
+    â”‚   â”œâ”€â”€ authRoutes.js
+    â”‚   â”œâ”€â”€ adminRoutes.js
+    â”‚   â”œâ”€â”€ studentTeacherRoutes.js
+    â”‚   â”œâ”€â”€ resultRoutes.js
+    â”‚   â”œâ”€â”€ subjectRoutes.js
+    â”‚   â”œâ”€â”€ timetableRoutes.js
+    â”‚   â”œâ”€â”€ noticeRoutes.js
+    â”‚   â””â”€â”€ assignmentRoutes.js
+    â”‚
+    â””â”€â”€ middleware/
+        â”œâ”€â”€ authMiddleware.js           # verifyToken, isStudent, isTeacher guards
+        â””â”€â”€ uploadMiddleware.js         # Multer configuration for file uploads
 ```
 
 ---
 
-## 👥 User Roles & Flows
+## ðŸ‘¥ User Roles & Flows
 
 ### Student Journey
 ```
 Landing Page
-    └─► Register (3 steps)
-            Step 1: Enter email → Receive OTP
+    â””â”€â–º Register (3 steps)
+            Step 1: Enter email â†’ Receive OTP
             Step 2: Verify 6-digit OTP (5 min timer)
             Step 3: Fill name, phone, studentId, college,
                     department, semester, gender, password
-                    └─► Account created ✅
-    └─► Login → Student Dashboard (Drawer Navigation)
-            ├── Home        → Attendance summary + Today's classes + Notices
-            ├── Attendance  → Subject-wise cards with progress bars
-            ├── Timetable   → Weekly schedule grid
-            ├── Notes       → Study material
-            ├── Results     → Marks + Semester results + Download
-            └── Profile     → Personal info + Digital ID card
+                    â””â”€â–º Account created âœ…
+    â””â”€â–º Login â†’ Student Dashboard (Drawer Navigation)
+            â”œâ”€â”€ Home        â†’ Attendance summary + Today's classes + Notices
+            â”œâ”€â”€ Attendance  â†’ Subject-wise cards with progress bars
+            â”œâ”€â”€ Timetable   â†’ Weekly schedule grid
+            â”œâ”€â”€ Notes       â†’ Study material
+            â”œâ”€â”€ Results     â†’ Marks + Semester results + Download
+            â””â”€â”€ Profile     â†’ Personal info + Digital ID card
 ```
 
 ### Teacher Journey
 ```
 Landing Page
-    └─► Register (same 3-step OTP flow)
-    └─► Login → Teacher Dashboard (Drawer Navigation)
-            ├── Home              → Today's classes + Student count
-            ├── Mark Attendance   → Today's schedule → Select class
-            │                       → Student list → Mark Present/Absent
-            │                       → Submit attendance
-            ├── Students          → Department + Semester filter
-            └── Profile           → Personal info + Logout
+    â””â”€â–º Register (same 3-step OTP flow)
+    â””â”€â–º Login â†’ Teacher Dashboard (Drawer Navigation)
+            â”œâ”€â”€ Home              â†’ Today's classes + Student count
+            â”œâ”€â”€ Mark Attendance   â†’ Today's schedule â†’ Select class
+            â”‚                       â†’ Student list â†’ Mark Present/Absent
+            â”‚                       â†’ Submit attendance
+            â”œâ”€â”€ Students          â†’ Department + Semester filter
+            â””â”€â”€ Profile           â†’ Personal info + Logout
 ```
 
 ### Admin Journey
 ```
 Landing Page
-    └─► Admin Login (purple theme, shield icon)
-            ↓
+    â””â”€â–º Admin Login (purple theme, shield icon)
+            â†“
         Admin Dashboard
-            ├── Manage Students   → College cards → Department cards → Student list
-            │                        (Add / Edit / Delete)
-            ├── Manage Teachers   → Teacher list (Add / Edit / Delete)
-            ├── Manage Subjects   → Subject list (Add / Edit / Delete)
-            ├── Manage Timetable  → Day filter → Entry list (Add / Edit / Delete)
-            ├── View Attendance   → All records + Stats (≥75%, <50%, Avg%)
-            └── Post Notice       → Category + Title + Content → Post
+            â”œâ”€â”€ Manage Students   â†’ College cards â†’ Department cards â†’ Student list
+            â”‚                        (Add / Edit / Delete)
+            â”œâ”€â”€ Manage Teachers   â†’ Teacher list (Add / Edit / Delete)
+            â”œâ”€â”€ Manage Subjects   â†’ Subject list (Add / Edit / Delete)
+            â”œâ”€â”€ Manage Timetable  â†’ Day filter â†’ Entry list (Add / Edit / Delete)
+            â”œâ”€â”€ View Attendance   â†’ All records + Stats (â‰¥75%, <50%, Avg%)
+            â””â”€â”€ Post Notice       â†’ Category + Title + Content â†’ Post
 ```
 
 ---
 
-## 🔐 Authentication System
+## ðŸ” Authentication System
 
 ### Token Strategy
 ```
@@ -280,56 +280,56 @@ Storage: AsyncStorage
 ### Auto Token Refresh
 ```
 Request with expired accessToken
-    ↓
+    â†“
 API returns 401 Unauthorized
-    ↓
+    â†“
 Axios interceptor catches it
-    ↓
+    â†“
 POST /auth/refresh-token with refreshToken
-    ↓
+    â†“
 New accessToken received
-    ↓
-Original request retried automatically ✅
-    ↓
-If refreshToken also expired → Clear storage → Redirect to Login
+    â†“
+Original request retried automatically âœ…
+    â†“
+If refreshToken also expired â†’ Clear storage â†’ Redirect to Login
 ```
 
 ### Registration Flow
 ```
-Step 1  →  POST /auth/send-email-otp     (email entered)
-Step 2  →  POST /auth/verify-email-otp   (OTP verified)
-Step 3  →  POST /auth/register           (details submitted)
+Step 1  â†’  POST /auth/send-email-otp     (email entered)
+Step 2  â†’  POST /auth/verify-email-otp   (OTP verified)
+Step 3  â†’  POST /auth/register           (details submitted)
 ```
 
 ### Forgot Password Flow
 ```
-Step 1  →  POST /auth/forgot-password    (send OTP to email)
-Step 2  →  OTP verified (5-minute timer + resend option)
-Step 3  →  POST /auth/reset-password     (new password set)
+Step 1  â†’  POST /auth/forgot-password    (send OTP to email)
+Step 2  â†’  OTP verified (5-minute timer + resend option)
+Step 3  â†’  POST /auth/reset-password     (new password set)
 ```
 
 ---
 
-## 📊 Result & Semester System
+## ðŸ“Š Result & Semester System
 
-### Type 1 — Assignment-Based Results (Automatic)
+### Type 1 â€” Assignment-Based Results (Automatic)
 ```
 Teacher creates Assignment
-    ↓
-Student submits → Teacher grades it (Submission.marks)
-    ↓
+    â†“
+Student submits â†’ Teacher grades it (Submission.marks)
+    â†“
 Student sees:
   - Subject-wise total marks and average
   - Exportable as PDF
 ```
 
-### Type 2 — Semester Results (Admin uploaded)
+### Type 2 â€” Semester Results (Admin uploaded)
 ```
 Admin uploads result for a student's semester:
   Fields: semester, year, SGPA, CGPA, status, subjects[]
 
-  If status = "pass"  →  student.semester += 1  (promoted)  ✅
-  If status = "fail"  →  student.semester stays  (held back) ❌
+  If status = "pass"  â†’  student.semester += 1  (promoted)  âœ…
+  If status = "fail"  â†’  student.semester stays  (held back) âŒ
 
 Result is saved in student.results[] array (history maintained)
 ```
@@ -341,62 +341,62 @@ For students who have no uploaded results yet, the system can calculate their cu
 Formula:
   yearsCompleted = currentYear - admissionYear
   if (currentMonth < July) yearsCompleted -= 1
-  semester = (yearsCompleted × 2) + 1
+  semester = (yearsCompleted Ã— 2) + 1
   semester = clamp between 1 and 8
 
 Example:
   Admission Year : 2023
   Current Date   : September 2025
   Years Completed: 2
-  Semester       : (2 × 2) + 1 = 5
+  Semester       : (2 Ã— 2) + 1 = 5
 ```
 
 Trigger sync: `POST /results/sync-semesters` (Admin only)
 
 ---
 
-## 🗺️ Navigation Architecture
+## ðŸ—ºï¸ Navigation Architecture
 
 ```
 app/ (Expo Router file-based routing)
-│
-├── index.js                    ← Landing page (entry point)
-│
-├── (auth)/                     ← Auth group (Stack layout)
-│   ├── student-login.js
-│   └── teacher-login.js
-│
-├── student/                    ← Student group (Drawer layout)
-│   ├── _layout.js
-│   ├── dashboard.js            ← Default screen
-│   ├── register.js
-│   ├── forgot.js
-│   ├── profile.js
-│   ├── timetable.js
-│   ├── notes.js
-│   └── attendance/[subject].js ← Dynamic route
-│
-├── teacher/                    ← Teacher group (Drawer layout)
-│   ├── _layout.js
-│   ├── dashboard.js            ← Default screen
-│   ├── register.js
-│   ├── forgot.js
-│   ├── profile.js
-│   ├── mark-attendance.js
-│   └── students.js
-│
-└── admin/                      ← Admin group (Stack layout)
-    ├── _layout.js
-    ├── login.js                ← Default screen
-    ├── register.js
-    ├── forgot.js
-    ├── dashboard.js
-    ├── manage-students.js
-    ├── manage-teachers.js
-    ├── manage-subjects.js
-    ├── manage-timetable.js
-    ├── view-attendance.js
-    └── post-notice.js
+â”‚
+â”œâ”€â”€ index.js                    â† Landing page (entry point)
+â”‚
+â”œâ”€â”€ (auth)/                     â† Auth group (Stack layout)
+â”‚   â”œâ”€â”€ student-login.js
+â”‚   â””â”€â”€ teacher-login.js
+â”‚
+â”œâ”€â”€ student/                    â† Student group (Drawer layout)
+â”‚   â”œâ”€â”€ _layout.js
+â”‚   â”œâ”€â”€ dashboard.js            â† Default screen
+â”‚   â”œâ”€â”€ register.js
+â”‚   â”œâ”€â”€ forgot.js
+â”‚   â”œâ”€â”€ profile.js
+â”‚   â”œâ”€â”€ timetable.js
+â”‚   â”œâ”€â”€ notes.js
+â”‚   â””â”€â”€ attendance/[subject].js â† Dynamic route
+â”‚
+â”œâ”€â”€ teacher/                    â† Teacher group (Drawer layout)
+â”‚   â”œâ”€â”€ _layout.js
+â”‚   â”œâ”€â”€ dashboard.js            â† Default screen
+â”‚   â”œâ”€â”€ register.js
+â”‚   â”œâ”€â”€ forgot.js
+â”‚   â”œâ”€â”€ profile.js
+â”‚   â”œâ”€â”€ mark-attendance.js
+â”‚   â””â”€â”€ students.js
+â”‚
+â””â”€â”€ admin/                      â† Admin group (Stack layout)
+    â”œâ”€â”€ _layout.js
+    â”œâ”€â”€ login.js                â† Default screen
+    â”œâ”€â”€ register.js
+    â”œâ”€â”€ forgot.js
+    â”œâ”€â”€ dashboard.js
+    â”œâ”€â”€ manage-students.js
+    â”œâ”€â”€ manage-teachers.js
+    â”œâ”€â”€ manage-subjects.js
+    â”œâ”€â”€ manage-timetable.js
+    â”œâ”€â”€ view-attendance.js
+    â””â”€â”€ post-notice.js
 ```
 
 ### Back Navigation Rules
@@ -409,7 +409,7 @@ app/ (Expo Router file-based routing)
 
 ---
 
-## 🎨 UI Design System
+## ðŸŽ¨ UI Design System
 
 ### Color Palette by Role
 | Role | Primary Color | Secondary | Background | Card |
@@ -420,27 +420,27 @@ app/ (Expo Router file-based routing)
 
 ### Semantic Colors
 ```
-Success   →  #34d399  (green)
-Warning   →  #f59e0b  (amber)
-Danger    →  #f87171  (red)
-Info      →  #60a5fa  (blue)
-Muted     →  #64748b  (slate)
-Disabled  →  #374151  (dark gray)
+Success   â†’  #34d399  (green)
+Warning   â†’  #f59e0b  (amber)
+Danger    â†’  #f87171  (red)
+Info      â†’  #60a5fa  (blue)
+Muted     â†’  #64748b  (slate)
+Disabled  â†’  #374151  (dark gray)
 ```
 
 ### UI Patterns
-- **Glassmorphism Cards** — semi-transparent with subtle borders
-- **Linear Gradient** — backgrounds and CTA buttons
-- **Bottom Sheet Modals** — forms, pickers, and confirmations
-- **Progress Bars** — attendance percentage visualization
-- **Step Bar** — multi-step registration flow indicator
-- **Drill-Down Navigation** — College → Department → Students
-- **Color-Coded Departments** — visual grouping for academic units
-- **Breadcrumb Trail** — shows current location in drill-down
+- **Glassmorphism Cards** â€” semi-transparent with subtle borders
+- **Linear Gradient** â€” backgrounds and CTA buttons
+- **Bottom Sheet Modals** â€” forms, pickers, and confirmations
+- **Progress Bars** â€” attendance percentage visualization
+- **Step Bar** â€” multi-step registration flow indicator
+- **Drill-Down Navigation** â€” College â†’ Department â†’ Students
+- **Color-Coded Departments** â€” visual grouping for academic units
+- **Breadcrumb Trail** â€” shows current location in drill-down
 
 ---
 
-## 🔌 API Reference
+## ðŸ”Œ API Reference
 
 ### Authentication  `/auth`
 ```http
@@ -532,9 +532,9 @@ GET    /dashboard/teacher          Teacher stats (today's classes, students)
 
 ---
 
-## 🗄️ Database Models
+## ðŸ—„ï¸ Database Models
 
-### User.js — Unified Model
+### User.js â€” Unified Model
 ```javascript
 {
   // Common fields
@@ -555,7 +555,7 @@ GET    /dashboard/teacher          Teacher stats (today's classes, students)
   gender:         String,
   admissionYear:  String,
   college:        String,
-  semester:       Number,           // Current semester (1–8)
+  semester:       Number,           // Current semester (1â€“8)
   isPromoted:     Boolean,          // Whether last result was pass
   results: [{                       // Semester result history
     semester:     Number,
@@ -593,8 +593,8 @@ GET    /dashboard/teacher          Teacher stats (today's classes, students)
 ```javascript
 {
   day:        String,     // "Monday"
-  subjectId:  ObjectId → Subject,
-  teacherId:  ObjectId → User,
+  subjectId:  ObjectId â†’ Subject,
+  teacherId:  ObjectId â†’ User,
   startTime:  String,     // "09:00 AM"
   endTime:    String,     // "10:00 AM"
   room:       String,     // "Room 101"
@@ -608,8 +608,8 @@ GET    /dashboard/teacher          Teacher stats (today's classes, students)
 {
   title:       String,
   description: String,
-  subjectId:   ObjectId → Subject,
-  teacherId:   ObjectId → User,
+  subjectId:   ObjectId â†’ Subject,
+  teacherId:   ObjectId â†’ User,
   dueDate:     Date,
   totalMarks:  Number,
 }
@@ -618,8 +618,8 @@ GET    /dashboard/teacher          Teacher stats (today's classes, students)
 ### Submission.js
 ```javascript
 {
-  assignmentId: ObjectId → Assignment,
-  studentId:    ObjectId → User,
+  assignmentId: ObjectId â†’ Assignment,
+  studentId:    ObjectId â†’ User,
   fileUrl:      String,    // Cloudinary URL
   marks:        Number,
   grade:        String,
@@ -629,40 +629,40 @@ GET    /dashboard/teacher          Teacher stats (today's classes, students)
 
 ---
 
-## ⚙️ Environment Variables
+## âš™ï¸ Environment Variables
 
 Create a `.env` file inside the `backend/` folder:
 
 ```env
-# ── Server ──────────────────────────────────
+# â”€â”€ Server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 PORT=5000
 
-# ── Database ────────────────────────────────
-MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/COLLAहUB
+# â”€â”€ Database â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/COLLAHUB
 
-# ── JWT Secrets ─────────────────────────────
+# â”€â”€ JWT Secrets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 JWT_SECRET=your_access_token_secret_here
 REFRESH_TOKEN_SECRET=your_refresh_token_secret_here
 
-# ── Email (Gmail SMTP) ───────────────────────
+# â”€â”€ Email (Gmail SMTP) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 EMAIL_USER=youremail@gmail.com
 EMAIL_PASS=your_gmail_app_password
 
-# ── Cloudinary (Image Upload) ────────────────
+# â”€â”€ Cloudinary (Image Upload) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
-# ── Admin Registration ───────────────────────
+# â”€â”€ Admin Registration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 ADMIN_SECRET_KEY=your_admin_secret_key_2025
 ```
 
 > **How to get Gmail App Password:**
-> Google Account → Security → 2-Step Verification → App Passwords → Generate for "Mail"
+> Google Account â†’ Security â†’ 2-Step Verification â†’ App Passwords â†’ Generate for "Mail"
 
 ---
 
-## 🚀 Getting Started
+## ðŸš€ Getting Started
 
 ### Prerequisites
 - Node.js v18+
@@ -672,8 +672,8 @@ ADMIN_SECRET_KEY=your_admin_secret_key_2025
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/COLLAहUB.git
-cd COLLAहUB
+git clone https://github.com/your-username/COLLAHUB.git
+cd COLLAHUB
 ```
 
 ### 2. Setup Backend
@@ -707,19 +707,19 @@ const API = axios.create({
 ```
 
 > **Find your local IP:**
-> - Windows: Run `ipconfig` → IPv4 Address
-> - Mac/Linux: Run `ifconfig` → inet address
+> - Windows: Run `ipconfig` â†’ IPv4 Address
+> - Mac/Linux: Run `ifconfig` â†’ inet address
 
 ### 5. Run on Your Device
 1. Install **Expo Go** from Play Store or App Store
 2. Scan the QR code shown in your terminal
-3. App will open on your device ✅
+3. App will open on your device âœ…
 
 ---
 
-## 📦 Dependencies
+## ðŸ“¦ Dependencies
 
-### Frontend — `mobileApp/package.json`
+### Frontend â€” `mobileApp/package.json`
 ```json
 {
   "expo": "~51.0.0",
@@ -734,7 +734,7 @@ const API = axios.create({
 }
 ```
 
-### Backend — `backend/package.json`
+### Backend â€” `backend/package.json`
 ```json
 {
   "express": "^4.19.0",
@@ -753,7 +753,7 @@ const API = axios.create({
 
 ---
 
-## 🐛 Bug Fixes Log
+## ðŸ› Bug Fixes Log
 
 | # | Bug | Root Cause | Fix Applied |
 |---|-----|-----------|-------------|
@@ -770,26 +770,26 @@ const API = axios.create({
 
 ---
 
-## 🔮 Roadmap
+## ðŸ”® Roadmap
 
-### Phase 2 — Upcoming
-- [ ] 🔔 Push Notifications via Firebase FCM
-- [ ] 📁 Assignment file upload (PDF/Image via Cloudinary)
-- [ ] 📊 Bulk import students from Excel file
-- [ ] 👨‍👩‍👧 Parent portal — view child's attendance and results
+### Phase 2 â€” Upcoming
+- [ ] ðŸ”” Push Notifications via Firebase FCM
+- [ ] ðŸ“ Assignment file upload (PDF/Image via Cloudinary)
+- [ ] ðŸ“Š Bulk import students from Excel file
+- [ ] ðŸ‘¨â€ðŸ‘©â€ðŸ‘§ Parent portal â€” view child's attendance and results
 
-### Phase 3 — Advanced
-- [ ] 🤳 Face recognition attendance
-- [ ] 💬 Real-time teacher-student chat
-- [ ] 🌐 Offline mode with background data sync
-- [ ] 🌙 Dark / Light theme toggle
-- [ ] 🌍 Multi-language support (Hindi / English)
-- [ ] 📈 Analytics dashboard with visual charts (Recharts / Victory)
-- [ ] 🎓 Automated certificate generation on semester completion
+### Phase 3 â€” Advanced
+- [ ] ðŸ¤³ Face recognition attendance
+- [ ] ðŸ’¬ Real-time teacher-student chat
+- [ ] ðŸŒ Offline mode with background data sync
+- [ ] ðŸŒ™ Dark / Light theme toggle
+- [ ] ðŸŒ Multi-language support (Hindi / English)
+- [ ] ðŸ“ˆ Analytics dashboard with visual charts (Recharts / Victory)
+- [ ] ðŸŽ“ Automated certificate generation on semester completion
 
 ---
 
-## 📞 Troubleshooting
+## ðŸ“ž Troubleshooting
 
 | Problem | Solution |
 |---------|---------|
@@ -801,7 +801,7 @@ const API = axios.create({
 
 ---
 
-## 👨‍💻 Author
+## ðŸ‘¨â€ðŸ’» Author
 
 **Ayush Tiwari**
 Full Stack Mobile Developer
@@ -809,10 +809,10 @@ React Native + Node.js + MongoDB
 
 ---
 
-## 📄 License
+## ðŸ“„ License
 
 ```
-Copyright © 2025 COLLAहUB, COLLAहUB
+Copyright Â© 2025 COLLAHUB, COLLAHUB
 All rights reserved.
 
 This project is private and proprietary.
@@ -822,7 +822,7 @@ Unauthorized copying, distribution, or modification is prohibited.
 ---
 
 <div align="center">
-  Built with ❤️ using React Native + Node.js + MongoDB
+  Built with â¤ï¸ using React Native + Node.js + MongoDB
   <br/>
-  <sub>COLLAहUB — Digitizing College Management</sub>
+  <sub>COLLAHUB â€” Digitizing College Management</sub>
 </div>

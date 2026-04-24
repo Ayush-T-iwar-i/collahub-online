@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+﻿import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Dimensions, StatusBar, Alert
 } from "react-native";
@@ -50,7 +50,7 @@ export default function StudentResult() {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64data = reader.result.split(",")[1];
-        const fileUri = `${FileSystem.documentDirectory}COLLAहUB_Result.pdf`;
+        const fileUri = `${FileSystem.documentDirectory}COLLAHUB_Result.pdf`;
         await FileSystem.writeAsStringAsync(fileUri, base64data, { encoding: "base64" });
         await Sharing.shareAsync(fileUri);
       };
@@ -102,8 +102,8 @@ export default function StudentResult() {
           <View style={styles.overviewInfo}>
             <Text style={styles.overviewLabel}>Current Status</Text>
             <Text style={styles.overviewValue}>
-               Semester {data?.currentSemester || "—"} 
-               {data?.isPromoted ? " 🌟" : ""}
+               Semester {data?.currentSemester || "â€”"} 
+               {data?.isPromoted ? " ðŸŒŸ" : ""}
             </Text>
           </View>
         </LinearGradient>
@@ -137,15 +137,15 @@ export default function StudentResult() {
                 <View style={styles.gpaRow}>
                   <View style={styles.gpaBox}>
                     <Text style={styles.gpaLabel}>SGPA</Text>
-                    <Text style={styles.gpaValue}>{sem.sgpa || "—"}</Text>
+                    <Text style={styles.gpaValue}>{sem.sgpa || "â€”"}</Text>
                   </View>
                   <View style={styles.gpaBox}>
                     <Text style={styles.gpaLabel}>CGPA</Text>
-                    <Text style={styles.gpaValue}>{sem.cgpa || "—"}</Text>
+                    <Text style={styles.gpaValue}>{sem.cgpa || "â€”"}</Text>
                   </View>
                   <View style={styles.gpaBox}>
                     <Text style={styles.gpaLabel}>Year</Text>
-                    <Text style={styles.gpaValue}>{sem.year || "—"}</Text>
+                    <Text style={styles.gpaValue}>{sem.year || "â€”"}</Text>
                   </View>
                 </View>
 

@@ -28,6 +28,13 @@
       "ios": {
         "simulator": false
       }
+    },
+    "production-apk": {
+      "distribution": "internal",
+      "channel": "production",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {

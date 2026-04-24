@@ -119,8 +119,8 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ── MongoDB injection protection ──────────────────────────
-// Manual sanitize — Express 5 ke saath compatible
-// express-mongo-sanitize Express 5 mein does not work
+// Manual sanitization compatible with Express 5.
+// express-mongo-sanitize currently has compatibility issues with Express 5.
 app.use((req, res, next) => {
   const sanitize = (obj) => {
     if (obj && typeof obj === "object") {

@@ -166,13 +166,13 @@ exports.login = async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ success: false, message: "Invalid password" });
 
-    // ✅ Save OTP to DB (Railway restarts pe bhi survive karega)
+    // Persist OTP in DB so it survives process restarts.
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp       = otp;
     user.otpExpire = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    // ✅ OTP email bhejo
+    // Send OTP email.
     try {
       await sendOtpEmail(email, otp, "login");
       console.log(`✅ OTP sent to ${email} [${user.role}]`);

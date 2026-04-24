@@ -33,7 +33,7 @@ export default function SuperAdminAnnouncements(){
   };
 
   const send=async()=>{
-    if(!form.title.trim()||!form.message.trim())return Alert.alert("Required","Title aur message dono chahiye");
+    if(!form.title.trim()||!form.message.trim())return Alert.alert("Required","Both title and message are required.");
     setSaving(true);
     try{
       await API.post("/super-admin/broadcast",{...form,message:form.message,subject:form.title});
@@ -43,7 +43,7 @@ export default function SuperAdminAnnouncements(){
     finally{setSaving(false);}
   };
 
-  const del=(item)=>Alert.alert("Delete","Delete karna chahte ho?",[
+  const del=(item)=>Alert.alert("Delete","Are you sure you want to delete this announcement?",[
     {text:"Cancel",style:"cancel"},
     {text:"Delete",style:"destructive",onPress:async()=>{
       try{await API.delete(`/super-admin/announcements/${item._id}`);setAnnouncements(p=>p.filter(a=>a._id!==item._id));}

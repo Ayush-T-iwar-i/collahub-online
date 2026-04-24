@@ -31,7 +31,7 @@ router.post("/verify-email-otp", verifyOtp);
 router.post("/register",         register);
 
 // Login flow — 2 steps
-router.post("/login",            login);           // Step 1: email+password → OTP bhejo
+router.post("/login",            login);           // Step 1: email + password -> send OTP
 router.post("/login-verify-otp", loginVerifyOtp);  // Step 2: OTP verify → tokens
 
 // Other
