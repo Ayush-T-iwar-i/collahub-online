@@ -76,10 +76,7 @@
       "policy": "sdkVersion"
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "666def6a-0a50-4366-b338-eb29dd5d48f3"
-      }
+      "router": {}
     }
   }
 }
