@@ -80,13 +80,13 @@ export default function LoginScreen() {
             <LinearGradient colors={["#7c3aed", "#a78bfa"]} style={styles.logoCircle}>
               <Text style={styles.logoText}>C</Text>
             </LinearGradient>
-            <Text style={styles.appName}>COLLAHUB</Text>
-            <Text style={styles.appTagline}>One Nims One World</Text>
+            <Text style={styles.appName}>COLLAहUB</Text>
+            <Text style={styles.appTagline}>One App One World</Text>
           </View>
 
           {/* Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Welcome Back ðŸ‘‹</Text>
+            <Text style={styles.cardTitle}>Welcome Back </Text>
             <Text style={styles.cardSub}>Please enter your login credentials.</Text>
 
             {/* Email Input */}
@@ -170,7 +170,7 @@ export default function LoginScreen() {
             </View>
           </View>
 
-<Text style={styles.footer}>COLLAHUB Â© 2026 {"\n"}Developed by Ayush Tiwari</Text>
+<Text style={styles.footer}>COLLAहUB Â© 2026 {"\n"}Developed by Ayush Tiwari</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

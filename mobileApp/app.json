@@ -46,7 +46,22 @@
           "imageWidth": 400
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "CollaHub needs access to your photo library to save your Student ID Card.",
+          "savePhotosPermission": "CollaHub needs permission to save your Student ID Card to your gallery.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CollaHub needs access to your photo library to update your profile picture.",
+          "cameraPermission": "CollaHub needs access to your camera to take a profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedTypes": true

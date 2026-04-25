@@ -60,7 +60,7 @@ export default function VerifyOtp() {
   const handleVerify = async () => {
     const otpStr = otp.join("");
     if (otpStr.length < 6) {
-      Alert.alert("Error", "Please Enter Your 6 digit OTP Here");
+      Alert.alert("Incomplete OTP", "Please enter the complete 6-digit verification code.");
       return;
     }
 
@@ -89,7 +89,7 @@ export default function VerifyOtp() {
         router.replace(finalConfig.route);
       }
     } catch (e) {
-      Alert.alert("Error", e.response?.data?.message || "The OTP is incorrect or expired");
+      Alert.alert("Verification Failed", e.response?.data?.message || "The OTP is incorrect or has expired. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ export default function VerifyOtp() {
   const handleResend = () => {
     Alert.alert(
       "Resend OTP",
-      "Go back to the login page and login again",
+      "Please go back to the login screen and sign in again to receive a new OTP.",
       [{ text: "OK", onPress: () => router.back() }]
     );
   };
