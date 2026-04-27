@@ -25,7 +25,7 @@ export default function LoginScreen() {
   const [emailFocus, setEmailFocus] = useState(false);
   const [passFocus,  setPassFocus]  = useState(false);
 
-  // Step 1 â€” Email + Password check â†’ Send OTP
+
   const handleLogin = async () => {
     const trimEmail = email.trim().toLowerCase();
     const trimPass  = password.trim();
