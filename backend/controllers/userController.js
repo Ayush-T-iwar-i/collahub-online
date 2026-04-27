@@ -6,7 +6,7 @@ const streamifier = require("streamifier");
 // ================= GET MY PROFILE =================
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id)
+    const user = await User.findById(req.user._id)
       .select("-password -refreshToken -otp -otpExpire");
     if (!user)
       return res.status(404).json({ success: false, message: "User not found" });
@@ -20,7 +20,7 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { name, oldPassword, newPassword } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (!user)
       return res.status(404).json({ success: false, message: "User not found" });
     if (name) user.name = name.trim();
@@ -57,7 +57,7 @@ exports.uploadProfileImage = async (req, res) => {
       });
     };
     const result = await uploadFromBuffer();
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     user.profileImage = result.secure_url;
     await user.save();
     res.json({

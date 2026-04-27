@@ -1,9 +1,21 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 
 const { verifyToken } = require("../middleware/authMiddleware");
 const User = require("../models/User");
-const { updateProfile } = require("../controllers/userController");
+
+const {
+  updateProfile,
+  uploadProfileImage
+} = require("../controllers/userController");
+
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 // ================= GET PROFILE =================
 router.get("/profile", verifyToken, async (req, res) => {
@@ -33,5 +45,12 @@ router.get("/profile", verifyToken, async (req, res) => {
 // ================= UPDATE PROFILE =================
 router.put("/update-profile", verifyToken, updateProfile);
 
-module.exports = router;
+// ================= UPLOAD PROFILE IMAGE =================
+router.post(
+  "/upload-profile-image",
+  verifyToken,
+  upload.single("profileImage"),
+  uploadProfileImage
+);
 
+module.exports = router;

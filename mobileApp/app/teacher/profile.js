@@ -87,7 +87,7 @@ const deptShort = (dept = "") =>
 // ═══════════════════════════════════════════════════════════
 export default function TeacherProfile() {
   const router    = useRouter();
-  const cardRef   = useRef(null);
+  const cardRef   = useRef(null);   // used by react-native-view-shot on mobile
   const scrollY   = useRef(new Animated.Value(0)).current;
   const backCount = useRef(0);
 
@@ -96,7 +96,7 @@ export default function TeacherProfile() {
   const [uploading,         setUploading]         = useState(false);
   const [downloading,       setDownloading]       = useState(false);
   const [imageModal,        setImageModal]        = useState(false);
-  const [previewImageModal, setPreviewImageModal] = useState(false); // ✅ NEW
+  const [previewImageModal, setPreviewImageModal] = useState(false);
 
   // ── Load ──
   useFocusEffect(useCallback(() => {
@@ -127,31 +127,61 @@ export default function TeacherProfile() {
     return () => h.remove();
   }, []));
 
-  // ── Upload photo ──
+  // ── Upload photo ── FIXED ──
   const changeProfileImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert("Permission needed", "Need gallery access"); return; }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
     });
     if (result.canceled) return;
-    const uri = result.assets[0].uri;
+
+    const asset = result.assets[0];
+    const uri   = asset.uri;
+
+    // Close modal first, then show uploading state
     setImageModal(false);
     setUploading(true);
+
     try {
       const formData = new FormData();
+
       if (IS_WEB) {
-        const res  = await fetch(uri);
-        const blob = await res.blob();
+        // ✅ FIX: On web, expo-image-picker returns a blob URL or base64.
+        // We must fetch the blob and append it correctly.
+        let blob;
+        if (uri.startsWith("data:")) {
+          // base64 data URI → convert to Blob
+          const byteString = atob(uri.split(",")[1]);
+          const mimeType   = uri.split(",")[0].split(":")[1].split(";")[0];
+          const ab         = new ArrayBuffer(byteString.length);
+          const ia         = new Uint8Array(ab);
+          for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+          blob = new Blob([ab], { type: mimeType });
+        } else {
+          // blob URL
+          const res = await fetch(uri);
+          blob      = await res.blob();
+        }
         formData.append("profileImage", blob, "profile.jpg");
       } else {
-        formData.append("profileImage", { uri, name: "profile.jpg", type: "image/jpeg" });
+        // ✅ Mobile: straightforward FormData file append
+        formData.append("profileImage", {
+          uri,
+          name: "profile.jpg",
+          type: asset.mimeType || "image/jpeg",
+        });
       }
+
       const resp   = await API.post("/user/upload-profile-image", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       const newUrl = resp.data?.imageUrl || resp.data?.profileImage;
+
       if (newUrl && newUrl.startsWith("http")) {
         setProfileImage(newUrl);
         const raw = await AsyncStorage.getItem("teacherData");
@@ -166,33 +196,50 @@ export default function TeacherProfile() {
         Alert.alert("Notice", "Upload succeeded but no image URL returned.");
       }
     } catch (e) {
+      console.log("Upload error:", e);
       Alert.alert("Error", "Photo upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
   };
 
-  // ── Download ID card ✅ FIXED ──
+  // ── Download ID card ── FIXED ──
   const downloadCard = async () => {
     setDownloading(true);
     try {
       if (IS_WEB) {
-        // ✅ Web — html2canvas
+        // ✅ FIX: Use ref-based DOM node lookup instead of getElementById,
+        // which is unreliable with React Native Web's nativeID rendering.
         const html2canvas = (await import("html2canvas")).default;
-        const el = document.getElementById("teacher-id-card");
-        if (!el) { Alert.alert("Error", "Card not found"); setDownloading(false); return; }
-        const canvas = await html2canvas(el, { backgroundColor: "#1a1000", scale: 2, useCORS: true });
-        const link   = document.createElement("a");
-        link.download = `${teacher?.teacherId || "teacher"}-id-card.png`;
-        link.href     = canvas.toDataURL("image/png");
+
+        // cardRef.current is the underlying DOM node on web via React Native Web
+        const el = cardRef.current;
+        if (!el) {
+          Alert.alert("Error", "Card element not found. Please scroll to the ID card section first.");
+          setDownloading(false);
+          return;
+        }
+
+        const canvas = await html2canvas(el, {
+          backgroundColor: "#1a1000",
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+        });
+
+        const link      = document.createElement("a");
+        link.download   = `${teacher?.teacherId || "teacher"}-id-card.png`;
+        link.href       = canvas.toDataURL("image/png");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         Alert.alert("Downloaded!", "ID card saved to your downloads.");
+
       } else {
-        // ✅ Mobile — view-shot + media library
-        const { captureRef } = await import("react-native-view-shot");
-        const MediaLibrary   = await import("expo-media-library");
+        // ✅ FIX: Import correctly and pass cardRef.current (the actual ref node)
+        const { captureRef }   = await import("react-native-view-shot");
+        const MediaLibrary     = await import("expo-media-library");
 
         const { status } = await MediaLibrary.requestPermissionsAsync();
         if (status !== "granted") {
@@ -201,7 +248,14 @@ export default function TeacherProfile() {
           return;
         }
 
-        const uri = await captureRef(cardRef, {
+        if (!cardRef.current) {
+          Alert.alert("Error", "Card not ready. Please try again.");
+          setDownloading(false);
+          return;
+        }
+
+        // ✅ FIX: Pass cardRef.current, not cardRef
+        const uri = await captureRef(cardRef.current, {
           format:  "png",
           quality: 1,
           result:  "tmpfile",
@@ -237,6 +291,14 @@ export default function TeacherProfile() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
+      {/* ✅ Uploading overlay shown at screen level (outside modal) so it's always visible */}
+      {uploading && (
+        <View style={styles.globalUploadingOverlay}>
+          <ActivityIndicator size="large" color="#f59e0b" />
+          <Text style={styles.globalUploadingText}>Uploading photo...</Text>
+        </View>
+      )}
+
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
@@ -266,18 +328,15 @@ export default function TeacherProfile() {
           <Animated.View style={[styles.avatarWrap, { transform: [{ scale: avatarSc }] }]}>
             <View style={styles.avatarRingOuter}>
               <View style={styles.avatarRingInner}>
-                {/* ✅ Click on avatar opens full preview */}
                 <Pressable onPress={() => profileImage && setPreviewImageModal(true)}>
                   <SafeImage uri={imgSrc} size={94} initials={initials} color="#f59e0b" />
                 </Pressable>
               </View>
             </View>
-            {uploading
-              ? <View style={styles.uploadingOverlay}><ActivityIndicator size="small" color="#fff" /></View>
-              : <Pressable style={styles.cameraFab} onPress={() => setImageModal(true)}>
-                  <MaterialIcons name="camera-alt" size={13} color="#fff" />
-                </Pressable>
-            }
+            {/* ✅ Camera FAB always shown (uploading indicator moved to global overlay) */}
+            <Pressable style={styles.cameraFab} onPress={() => setImageModal(true)}>
+              <MaterialIcons name="camera-alt" size={13} color="#fff" />
+            </Pressable>
           </Animated.View>
 
           <Animated.View style={[styles.heroNameWrap, { opacity: nameFade }]}>
@@ -289,10 +348,10 @@ export default function TeacherProfile() {
         {/* ══ QUICK STATS ══ */}
         <View style={styles.statsStrip}>
           {[
-            { label: "Dept",    value: deptShortName || "—",                                    color: "#f59e0b" },
-            { label: "College", value: teacher.college ? teacher.college.split(" ")[0] : "—",  color: "#a78bfa" },
-            { label: "Role",    value: "Faculty",                                                color: "#34d399" },
-            { label: "ID",      value: teacher.teacherId || "—",                               color: "#fb923c" },
+            { label: "Dept",    value: deptShortName || "—",                                   color: "#f59e0b" },
+            { label: "College", value: teacher.college ? teacher.college.split(" ")[0] : "—", color: "#a78bfa" },
+            { label: "Role",    value: "Faculty",                                               color: "#34d399" },
+            { label: "ID",      value: teacher.teacherId || "—",                              color: "#fb923c" },
           ].map((s, i, arr) => (
             <React.Fragment key={i}>
               <View style={styles.statItem}>
@@ -376,8 +435,13 @@ export default function TeacherProfile() {
         <View style={styles.card}>
           <SectionHead icon="id-card-outline" title="Teacher ID Card" color="#f59e0b" />
 
-          {/* ✅ ref directly on View — not cardRef.current */}
-          <View ref={cardRef} collapsable={false} nativeID="teacher-id-card" style={styles.idCardOuter}>
+          {/*
+            ✅ FIX: ref={cardRef} on this View works for both:
+              - Mobile: react-native-view-shot uses cardRef.current directly
+              - Web: html2canvas uses cardRef.current (the DOM node)
+            collapsable={false} ensures React Native doesn't optimize away the node.
+          */}
+          <View ref={cardRef} collapsable={false} style={styles.idCardOuter}>
             <LinearGradient colors={["#1a1000", "#0d0800", "#1a0e00"]} style={styles.idCard}>
               <LinearGradient colors={["#f59e0b", "#d97706", "#b45309"]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.idStripe} />
@@ -482,12 +546,6 @@ export default function TeacherProfile() {
             <Text style={styles.imgModalTitle}>Change Profile Photo</Text>
             <View style={styles.imgPreviewWrap}>
               <SafeImage uri={imgSrc} size={120} initials={initials} color="#f59e0b" />
-              {uploading && (
-                <View style={styles.imgUploadingOverlay}>
-                  <ActivityIndicator size="large" color="#f59e0b" />
-                  <Text style={styles.imgUploadingText}>Uploading...</Text>
-                </View>
-              )}
             </View>
             <Pressable style={styles.imgPickBtn} onPress={changeProfileImage}>
               <LinearGradient colors={["#d97706", "#f59e0b"]}
@@ -507,9 +565,19 @@ export default function TeacherProfile() {
 }
 
 const styles = StyleSheet.create({
-  container:           { flex: 1, backgroundColor: "#070a0d" },
-  loader:              { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#070a0d", gap: 14 },
-  loaderText:          { color: "#374151", fontSize: 13 },
+  container:              { flex: 1, backgroundColor: "#070a0d" },
+  loader:                 { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#070a0d", gap: 14 },
+  loaderText:             { color: "#374151", fontSize: 13 },
+
+  // ✅ Global uploading overlay (screen-level, always visible regardless of modal state)
+  globalUploadingOverlay: {
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    zIndex: 9999,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "center", alignItems: "center", gap: 14,
+  },
+  globalUploadingText:    { color: "#f59e0b", fontSize: 14, fontWeight: "700" },
+
   hero:                { alignItems: "center", justifyContent: "flex-end", paddingBottom: 24, overflow: "hidden" },
   deco1:               { position: "absolute", width: 220, height: 220, borderRadius: 110, top: -80,  left: -60,   backgroundColor: "rgba(245,158,11,0.06)" },
   deco2:               { position: "absolute", width: 160, height: 160, borderRadius: 80,  top: 30,   right: -40,  backgroundColor: "rgba(167,139,250,0.05)" },
@@ -520,7 +588,6 @@ const styles = StyleSheet.create({
   avatarWrap:          { alignItems: "center", marginBottom: 14, position: "relative" },
   avatarRingOuter:     { width: 104, height: 104, borderRadius: 52, borderWidth: 2, borderColor: "rgba(245,158,11,0.5)", padding: 3, justifyContent: "center", alignItems: "center" },
   avatarRingInner:     { width: 94, height: 94, borderRadius: 47, overflow: "hidden", borderWidth: 2, borderColor: "rgba(245,158,11,0.2)" },
-  uploadingOverlay:    { position: "absolute", width: 104, height: 104, borderRadius: 52, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", alignItems: "center" },
   cameraFab:           { position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14, backgroundColor: "#d97706", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "#070a0d" },
   heroNameWrap:        { alignItems: "center" },
   heroName:            { color: "#fff", fontSize: 21, fontWeight: "800", letterSpacing: 0.3 },
@@ -537,7 +604,6 @@ const styles = StyleSheet.create({
   acadRow:             { flexDirection: "row", gap: 10, marginBottom: 14, flexWrap: "wrap" },
   acadBox:             { flexGrow: 1, flexBasis: "30%", minWidth: 92, borderRadius: 16, padding: 12, alignItems: "center", gap: 6, borderWidth: 1 },
   acadCircle:          { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },
-  acadCircleNum:       { color: "#f59e0b", fontSize: 20, fontWeight: "900" },
   acadBoxTitle:        { fontSize: 11, fontWeight: "700", textAlign: "center" },
   acadBoxSub:          { color: "#374151", fontSize: 9, textAlign: "center" },
   deptBadge:           { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "rgba(245,158,11,0.3)", backgroundColor: "rgba(245,158,11,0.07)", flexShrink: 1 },
@@ -585,15 +651,12 @@ const styles = StyleSheet.create({
   imgModalBg:          { flex: 1, backgroundColor: "rgba(0,0,0,0.82)", justifyContent: "center", alignItems: "center" },
   imgModalCard:        { backgroundColor: "#0f0b04", borderRadius: 24, padding: 24, width: width - 60, alignItems: "center", borderWidth: 1, borderColor: "rgba(245,158,11,0.15)" },
   imgModalTitle:       { color: "#fff", fontSize: 16, fontWeight: "800", marginBottom: 16 },
-  imgPreviewWrap:      { width: 120, height: 120, borderRadius: 60, overflow: "hidden", marginBottom: 20, borderWidth: 2, borderColor: "rgba(245,158,11,0.4)", position: "relative" },
-  imgUploadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", gap: 8 },
-  imgUploadingText:    { color: "#f59e0b", fontSize: 11, fontWeight: "600" },
+  imgPreviewWrap:      { width: 120, height: 120, borderRadius: 60, overflow: "hidden", marginBottom: 20, borderWidth: 2, borderColor: "rgba(245,158,11,0.4)" },
   imgPickBtn:          { borderRadius: 14, overflow: "hidden", width: "100%", marginBottom: 10 },
   imgPickGrad:         { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14 },
   imgPickText:         { color: "#fff", fontWeight: "700", fontSize: 14 },
   imgCancelBtn:        { paddingVertical: 12, width: "100%", alignItems: "center" },
   imgCancelText:       { color: "#4b5563", fontWeight: "600", fontSize: 14 },
-  // ✅ Full preview modal
   fullImageModalBg:    { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
   fullImagePreview:    { width: "90%", height: "70%", borderRadius: 16 },
   closePreviewBtn:     { position: "absolute", top: 52, right: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.1)", justifyContent: "center", alignItems: "center" },

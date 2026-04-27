@@ -290,7 +290,7 @@ exports.refreshToken = async (req, res) => {
 // ══════════════════════════════════════════════════════════
 exports.logout = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (user) { user.refreshToken = null; await user.save(); }
     res.json({ success: true, message: "Logged out successfully" });
   } catch (error) {
@@ -360,7 +360,7 @@ exports.resetPassword = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
 
     if (!user)
       return res.status(404).json({ success: false, message: "User not found" });
