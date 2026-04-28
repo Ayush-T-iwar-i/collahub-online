@@ -110,45 +110,57 @@ export default function StudentProfile() {
       setUploading(false);
     }
   };
-// ── Download ID card (Fixed Version) ──
-const downloadCard = async () => {
-  setDownloading(true);
-  try {
-    if (IS_WEB) {
-      // ... aapka web logic ...
-    } else {
-      const { captureRef } = await import("react-native-view-shot");
-      const MediaLibrary = await import("expo-media-library");
 
-      // 1. Check for existing permissions
-      const status = await MediaLibrary.getPermissionsAsync();
-      
-      if (status.status !== 'granted') {
-        // 2. Request only what's needed. Pass 'writeOnly: true' if using SDK 50+
-        const request = await MediaLibrary.requestPermissionsAsync(false);
-        if (!request.granted) {
-          Alert.alert("Permission Required", "Please allow gallery access.");
-          setDownloading(false);
+  // ── Download ID card ──
+  const downloadCard = async () => {
+    setDownloading(true);
+
+    try {
+      if (IS_WEB) {
+        const html2canvas = (await import("html2canvas")).default;
+        const el = document.getElementById("student-id-card");
+
+        if (!el) {
+          Alert.alert("Error", "ID card not found");
           return;
         }
+
+        const canvas = await html2canvas(el, {
+          backgroundColor: "#0c1f3f",
+          scale: 2,
+        });
+
+        const link = document.createElement("a");
+        link.download = `${student?.studentId || "student"}-id-card.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } else {
+        const { captureRef } = await import("react-native-view-shot");
+        const MediaLibrary = await import("expo-media-library");
+
+        const permission = await MediaLibrary.requestPermissionsAsync();
+
+        if (!permission.granted) {
+          Alert.alert("Permission Required", "Please allow media library access to save the ID card.");
+          return;
+        }
+
+        const uri = await captureRef(cardRef.current, {
+          format: "png",
+          quality: 1,
+        });
+
+        await MediaLibrary.saveToLibraryAsync(uri);
+
+        Alert.alert("Success", "ID card saved to your gallery.");
       }
-
-      const uri = await captureRef(cardRef.current, {
-        format: "png",
-        quality: 1,
-      });
-
-      // 3. Directly create asset (This works better on Android 13+)
-      await MediaLibrary.createAssetAsync(uri);
-      Alert.alert("Success ✅", "ID card saved to gallery!");
+    } catch (error) {
+      console.log("ID card download failed:", error);
+      Alert.alert("Error", "Failed to save ID card. Please try again.");
+    } finally {
+      setDownloading(false);
     }
-  } catch (error) {
-    console.log("ID card download failed:", error);
-    Alert.alert("Error", "Check permissions in App Settings.");
-  } finally {
-    setDownloading(false);
-  }
-};
+  };
 
   if (!student) return (
     <View style={styles.loader}>
