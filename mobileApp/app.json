@@ -67,7 +67,9 @@
           "photosPermission": "CollaHub needs access to your photo library to update your profile picture.",
           "cameraPermission": "CollaHub needs access to your camera to take a profile picture."
         }
-      ]
+      ],
+      "expo-web-browser",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedTypes": true

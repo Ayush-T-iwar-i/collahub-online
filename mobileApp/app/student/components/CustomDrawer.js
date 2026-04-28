@@ -19,7 +19,7 @@ import { BlurView } from "expo-blur";
 
 const { width } = Dimensions.get("window");
 
-// â”€â”€ Single animated menu item â”€â”€
+
 const MenuItem = ({ icon, label, accent, onPress, index }) => {
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -67,7 +67,7 @@ const MenuItem = ({ icon, label, accent, onPress, index }) => {
   );
 };
 
-// â”€â”€ Section divider â”€â”€
+
 const SectionLabel = ({ label }) => (
   <Text style={styles.sectionLabel}>{label}</Text>
 );
@@ -167,7 +167,7 @@ const imageSource = isValidUri(localImage)
     >
       <View style={styles.container}>
 
-        {/* â”€â”€ HEADER â”€â”€ */}
+        
         <Animated.View style={[styles.header, {
           opacity: headerAnim,
           transform: [{ translateY: headerTranslateY }],
@@ -200,7 +200,7 @@ const imageSource = isValidUri(localImage)
             {student?.name || "Student"}
           </Text>
           <Text style={styles.studentId} numberOfLines={1}>
-            {student?.studentId || "ID: â€”"}
+            {student?.studentId || "ID:”"}
           </Text>
 
           {/* Info badges */}
@@ -231,7 +231,7 @@ const imageSource = isValidUri(localImage)
           )}
         </Animated.View>
 
-        {/* â”€â”€ MENU â”€â”€ */}
+       
         <View style={styles.menuSection}>
           <SectionLabel label="MAIN" />
           {mainMenu.map((item, i) => (
@@ -258,10 +258,10 @@ const imageSource = isValidUri(localImage)
           ))}
         </View>
 
-        {/* â”€â”€ DIVIDER â”€â”€ */}
+      
         <View style={styles.divider} />
 
-        {/* â”€â”€ LOGOUT â”€â”€ */}
+       
         <Pressable onPress={handleLogout} style={({ pressed }) => [
           styles.logoutBtn,
           pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
@@ -273,7 +273,7 @@ const imageSource = isValidUri(localImage)
           <Ionicons name="chevron-forward" size={13} color="#7f1d1d" />
         </Pressable>
 
-        {/* â”€â”€ FOOTER â”€â”€ */}
+        
         <View style={styles.footer}>
           <View style={styles.footerBadge}>
             <View style={styles.footerDot} />

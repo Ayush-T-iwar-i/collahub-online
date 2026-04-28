@@ -20,7 +20,7 @@ const StatCard = ({ icon, label, value, color, onPress }) => (
       <View style={[s.statIcon, { backgroundColor: color + "22" }]}>
         <Ionicons name={icon} size={18} color={color} />
       </View>
-      <Text style={[s.statVal, { color }]}>{value ?? "â€”"}</Text>
+      <Text style={[s.statVal, { color }]}>{value ?? ""}</Text>
       <Text style={s.statLabel}>{label}</Text>
       <View style={[s.statArrow, { backgroundColor: color + "18" }]}>
         <Ionicons name="arrow-forward" size={10} color={color} />
@@ -314,7 +314,7 @@ export default function SuperAdminDashboard() {
         ))}
       </View>
 
-      {/* â”€â”€ Shutdown Modal â”€â”€ */}
+    
       <Modal visible={sdModal} transparent animationType="fade"
         onRequestClose={() => !sdLoading && setSdModal(false)}>
         <View style={s.overlay}>
@@ -358,7 +358,7 @@ export default function SuperAdminDashboard() {
         </View>
       </Modal>
 
-      {/* â”€â”€ Add Admin Modal â”€â”€ */}
+      
       <Modal visible={aaModal} transparent animationType="slide"
         onRequestClose={()=>!aaLoading&&setAaModal(false)}>
         <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":"height"}>
@@ -430,7 +430,7 @@ export default function SuperAdminDashboard() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* â”€â”€ Broadcast Modal â”€â”€ */}
+      
       <Modal visible={bcModal} transparent animationType="slide"
         onRequestClose={()=>!bcLoading&&setBcModal(false)}>
         <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":"height"}>

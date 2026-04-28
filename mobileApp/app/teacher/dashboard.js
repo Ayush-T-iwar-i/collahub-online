@@ -436,7 +436,7 @@ export default function TeacherDashboard() {
       try {
         const d = JSON.parse(raw);
         setTeacherData(d);
-        // âœ… Only Cloudinary URLs
+       
         const img = d.profileImage;
         setProfileImage(img && img.startsWith("http") ? img : null);
       } catch { }
@@ -555,7 +555,7 @@ export default function TeacherDashboard() {
                 )}
               </View>
               <View style={styles.welcomeRight}>
-                {/* âœ… SafeImage in welcome card too */}
+                
                 <SafeImage
                   uri={profileImage}
                   size={60}

@@ -102,7 +102,7 @@ export default function StudentResult() {
           <View style={styles.overviewInfo}>
             <Text style={styles.overviewLabel}>Current Status</Text>
             <Text style={styles.overviewValue}>
-               Semester {data?.currentSemester || "â€”"} 
+               Semester {data?.currentSemester || ""} 
                {data?.isPromoted ? " ðŸŒŸ" : ""}
             </Text>
           </View>
@@ -137,15 +137,15 @@ export default function StudentResult() {
                 <View style={styles.gpaRow}>
                   <View style={styles.gpaBox}>
                     <Text style={styles.gpaLabel}>SGPA</Text>
-                    <Text style={styles.gpaValue}>{sem.sgpa || "â€”"}</Text>
+                    <Text style={styles.gpaValue}>{sem.sgpa || ""}</Text>
                   </View>
                   <View style={styles.gpaBox}>
                     <Text style={styles.gpaLabel}>CGPA</Text>
-                    <Text style={styles.gpaValue}>{sem.cgpa || "â€”"}</Text>
+                    <Text style={styles.gpaValue}>{sem.cgpa || ""}</Text>
                   </View>
                   <View style={styles.gpaBox}>
                     <Text style={styles.gpaLabel}>Year</Text>
-                    <Text style={styles.gpaValue}>{sem.year || "â€”"}</Text>
+                    <Text style={styles.gpaValue}>{sem.year || ""}</Text>
                   </View>
                 </View>
 
