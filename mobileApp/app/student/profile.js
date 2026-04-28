@@ -111,67 +111,45 @@ export default function StudentProfile() {
     }
   };
 // ── Download ID card (Fixed Version) ──
-  const downloadCard = async () => {
-    setDownloading(true);
+const downloadCard = async () => {
+  setDownloading(true);
+  try {
+    if (IS_WEB) {
+      // ... aapka web logic ...
+    } else {
+      const { captureRef } = await import("react-native-view-shot");
+      const MediaLibrary = await import("expo-media-library");
 
-    try {
-      if (IS_WEB) {
-        const html2canvas = (await import("html2canvas")).default;
-        const el = document.getElementById("student-id-card");
-
-        if (!el) {
-          Alert.alert("Error", "ID card not found");
+      // 1. Check for existing permissions
+      const status = await MediaLibrary.getPermissionsAsync();
+      
+      if (status.status !== 'granted') {
+        // 2. Request only what's needed. Pass 'writeOnly: true' if using SDK 50+
+        const request = await MediaLibrary.requestPermissionsAsync(false);
+        if (!request.granted) {
+          Alert.alert("Permission Required", "Please allow gallery access.");
+          setDownloading(false);
           return;
         }
-
-        const canvas = await html2canvas(el, {
-          backgroundColor: "#0c1f3f",
-          scale: 3, // Web par thodi high quality rakhi hai
-        });
-
-        const link = document.createElement("a");
-        link.download = `${student?.studentId || "student"}-id-card.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      } else {
-        const { captureRef } = await import("react-native-view-shot");
-        const MediaLibrary = await import("expo-media-library");
-
-        // CRITICAL FIX: 'false' pass karne se ye Audio permission skip kar dega
-        // Ye sirf Photos/Videos ki permission maangega
-        const permission = await MediaLibrary.requestPermissionsAsync(false);
-
-        if (!permission.granted) {
-          Alert.alert(
-            "Permission Required", 
-            "Gallery access is needed to save your ID card. Please enable it in settings."
-          );
-          return;
-        }
-
-        // Capture the view
-        const uri = await captureRef(cardRef.current, {
-          format: "png",
-          quality: 1,
-          result: "tmpfile" 
-        });
-
-        // Save to Gallery
-        const asset = await MediaLibrary.createAssetAsync(uri);
-        
-        // Optional: Ek alag folder banane ke liye (CollaHub naam se)
-        await MediaLibrary.createAlbumAsync("CollaHub", asset, false);
-
-        Alert.alert("Success ✅", "ID card saved to your gallery in 'CollaHub' folder.");
       }
-    } catch (error) {
-      console.log("ID card download failed:", error);
-      Alert.alert("Error", "Failed to save ID card. Check if your gallery is full or permissions are denied.");
-    } finally {
-      setDownloading(false);
+
+      const uri = await captureRef(cardRef.current, {
+        format: "png",
+        quality: 1,
+      });
+
+      // 3. Directly create asset (This works better on Android 13+)
+      await MediaLibrary.createAssetAsync(uri);
+      Alert.alert("Success ✅", "ID card saved to gallery!");
     }
-  };
-  
+  } catch (error) {
+    console.log("ID card download failed:", error);
+    Alert.alert("Error", "Check permissions in App Settings.");
+  } finally {
+    setDownloading(false);
+  }
+};
+
   if (!student) return (
     <View style={styles.loader}>
       <ActivityIndicator size="large" color="#00c6ff" />

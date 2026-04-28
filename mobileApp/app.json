@@ -54,15 +54,14 @@
         }
       ],
       "expo-video",
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "CollaHub needs access to your photo library to save your Student ID Card.",
-          "savePhotosPermission": "CollaHub needs permission to save your Student ID Card to your gallery.",
-          "isAccessMediaLocationEnabled": true,
-          "isAudioLibraryPermissionEnabled": true
-        }
-      ],
+     [
+  "expo-media-library",
+  {
+    "photosPermission": "Allow CollaHub to save your ID Card.",
+    "savePhotosPermission": "Allow CollaHub to save your ID Card.",
+    "isAccessMediaLocationEnabled": false 
+  }
+],
       [
         "expo-image-picker",
         {
