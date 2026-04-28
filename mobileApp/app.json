@@ -8,6 +8,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "icon": "./assets/icon.png",
+
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -38,8 +39,8 @@
       ]
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/favicon.png"
+      "output": "static"
+      
     },
     "plugins": [
       "expo-router",
@@ -58,7 +59,8 @@
         {
           "photosPermission": "CollaHub needs access to your photo library to save your Student ID Card.",
           "savePhotosPermission": "CollaHub needs permission to save your Student ID Card to your gallery.",
-          "isAccessMediaLocationEnabled": true
+          "isAccessMediaLocationEnabled": true,
+          "isAudioLibraryPermissionEnabled": true
         }
       ],
       [
@@ -71,9 +73,7 @@
       "expo-web-browser",
       "@react-native-community/datetimepicker"
     ],
-    "experiments": {
-      "typedTypes": true
-    },
+    
     "updates": {
       "url": "https://u.expo.dev/666def6a-0a50-4366-b338-eb29dd5d48f3",
       "enabled": true,

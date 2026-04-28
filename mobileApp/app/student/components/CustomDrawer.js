@@ -226,7 +226,7 @@ const imageSource = isValidUri(localImage)
           {/* College */}
           {student?.college && (
             <Text style={styles.college} numberOfLines={1}>
-              ðŸ« {student.college}
+              {student.college}
             </Text>
           )}
         </Animated.View>

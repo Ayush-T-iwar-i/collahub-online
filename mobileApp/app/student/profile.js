@@ -110,8 +110,7 @@ export default function StudentProfile() {
       setUploading(false);
     }
   };
-
-  // ── Download ID card ──
+// ── Download ID card (Fixed Version) ──
   const downloadCard = async () => {
     setDownloading(true);
 
@@ -127,7 +126,7 @@ export default function StudentProfile() {
 
         const canvas = await html2canvas(el, {
           backgroundColor: "#0c1f3f",
-          scale: 2,
+          scale: 3, // Web par thodi high quality rakhi hai
         });
 
         const link = document.createElement("a");
@@ -138,30 +137,41 @@ export default function StudentProfile() {
         const { captureRef } = await import("react-native-view-shot");
         const MediaLibrary = await import("expo-media-library");
 
-        const permission = await MediaLibrary.requestPermissionsAsync();
+        // CRITICAL FIX: 'false' pass karne se ye Audio permission skip kar dega
+        // Ye sirf Photos/Videos ki permission maangega
+        const permission = await MediaLibrary.requestPermissionsAsync(false);
 
         if (!permission.granted) {
-          Alert.alert("Permission Required", "Please allow media library access to save the ID card.");
+          Alert.alert(
+            "Permission Required", 
+            "Gallery access is needed to save your ID card. Please enable it in settings."
+          );
           return;
         }
 
+        // Capture the view
         const uri = await captureRef(cardRef.current, {
           format: "png",
           quality: 1,
+          result: "tmpfile" 
         });
 
-        await MediaLibrary.saveToLibraryAsync(uri);
+        // Save to Gallery
+        const asset = await MediaLibrary.createAssetAsync(uri);
+        
+        // Optional: Ek alag folder banane ke liye (CollaHub naam se)
+        await MediaLibrary.createAlbumAsync("CollaHub", asset, false);
 
-        Alert.alert("Success", "ID card saved to your gallery.");
+        Alert.alert("Success ✅", "ID card saved to your gallery in 'CollaHub' folder.");
       }
     } catch (error) {
       console.log("ID card download failed:", error);
-      Alert.alert("Error", "Failed to save ID card. Please try again.");
+      Alert.alert("Error", "Failed to save ID card. Check if your gallery is full or permissions are denied.");
     } finally {
       setDownloading(false);
     }
   };
-
+  
   if (!student) return (
     <View style={styles.loader}>
       <ActivityIndicator size="large" color="#00c6ff" />

@@ -10,25 +10,25 @@ import { useRouter } from "expo-router";
 import API from "../services/api";
 
 const ROLE_CONFIG = {
-  student:      { color: "#00c6ff", icon: "school",            label: "Student"     },
-  teacher:      { color: "#f59e0b", icon: "person",            label: "Teacher"     },
-  admin:        { color: "#a78bfa", icon: "shield-checkmark",  label: "Admin"       },
-  "super-admin":{ color: "#f87171", icon: "star",              label: "Super Admin" },
+  student: { color: "#00c6ff", icon: "school", label: "Student" },
+  teacher: { color: "#f59e0b", icon: "person", label: "Teacher" },
+  admin: { color: "#a78bfa", icon: "shield-checkmark", label: "Admin" },
+  "super-admin": { color: "#f87171", icon: "star", label: "Super Admin" },
 };
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email,      setEmail]      = useState("");
-  const [password,   setPassword]   = useState("");
-  const [showPass,   setShowPass]   = useState(false);
-  const [loading,    setLoading]    = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [emailFocus, setEmailFocus] = useState(false);
-  const [passFocus,  setPassFocus]  = useState(false);
+  const [passFocus, setPassFocus] = useState(false);
 
 
   const handleLogin = async () => {
     const trimEmail = email.trim().toLowerCase();
-    const trimPass  = password.trim();
+    const trimPass = password.trim();
 
     if (!trimEmail || !trimPass) {
       Alert.alert("Error", "Both email and password are required");
@@ -38,7 +38,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const res = await API.post("/auth/login", {
-        email:    trimEmail,
+        email: trimEmail,
         password: trimPass,
       });
 
@@ -50,7 +50,7 @@ export default function LoginScreen() {
           pathname: "/verify-otp",
           params: {
             email: trimEmail,
-            role:  role || "student",
+            role: role || "student",
           },
         });
       }
@@ -102,7 +102,7 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 onFocus={() => setEmailFocus(true)}
-                onBlur={()  => setEmailFocus(false)}
+                onBlur={() => setEmailFocus(false)}
               />
             </View>
 
@@ -117,7 +117,7 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPass}
                 onFocus={() => setPassFocus(true)}
-                onBlur={()  => setPassFocus(false)}
+                onBlur={() => setPassFocus(false)}
               />
               <Pressable onPress={() => setShowPass(!showPass)}>
                 <Ionicons
@@ -149,9 +149,9 @@ export default function LoginScreen() {
                 {loading
                   ? <ActivityIndicator color="#fff" />
                   : <>
-                      <Text style={styles.loginBtnText}>Continue</Text>
-                      <Ionicons name="arrow-forward" size={18} color="#fff" />
-                    </>
+                    <Text style={styles.loginBtnText}>Continue</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                  </>
                 }
               </LinearGradient>
             </Pressable>
@@ -170,7 +170,7 @@ export default function LoginScreen() {
             </View>
           </View>
 
-<Text style={styles.footer}>COLLAहUB Â© 2026 {"\n"}Developed by Ayush Tiwari</Text>
+          <Text style={styles.footer}>COLLAहUB Â© 2026 {"\n"}Developed by Ayush Tiwari</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -178,35 +178,35 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:  { flex: 1, backgroundColor: "#080d17" },
-  scroll:     { flexGrow: 1, justifyContent: "center", padding: 24, paddingTop: 60 },
+  container: { flex: 1, backgroundColor: "#080d17" },
+  scroll: { flexGrow: 1, justifyContent: "center", padding: 24, paddingTop: 60 },
 
-  logoWrap:   { alignItems: "center", marginBottom: 36 },
+  logoWrap: { alignItems: "center", marginBottom: 36 },
   logoCircle: { width: 72, height: 72, borderRadius: 22, justifyContent: "center", alignItems: "center", marginBottom: 14 },
-  logoText:   { color: "#fff", fontSize: 36, fontWeight: "900" },
-  appName:    { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: 1 },
+  logoText: { color: "#fff", fontSize: 36, fontWeight: "900" },
+  appName: { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: 1 },
   appTagline: { color: "#64748b", fontSize: 12, marginTop: 4 },
 
-  card:       { backgroundColor: "#111827", borderRadius: 30, padding: 24, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.81)" },
-  cardTitle:  { color: "#fff", fontSize: 22, fontWeight: "800", marginBottom: 6 },
-  cardSub:    { color: "#64748b", fontSize: 13, marginBottom: 24 },
+  card: { backgroundColor: "#111827", borderRadius: 30, padding: 24, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.81)" },
+  cardTitle: { color: "#fff", fontSize: 22, fontWeight: "800", marginBottom: 6 },
+  cardSub: { color: "#64748b", fontSize: 13, marginBottom: 24 },
 
-  inputWrap:      { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#1a2535", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  inputWrap: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#1a2535", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
   inputWrapFocus: { borderColor: "#a78bfa" },
-  input:          { flex: 1, color: "#fff", fontSize: 14 },
+  input: { flex: 1, color: "#fff", fontSize: 14 },
 
   forgotWrap: { alignSelf: "flex-end", marginBottom: 22 },
   forgotText: { color: "#a78bfa", fontSize: 13, fontWeight: "600" },
 
-  loginBtn:     { borderRadius: 14, overflow: "hidden", marginBottom: 24 },
+  loginBtn: { borderRadius: 14, overflow: "hidden", marginBottom: 24 },
   loginBtnGrad: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
   loginBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
 
-  roleInfoWrap:  { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", paddingTop: 18 },
+  roleInfoWrap: { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", paddingTop: 18 },
   roleInfoTitle: { color: "#374151", fontSize: 11, fontWeight: "700", textAlign: "center", marginBottom: 12, letterSpacing: 0.5 },
-  roleRow:       { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" },
-  roleChip:      { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#1a2535", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  roleChipText:  { fontSize: 11, fontWeight: "700" },
+  roleRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" },
+  roleChip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#1a2535", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  roleChipText: { fontSize: 11, fontWeight: "700" },
 
   footer: { color: "#a2bde3", fontSize: 11, textAlign: "center", marginTop: 24 },
 });

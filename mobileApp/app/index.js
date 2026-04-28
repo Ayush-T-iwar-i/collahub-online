@@ -8,15 +8,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Role → route + storage key mapping
 const ROLE_MAP = {
-  student:       { loggedInKey: "studentLoggedIn",     route: "/student/dashboard"      },
-  teacher:       { loggedInKey: "teacherLoggedIn",     route: "/teacher/dashboard"      },
-  admin:         { loggedInKey: "adminLoggedIn",       route: "/admin/dashboard"        },
-  "super-admin": { loggedInKey: "superAdminLoggedIn",  route: "/super-admin/dashboard"  },
+  student: { loggedInKey: "studentLoggedIn", route: "/student/dashboard" },
+  teacher: { loggedInKey: "teacherLoggedIn", route: "/teacher/dashboard" },
+  admin: { loggedInKey: "adminLoggedIn", route: "/admin/dashboard" },
+  "super-admin": { loggedInKey: "superAdminLoggedIn", route: "/super-admin/dashboard" },
 };
 
 export default function Index() {
-  const [checking,  setChecking]  = useState(true);
-  const [redirect,  setRedirect]  = useState(null);
+  const [checking, setChecking] = useState(true);
+  const [redirect, setRedirect] = useState(null);
 
   useEffect(() => {
     checkLoginStatus();
@@ -36,9 +36,9 @@ export default function Index() {
         const isLoggedIn = await AsyncStorage.getItem(config.loggedInKey);
         if (isLoggedIn === "true") {
           const dataKey = role === "super-admin" ? "superAdminData"
-                        : role === "admin"       ? "adminData"
-                        : role === "teacher"     ? "teacherData"
-                        : "studentData";
+            : role === "admin" ? "adminData"
+              : role === "teacher" ? "teacherData"
+                : "studentData";
 
           const userData = await AsyncStorage.getItem(dataKey);
           if (userData) {
