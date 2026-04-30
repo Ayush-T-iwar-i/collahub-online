@@ -106,7 +106,7 @@ const TodayClasses = ({ timetable }) => {
       {todaySlots.length === 0 ? (
         <View style={styles.noClassBox}>
           <Ionicons name="cafe-outline" size={22} color="#374151" />
-          <Text style={styles.noClassText}>No classes today ðŸŽ‰</Text>
+          <Text style={styles.noClassText}>No classes today</Text>
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}

@@ -1,5 +1,3 @@
-// utils/sendEmail.js
-// Uses Resend for reliable transactional email delivery.
 
 const { Resend } = require("resend");
 
@@ -75,7 +73,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="warn">🔒 <strong>Security:</strong> Never share this OTP with anyone. CollaHub staff will never ask for your OTP. If you did not request this, ignore this email.</div>
 </div>
 <div class="f">
-<p><strong>${APP_NAME}</strong> — NIMS University, Jaipur</p>
+<p><strong>${APP_NAME}</strong></p>
 <p>Automated email — do not reply</p>
 </div>
 </div>

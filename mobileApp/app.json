@@ -8,7 +8,6 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "icon": "./assets/icon.png",
-
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -16,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.nims.collahub"
+      "bundleIdentifier": "com.nims.collahub",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.nims.collahub",
@@ -40,7 +42,6 @@
     },
     "web": {
       "output": "static"
-      
     },
     "plugins": [
       "expo-router",
@@ -54,14 +55,14 @@
         }
       ],
       "expo-video",
-     [
-  "expo-media-library",
-  {
-    "photosPermission": "Allow CollaHub to save your ID Card.",
-    "savePhotosPermission": "Allow CollaHub to save your ID Card.",
-    "isAccessMediaLocationEnabled": false 
-  }
-],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow CollaHub to save your ID Card.",
+          "savePhotosPermission": "Allow CollaHub to save your ID Card.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
       [
         "expo-image-picker",
         {
@@ -72,7 +73,6 @@
       "expo-web-browser",
       "@react-native-community/datetimepicker"
     ],
-    
     "updates": {
       "url": "https://u.expo.dev/666def6a-0a50-4366-b338-eb29dd5d48f3",
       "enabled": true,

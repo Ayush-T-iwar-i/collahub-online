@@ -1,10 +1,4 @@
-﻿// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// admin-biometric.js  â†’  app/admin/biometric.js
-//
-// Live gate attendance dashboard
-// Essl device se aane wale real-time punch logs
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
+﻿
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable,
@@ -18,9 +12,6 @@ import API from "../../services/api";
 
 const IS_WEB = Platform.OS === "web";
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  Helpers
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fmtTime = (iso) => {
   if (!iso) return "â€”";
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
@@ -32,9 +23,6 @@ const fmtDate = (iso) => {
 const initials = (name = "") =>
   name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  Stat Card
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const StatCard = ({ icon, label, value, color }) => (
   <LinearGradient colors={[color + "18", color + "06"]}
     style={[styles.statCard, { borderColor: color + "30" }]}>
@@ -46,11 +34,8 @@ const StatCard = ({ icon, label, value, color }) => (
   </LinearGradient>
 );
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-//  Log Row
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LogRow = ({ item, onEnroll }) => {
-  const isIn  = item.punchType === "CheckIn";
+  const isIn = item.punchType === "CheckIn";
   const color = isIn ? "#34d399" : "#f87171";
 
   return (
@@ -106,42 +91,39 @@ const LogRow = ({ item, onEnroll }) => {
   );
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  MAIN SCREEN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 export default function BiometricGate() {
   const router = useRouter();
 
-  const [logs,        setLogs]        = useState([]);
-  const [stats,       setStats]       = useState(null);
-  const [loading,     setLoading]     = useState(true);
-  const [refreshing,  setRefreshing]  = useState(false);
-  const [filter,      setFilter]      = useState("all"); // all | in | out | unmatched
-  const [search,      setSearch]      = useState("");
+  const [logs, setLogs] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState("all"); // all | in | out | unmatched
+  const [search, setSearch] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
   // Enroll modal
-  const [enrollModal,  setEnrollModal]  = useState(false);
-  const [enrollLog,    setEnrollLog]    = useState(null);
-  const [enrollInput,  setEnrollInput]  = useState("");
-  const [enrollLoading,setEnrollLoading]= useState(false);
+  const [enrollModal, setEnrollModal] = useState(false);
+  const [enrollLog, setEnrollLog] = useState(null);
+  const [enrollInput, setEnrollInput] = useState("");
+  const [enrollLoading, setEnrollLoading] = useState(false);
 
   // Manual pull modal
-  const [pullModal,   setPullModal]   = useState(false);
-  const [deviceIp,    setDeviceIp]    = useState("192.168.1.100");
-  const [pulling,     setPulling]     = useState(false);
+  const [pullModal, setPullModal] = useState(false);
+  const [deviceIp, setDeviceIp] = useState("192.168.1.100");
+  const [pulling, setPulling] = useState(false);
 
   const intervalRef = useRef(null);
 
-  // â”€â”€ Fetch logs â”€â”€
   const fetchLogs = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
       const params = { limit: 100 };
-      if (filter === "in")        params.punchType = "CheckIn";
-      if (filter === "out")       params.punchType = "CheckOut";
-      if (filter === "unmatched") params.matched   = false;
+      if (filter === "in") params.punchType = "CheckIn";
+      if (filter === "out") params.punchType = "CheckOut";
+      if (filter === "unmatched") params.matched = false;
 
       const res = await API.get("/biometric/logs", { params });
       setLogs(res.data?.logs || []);
@@ -168,14 +150,13 @@ export default function BiometricGate() {
     return () => clearInterval(intervalRef.current);
   }, [autoRefresh, fetchLogs]);
 
-  // â”€â”€ Enroll â”€â”€
   const handleEnroll = async () => {
     if (!enrollInput.trim()) { Alert.alert("Error", "Enter Student ID"); return; }
     setEnrollLoading(true);
     try {
       const res = await API.post("/biometric/enroll", {
         deviceUserId: enrollLog.deviceUserId,
-        studentId:    enrollInput.trim().toUpperCase(),
+        studentId: enrollInput.trim().toUpperCase(),
       });
       Alert.alert("âœ… Done!", res.data.message);
       setEnrollModal(false);
@@ -188,7 +169,6 @@ export default function BiometricGate() {
     }
   };
 
-  // â”€â”€ Manual Pull â”€â”€
   const handlePull = async () => {
     if (!deviceIp.trim()) { Alert.alert("Error", "Device IP daalo"); return; }
     setPulling(true);
@@ -204,7 +184,7 @@ export default function BiometricGate() {
     }
   };
 
-  // â”€â”€ Filtered list â”€â”€
+
   const filtered = logs.filter(l => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -220,7 +200,6 @@ export default function BiometricGate() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#070d1a" />
 
-      {/* â”€â”€ Header â”€â”€ */}
       <LinearGradient colors={["#070d1a", "#0b1a30"]} style={styles.header}>
         <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace("/admin/dashboard")} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
@@ -242,18 +221,18 @@ export default function BiometricGate() {
         </Pressable>
       </LinearGradient>
 
-      {/* â”€â”€ Stats Row â”€â”€ */}
+
       {stats && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.statsRow}>
-          <StatCard icon="people-outline"       label="Total Aaj"   value={stats.totalToday}    color="#00c6ff" />
-          <StatCard icon="enter-outline"         label="Check Ins"   value={stats.checkInsToday} color="#34d399" />
-          <StatCard icon="checkmark-circle"      label="Matched"     value={stats.matchedToday}  color="#a78bfa" />
-          <StatCard icon="alert-circle-outline"  label="Unmatched"   value={stats.unmatched}     color="#f87171" />
+          <StatCard icon="people-outline" label="Total Aaj" value={stats.totalToday} color="#00c6ff" />
+          <StatCard icon="enter-outline" label="Check Ins" value={stats.checkInsToday} color="#34d399" />
+          <StatCard icon="checkmark-circle" label="Matched" value={stats.matchedToday} color="#a78bfa" />
+          <StatCard icon="alert-circle-outline" label="Unmatched" value={stats.unmatched} color="#f87171" />
         </ScrollView>
       )}
 
-      {/* â”€â”€ Search â”€â”€ */}
+
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={15} color="#374151" />
@@ -270,18 +249,17 @@ export default function BiometricGate() {
         </Pressable>
       </View>
 
-      {/* â”€â”€ Filter Chips â”€â”€ */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}>
         {[
-          { key: "all",       label: "All",       color: "#00c6ff" },
-          { key: "in",        label: "Check In",  color: "#34d399" },
-          { key: "out",       label: "Check Out", color: "#f87171" },
+          { key: "all", label: "All", color: "#00c6ff" },
+          { key: "in", label: "Check In", color: "#34d399" },
+          { key: "out", label: "Check Out", color: "#f87171" },
           { key: "unmatched", label: "Unmatched", color: "#f59e0b" },
         ].map(f => (
           <Pressable key={f.key} onPress={() => setFilter(f.key)}
             style={[styles.chip,
-              filter === f.key && { backgroundColor: f.color + "18", borderColor: f.color + "60" }]}>
+            filter === f.key && { backgroundColor: f.color + "18", borderColor: f.color + "60" }]}>
             <Text style={[styles.chipText, filter === f.key && { color: f.color }]}>
               {f.label}
             </Text>
@@ -291,7 +269,6 @@ export default function BiometricGate() {
 
       <Text style={styles.countText}>{filtered.length} entries</Text>
 
-      {/* â”€â”€ Log List â”€â”€ */}
       {loading
         ? <ActivityIndicator size="large" color="#00c6ff" style={{ marginTop: 40 }} />
         : (
@@ -316,7 +293,6 @@ export default function BiometricGate() {
         )
       }
 
-      {/* â•â•â• ENROLL MODAL â•â•â• */}
       <Modal visible={enrollModal} transparent animationType="slide">
         <View style={styles.overlay}>
           <View style={styles.modal}>
@@ -355,7 +331,6 @@ export default function BiometricGate() {
         </View>
       </Modal>
 
-      {/* â•â•â• MANUAL PULL MODAL â•â•â• */}
       <Modal visible={pullModal} transparent animationType="slide">
         <View style={styles.overlay}>
           <View style={styles.modal}>
@@ -390,66 +365,66 @@ export default function BiometricGate() {
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: "#070d1a" },
+  container: { flex: 1, backgroundColor: "#070d1a" },
 
   // Header
-  header:         { flexDirection: "row", alignItems: "center", paddingTop: 52, paddingBottom: 14, paddingHorizontal: 16, gap: 10 },
-  headerBtn:      { width: 38, height: 38, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
-  headerTitle:    { color: "#fff", fontSize: 17, fontWeight: "800" },
-  headerSub:      { color: "#374151", fontSize: 11, marginTop: 1 },
+  header: { flexDirection: "row", alignItems: "center", paddingTop: 52, paddingBottom: 14, paddingHorizontal: 16, gap: 10 },
+  headerBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  headerTitle: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  headerSub: { color: "#374151", fontSize: 11, marginTop: 1 },
 
   // Stats
-  statsRow:       { paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
-  statCard:       { borderRadius: 16, padding: 14, alignItems: "center", minWidth: 90, borderWidth: 1, gap: 6 },
-  statIcon:       { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center" },
-  statVal:        { fontSize: 20, fontWeight: "900" },
-  statLabel:      { color: "#374151", fontSize: 10, fontWeight: "600" },
+  statsRow: { paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
+  statCard: { borderRadius: 16, padding: 14, alignItems: "center", minWidth: 90, borderWidth: 1, gap: 6 },
+  statIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  statVal: { fontSize: 20, fontWeight: "900" },
+  statLabel: { color: "#374151", fontSize: 10, fontWeight: "600" },
 
   // Search
-  searchRow:      { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 10, marginBottom: 10 },
-  searchBox:      { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#0f1b2d", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
-  searchInput:    { flex: 1, color: "#fff", fontSize: 13 },
-  refreshBtn:     { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(0,198,255,0.08)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(0,198,255,0.2)" },
+  searchRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 10, marginBottom: 10 },
+  searchBox: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#0f1b2d", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  searchInput: { flex: 1, color: "#fff", fontSize: 13 },
+  refreshBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(0,198,255,0.08)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(0,198,255,0.2)" },
 
   // Filter chips
-  filterRow:      { paddingHorizontal: 16, gap: 8, marginBottom: 8 },
-  chip:           { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)" },
-  chipText:       { color: "#374151", fontSize: 12, fontWeight: "600" },
-  countText:      { color: "#1f2937", fontSize: 11, paddingHorizontal: 16, marginBottom: 6 },
+  filterRow: { paddingHorizontal: 16, gap: 8, marginBottom: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)" },
+  chipText: { color: "#374151", fontSize: 12, fontWeight: "600" },
+  countText: { color: "#1f2937", fontSize: 11, paddingHorizontal: 16, marginBottom: 6 },
 
   // Log rows
-  logRow:         { flexDirection: "row", alignItems: "center", backgroundColor: "#0f1b2d", borderRadius: 14, marginBottom: 8, padding: 12, gap: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.05)" },
-  logAvatar:      { width: 42, height: 42, borderRadius: 21, justifyContent: "center", alignItems: "center" },
-  logAvatarText:  { fontSize: 14, fontWeight: "800" },
-  logInfo:        { flex: 1 },
-  logName:        { color: "#fff", fontSize: 13, fontWeight: "700" },
-  logMeta:        { color: "#64748b", fontSize: 11, marginTop: 2 },
-  logSub:         { color: "#374151", fontSize: 10, marginTop: 1 },
-  logRight:       { alignItems: "flex-end", gap: 4 },
-  punchBadge:     { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
+  logRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#0f1b2d", borderRadius: 14, marginBottom: 8, padding: 12, gap: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.05)" },
+  logAvatar: { width: 42, height: 42, borderRadius: 21, justifyContent: "center", alignItems: "center" },
+  logAvatarText: { fontSize: 14, fontWeight: "800" },
+  logInfo: { flex: 1 },
+  logName: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  logMeta: { color: "#64748b", fontSize: 11, marginTop: 2 },
+  logSub: { color: "#374151", fontSize: 10, marginTop: 1 },
+  logRight: { alignItems: "flex-end", gap: 4 },
+  punchBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
   punchBadgeText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
-  logTime:        { color: "#94a3b8", fontSize: 12, fontWeight: "600" },
-  modeBadge:      { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  modeBadgeText:  { fontSize: 9, fontWeight: "700" },
-  enrollBtn:      { backgroundColor: "rgba(245,158,11,0.15)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "rgba(245,158,11,0.4)" },
-  enrollBtnText:  { color: "#f59e0b", fontSize: 10, fontWeight: "700" },
+  logTime: { color: "#94a3b8", fontSize: 12, fontWeight: "600" },
+  modeBadge: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  modeBadgeText: { fontSize: 9, fontWeight: "700" },
+  enrollBtn: { backgroundColor: "rgba(245,158,11,0.15)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "rgba(245,158,11,0.4)" },
+  enrollBtnText: { color: "#f59e0b", fontSize: 10, fontWeight: "700" },
 
   // Empty
-  empty:          { alignItems: "center", paddingTop: 60, gap: 10 },
-  emptyText:      { color: "#374151", fontSize: 15, fontWeight: "700" },
-  emptySub:       { color: "#1f2937", fontSize: 12, textAlign: "center" },
+  empty: { alignItems: "center", paddingTop: 60, gap: 10 },
+  emptyText: { color: "#374151", fontSize: 15, fontWeight: "700" },
+  emptySub: { color: "#1f2937", fontSize: 12, textAlign: "center" },
 
   // Modal
-  overlay:        { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" },
-  modal:          { backgroundColor: "#0f1b2d", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  modalTitle:     { color: "#fff", fontSize: 17, fontWeight: "800", marginBottom: 12 },
-  modalInfo:      { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(245,158,11,0.08)", padding: 12, borderRadius: 12, marginBottom: 10 },
-  modalInfoText:  { color: "#94a3b8", fontSize: 13 },
-  modalSub:       { color: "#374151", fontSize: 12, marginBottom: 16, lineHeight: 18 },
-  modalInput:     { backgroundColor: "#070d1a", color: "#fff", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 16 },
-  modalBtns:      { flexDirection: "row", gap: 12 },
-  cancelBtn:      { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center" },
-  cancelBtnText:  { color: "#64748b", fontWeight: "700" },
-  confirmBtn:     { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: "#00c6ff", alignItems: "center" },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" },
+  modal: { backgroundColor: "#0f1b2d", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  modalTitle: { color: "#fff", fontSize: 17, fontWeight: "800", marginBottom: 12 },
+  modalInfo: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(245,158,11,0.08)", padding: 12, borderRadius: 12, marginBottom: 10 },
+  modalInfoText: { color: "#94a3b8", fontSize: 13 },
+  modalSub: { color: "#374151", fontSize: 12, marginBottom: 16, lineHeight: 18 },
+  modalInput: { backgroundColor: "#070d1a", color: "#fff", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 16 },
+  modalBtns: { flexDirection: "row", gap: 12 },
+  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center" },
+  cancelBtnText: { color: "#64748b", fontWeight: "700" },
+  confirmBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: "#00c6ff", alignItems: "center" },
   confirmBtnText: { color: "#000", fontWeight: "800", fontSize: 14 },
 });
