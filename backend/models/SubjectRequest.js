@@ -38,4 +38,4 @@ const subjectRequestSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-module.exports = mongoose.model("SubjectRequest", subjectRequestSchema);
+const SubjectRequest = require("../models/SubjectRequest");
