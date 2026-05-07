@@ -36,14 +36,199 @@ router.get("/my", verifyToken, isTeacher, async (req, res) => {
   }
 });
 
-// ── Teacher: Accepted subjects (for attendance) ──
+// ── Teacher: Accepted subjects + shared subjects (for attendance) ──
 router.get("/my-subjects", verifyToken, isTeacher, async (req, res) => {
   try {
-    const subjects = await SubjectRequest.find({
+    const now = new Date();
+
+    // 1. Own accepted subjects
+    const ownSubjects = await SubjectRequest.find({
       teacherId: req.user.id,
       status:    "accepted",
     }).sort({ createdAt: -1 });
-    res.json({ success: true, subjects });
+
+    // 2. Subjects shared with this teacher — find all where sharedWith has this teacher
+    const sharedSubjects = await SubjectRequest.find({
+      status: "accepted",
+      sharedWith: {
+        $elemMatch: {
+          teacherId: req.user.id,
+          expiresAt: { $gt: now }, // not expired
+        },
+      },
+    });
+
+    // Build shared subjects list — only include the specific shared slots
+    const sharedFormatted = [];
+    sharedSubjects.forEach(sub => {
+      const activeShares = sub.sharedWith.filter(
+        s => s.teacherId.toString() === req.user.id.toString() && new Date(s.expiresAt) > now
+      );
+      activeShares.forEach(share => {
+        sharedFormatted.push({
+          ...sub.toObject(),
+          _id:          sub._id,
+          isShared:     true,               // ✅ flag for frontend
+          originalTeacherName: sub.teacherName,
+          // Override timetable to show only shared slot
+          timetable: sub.timetable.filter(
+            t => t.day === share.day && t.startTime === share.startTime
+          ),
+          sharedSlot: {
+            day:       share.day,
+            startTime: share.startTime,
+            endTime:   share.endTime,
+            expiresAt: share.expiresAt,
+          },
+        });
+      });
+    });
+
+    res.json({
+      success:  true,
+      subjects: [...ownSubjects, ...sharedFormatted],
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ── Teacher: Get teachers in same college+dept for sharing ──
+router.get("/teachers-list", verifyToken, isTeacher, async (req, res) => {
+  try {
+    const me = await User.findById(req.user.id).select("college department");
+    const teachers = await User.find({
+      role:    "teacher",
+      college: me.college,          // ✅ same college — sabhi departments
+      _id:     { $ne: req.user.id }, // exclude self
+    }).select("name teacherId email department _id").sort({ department: 1, name: 1 });
+    res.json({ success: true, teachers });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ── Teacher: Share a class slot with another teacher ──
+// POST /subject-requests/:id/share
+// Body: { teacherId, teacherName, day, startTime, endTime, expiresAt }
+router.post("/:id/share", verifyToken, isTeacher, async (req, res) => {
+  try {
+    const subject = await SubjectRequest.findOne({
+      _id:       req.params.id,
+      teacherId: req.user.id,   // only owner can share
+      status:    "accepted",
+    });
+    if (!subject) {
+      return res.status(404).json({ success: false, message: "Subject not found or not yours" });
+    }
+
+    const { teacherId, teacherName, day, startTime, endTime, expiresAt } = req.body;
+    if (!teacherId || !day || !startTime) {
+      return res.status(400).json({ success: false, message: "teacherId, day, startTime required" });
+    }
+
+    // Verify target teacher exists
+    const targetTeacher = await User.findById(teacherId).select("name role");
+    if (!targetTeacher || targetTeacher.role !== "teacher") {
+      return res.status(404).json({ success: false, message: "Target teacher not found" });
+    }
+
+    // Check if this slot exists in timetable
+    const slotExists = subject.timetable.some(
+      t => t.day === day && t.startTime === startTime
+    );
+    if (!slotExists) {
+      return res.status(400).json({ success: false, message: "This time slot is not in timetable" });
+    }
+
+    // Remove existing share for same teacher+slot (avoid duplicates)
+    subject.sharedWith = subject.sharedWith.filter(
+      s => !(s.teacherId.toString() === teacherId && s.day === day && s.startTime === startTime)
+    );
+
+    // Calculate expiresAt — default: end of today's class time
+    let expiry = expiresAt ? new Date(expiresAt) : null;
+    if (!expiry) {
+      // Default: expires when class ends today
+      const today = new Date();
+      const [endH, endM] = (endTime || "23:59").split(":").map(Number);
+      expiry = new Date(today.getFullYear(), today.getMonth(), today.getDate(), endH, endM, 0);
+      // If already past, set to end of day
+      if (expiry < new Date()) {
+        expiry = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      }
+    }
+
+    subject.sharedWith.push({
+      teacherId:   targetTeacher._id,
+      teacherName: targetTeacher.name,
+      day,
+      startTime,
+      endTime:     endTime || "",
+      expiresAt:   expiry,
+    });
+
+    await subject.save();
+
+    // Send notification to substitute teacher
+    try {
+      const Notification = require("../models/Notification");
+      await Notification.create({
+        userId:  teacherId,
+        title:   "Class Assigned to You",
+        message: `${subject.teacherName} has shared "${subject.subjectName}" class (${day} ${startTime}) with you. Please mark attendance.`,
+        type:    "class_share",
+        isRead:  false,
+      });
+    } catch (e) {
+      console.log("Notification error:", e.message);
+    }
+
+    res.json({
+      success: true,
+      message: `Class shared with ${targetTeacher.name} until ${expiry.toLocaleTimeString("en-IN")}`,
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ── Teacher: Unshare / remove a shared class ──
+// DELETE /subject-requests/:id/share/:shareId
+router.delete("/:id/share/:shareId", verifyToken, isTeacher, async (req, res) => {
+  try {
+    const subject = await SubjectRequest.findOne({
+      _id:       req.params.id,
+      teacherId: req.user.id,
+      status:    "accepted",
+    });
+    if (!subject) {
+      return res.status(404).json({ success: false, message: "Subject not found" });
+    }
+
+    subject.sharedWith = subject.sharedWith.filter(
+      s => s._id.toString() !== req.params.shareId
+    );
+    await subject.save();
+
+    res.json({ success: true, message: "Share removed" });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ── Teacher: Get share status for a subject ──
+router.get("/:id/shares", verifyToken, isTeacher, async (req, res) => {
+  try {
+    const subject = await SubjectRequest.findOne({
+      _id:       req.params.id,
+      teacherId: req.user.id,
+    });
+    if (!subject) return res.status(404).json({ success: false, message: "Not found" });
+
+    const now = new Date();
+    const activeShares = subject.sharedWith.filter(s => new Date(s.expiresAt) > now);
+    res.json({ success: true, shares: activeShares });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
@@ -291,7 +476,7 @@ router.post("/", verifyToken, isTeacher, async (req, res) => {
   }
 });
 
-// ── Admin: Accept + Assign Timetable (STRONG CONFLICT CHECK) ──
+// ── Admin: Accept + Assign Timetable ──
 router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
   try {
     const request = await SubjectRequest.findById(req.params.id);
@@ -301,48 +486,36 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
 
     if (timetable && timetable.length > 0) {
       for (const slot of timetable) {
-
-        // ✅ FIX 1: Teacher conflict — same teacher, same day+time in SubjectRequest
         const teacherConflict = await SubjectRequest.findOne({
           _id:       { $ne: request._id },
           teacherId: request.teacherId,
           status:    "accepted",
-          timetable: {
-            $elemMatch: { day: slot.day, startTime: slot.startTime },
-          },
+          timetable: { $elemMatch: { day: slot.day, startTime: slot.startTime } },
         });
         if (teacherConflict) {
           return res.status(400).json({
             success: false,
-            message: `Teacher conflict: ${request.teacherName} already has "${teacherConflict.subjectName}" on ${slot.day} at ${slot.startTime}. Please select a different time slot.`,
+            message: `Teacher conflict: ${request.teacherName} already has "${teacherConflict.subjectName}" on ${slot.day} at ${slot.startTime}.`,
           });
         }
 
-        // ✅ FIX 2: Also check Timetable model (teacher self-set schedule)
         const timetableConflict = await Timetable.findOne({
           teacherId: request.teacherId,
-          slots: {
-            $elemMatch: { day: slot.day, startTime: slot.startTime },
-          },
+          slots: { $elemMatch: { day: slot.day, startTime: slot.startTime } },
         });
         if (timetableConflict) {
           return res.status(400).json({
             success: false,
-            message: `Schedule conflict: ${request.teacherName} already has a class on ${slot.day} at ${slot.startTime}. Please select a different time slot.`,
+            message: `Schedule conflict: ${request.teacherName} already has a class on ${slot.day} at ${slot.startTime}.`,
           });
         }
 
-        // ✅ FIX 3: Room conflict
         if (slot.room && slot.room.trim()) {
           const roomConflict = await SubjectRequest.findOne({
             _id:    { $ne: request._id },
             status: "accepted",
             timetable: {
-              $elemMatch: {
-                day:       slot.day,
-                startTime: slot.startTime,
-                room:      slot.room.trim(),
-              },
+              $elemMatch: { day: slot.day, startTime: slot.startTime, room: slot.room.trim() },
             },
           });
           if (roomConflict) {
@@ -353,9 +526,6 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
           }
         }
 
-        
-
-        // ✅ FIX 4: Same batch + same day + same time — students ka timetable clash
         const batchConflict = await SubjectRequest.findOne({
           _id:           { $ne: request._id },
           college:       request.college,
@@ -363,13 +533,8 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
           semester:      request.semester,
           admissionYear: request.admissionYear,
           status:        "accepted",
-          $or: [
-            { section: "All" },
-            { section: request.section },
-          ],
-          timetable: {
-            $elemMatch: { day: slot.day, startTime: slot.startTime },
-          },
+          $or: [{ section: "All" }, { section: request.section }],
+          timetable: { $elemMatch: { day: slot.day, startTime: slot.startTime } },
         });
         if (batchConflict) {
           return res.status(400).json({
@@ -380,15 +545,11 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
       }
     }
 
-    // All checks passed — save
     request.status    = "accepted";
     request.adminNote = "";
-    if (timetable && timetable.length > 0) {
-      request.timetable = timetable;
-    }
+    if (timetable && timetable.length > 0) request.timetable = timetable;
     await request.save();
 
-    // Also save to Timetable model
     if (timetable && timetable.length > 0 && request.subjectId) {
       await Timetable.findOneAndUpdate(
         { subjectId: request.subjectId, teacherId: request.teacherId },
@@ -400,30 +561,24 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
           semester:      request.semester,
           admissionYear: request.admissionYear,
           slots: timetable.map((s, i) => ({
-            day:        s.day,
-            startTime:  s.startTime,
-            endTime:    s.endTime,
-            room:       s.room || "",
-            slotNumber: i + 1,
+            day: s.day, startTime: s.startTime, endTime: s.endTime,
+            room: s.room || "", slotNumber: i + 1,
           })),
         },
         { upsert: true, new: true }
       );
     }
 
-    // ✅ FIX 5: Send notification to teacher
     try {
       const Notification = require("../models/Notification");
       await Notification.create({
-        userId:   request.teacherId,
-        title:    "Subject Request Accepted",
-        message:  `Your request for "${request.subjectName}" has been accepted. Timetable has been assigned.`,
-        type:     "subject_request",
-        isRead:   false,
+        userId:  request.teacherId,
+        title:   "Subject Request Accepted",
+        message: `Your request for "${request.subjectName}" has been accepted. Timetable has been assigned.`,
+        type:    "subject_request",
+        isRead:  false,
       });
-    } catch (notifErr) {
-      console.log("Notification create error (non-critical):", notifErr.message);
-    }
+    } catch (e) { console.log("Notification error:", e.message); }
 
     res.json({ success: true, message: "Request accepted and timetable assigned!", request });
   } catch (e) {
@@ -441,7 +596,6 @@ router.put("/:id/reject", verifyToken, isAdmin, async (req, res) => {
     );
     if (!request) return res.status(404).json({ success: false, message: "Request not found" });
 
-    // ✅ Send notification to teacher on rejection too
     try {
       const Notification = require("../models/Notification");
       await Notification.create({
@@ -451,9 +605,7 @@ router.put("/:id/reject", verifyToken, isAdmin, async (req, res) => {
         type:    "subject_request",
         isRead:  false,
       });
-    } catch (notifErr) {
-      console.log("Notification create error (non-critical):", notifErr.message);
-    }
+    } catch (e) { console.log("Notification error:", e.message); }
 
     res.json({ success: true, message: "Request rejected", request });
   } catch (e) {
@@ -462,12 +614,36 @@ router.put("/:id/reject", verifyToken, isAdmin, async (req, res) => {
 });
 
 // ── Teacher: Students for a subject ──
+// NOTE: Also allow substitute teacher to access students
 router.get("/:id/students", verifyToken, isTeacher, async (req, res) => {
   try {
-    const subject = await SubjectRequest.findById(req.params.id);
-    if (!subject || subject.status !== "accepted") {
-      return res.status(404).json({ success: false, message: "Accepted subject not found" });
+    const now = new Date();
+
+    // Check if own subject OR shared with this teacher
+    let subject = await SubjectRequest.findOne({
+      _id:       req.params.id,
+      teacherId: req.user.id,
+      status:    "accepted",
+    });
+
+    // If not own, check if shared
+    if (!subject) {
+      subject = await SubjectRequest.findOne({
+        _id:    req.params.id,
+        status: "accepted",
+        sharedWith: {
+          $elemMatch: {
+            teacherId: req.user.id,
+            expiresAt: { $gt: now },
+          },
+        },
+      });
     }
+
+    if (!subject) {
+      return res.status(404).json({ success: false, message: "Subject not found or access denied" });
+    }
+
     const filter = {
       role:          "student",
       college:       subject.college,
@@ -475,12 +651,12 @@ router.get("/:id/students", verifyToken, isTeacher, async (req, res) => {
       semester:      subject.semester,
       admissionYear: subject.admissionYear,
     };
-    if (subject.section && subject.section !== "All") {
-      filter.section = subject.section;
-    }
+    if (subject.section && subject.section !== "All") filter.section = subject.section;
+
     const students = await User.find(filter)
       .select("-password -refreshToken -otp -otpExpire")
       .sort({ name: 1 });
+
     res.json({
       success:  true,
       students,

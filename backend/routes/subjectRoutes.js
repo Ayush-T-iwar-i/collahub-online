@@ -1,57 +1,55 @@
-const express = require("express");
-const router  = express.Router();
-const Subject = require("../models/Subject");
+const mongoose = require("mongoose");
 
-const {
-  createSubject,
-  getSubjects,
-  getSubjectsForTeacher,
-  getSubjectsForStudent,
-  getSubjectById,
-  updateSubject,
-  deleteSubject,
-} = require("../controllers/subjectController");
+const timetableSlotSchema = new mongoose.Schema({
+  day:       { type: String, enum: ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"] },
+  startTime: { type: String },
+  endTime:   { type: String },
+  room:      { type: String, default: "" },
+}, { _id: false });
 
-const {
-  verifyToken,
-  isAdmin,
-  isTeacher,
-} = require("../middleware/authMiddleware");
+// ✅ NEW — class sharing schema
+const sharedWithSchema = new mongoose.Schema({
+  teacherId:   { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  teacherName: { type: String, required: true },
+  day:         { type: String },       // which day shared
+  startTime:   { type: String },       // which slot shared
+  endTime:     { type: String },
+  expiresAt:   { type: Date },         // auto-remove after this time
+  sharedAt:    { type: Date, default: Date.now },
+}, { _id: true });
 
-// ═══════════════════════════════════════════
-// ⚠️  IMPORTANT: Specific routes MUST come
-//     before /:id to avoid conflicts
-// ═══════════════════════════════════════════
+const subjectRequestSchema = new mongoose.Schema({
+  // ── Teacher info ──
+  teacherId:   { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  teacherName: { type: String, required: true },
 
-// ── ADMIN: Create subject ──
-// POST /subjects/create
-router.post("/create", verifyToken, isAdmin, createSubject);
+  // ── Subject info ──
+  subjectName: { type: String, required: true },
+  subjectCode: { type: String, default: "" },
+  subjectId:   { type: mongoose.Schema.Types.ObjectId, ref: "Subject", default: null },
+  subjectType: { type: String, enum: ["Theory","Lab","Both"], default: "Theory" },
 
-// ── ADMIN: Get all subjects (with optional filters) ──
-// GET /subjects
-// GET /subjects?college=NIET&department=CSE&semester=2
-router.get("/", verifyToken, getSubjects);
+  // ── Target class ──
+  college:       { type: String, required: true },
+  department:    { type: String, required: true },
+  semester:      { type: Number, required: true },
+  admissionYear: { type: String, required: true },
+  section:       { type: String, default: "All" },
 
-// ── TEACHER: Subjects matching college + department ──
-// GET /subjects/for-teacher
-// ✅ 2-field match — teacher ke college + department se filter
-router.get("/for-teacher", verifyToken, isTeacher, getSubjectsForTeacher);
+  // ── Admin assigned timetable ──
+  timetable: [timetableSlotSchema],
 
-// ── STUDENT: Subjects matching college + department + semester ──
-// GET /subjects/for-student
-// ✅ 3-field match — student ke college + dept + semester se filter
-router.get("/for-student", verifyToken, getSubjectsForStudent);
+  // ── Status ──
+  status: {
+    type:    String,
+    enum:    ["pending", "accepted", "rejected"],
+    default: "pending",
+  },
+  adminNote: { type: String, default: "" },
 
-// ── ADMIN: Update subject ──
-// PUT /subjects/:id
-router.put("/:id", verifyToken, isAdmin, updateSubject);
+  // ✅ NEW — class sharing
+  sharedWith: [sharedWithSchema],
 
-// ── ADMIN: Delete subject ──
-// DELETE /subjects/:id
-router.delete("/:id", verifyToken, isAdmin, deleteSubject);
+}, { timestamps: true });
 
-// ── GET by ID (must be last) ──
-// GET /subjects/:id
-router.get("/:id", verifyToken, getSubjectById);
-
-module.exports = router;
+module.exports = mongoose.model("SubjectRequest", subjectRequestSchema);

@@ -1,5 +1,5 @@
 ﻿ #############COLLAHUB####################
-# ðŸŽ“ COLLAHUB, COLLAHUB â€” College Management & Attendance App
+#  COLLAHUB, COLLAHUB College Management & Attendance App
 
 <div align="center">
 
@@ -9,7 +9,7 @@
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-4ade80?style=flat-square&logo=mongodb)
 ![JWT](https://img.shields.io/badge/Auth-JWT-f59e0b?style=flat-square)
 
-**A full-stack mobile application for managing college attendance, results, assignments, timetable, and notices â€” across three roles: Student, Teacher, and Admin.**
+**A full-stack mobile application for managing college attendance, results, assignments, timetable, and notices across three roles: Student, Teacher, and Admin.**
 
 </div>
 
@@ -38,7 +38,7 @@
 
 ## ðŸŒŸ Project Overview
 
-**COLLAHUB** is a comprehensive college management system that digitizes the entire academic workflow of an institution. It supports three distinct user roles â€” Student, Teacher, and Admin â€” each with their own dedicated interface, navigation, and features.
+**COLLAHUB** is a comprehensive college management system that digitizes the entire academic workflow of an institution. It supports three distinct user roles - Student, Teacher, and Admin each with their own dedicated interface, navigation, and features.
 
 The application is built with a **dark-themed glassmorphism UI**, role-specific color schemes, smooth animations, and a clean component architecture.
 
@@ -51,9 +51,9 @@ The application is built with a **dark-themed glassmorphism UI**, role-specific 
 
 ---
 
-## âœ¨ Features by Role
+## Features by Role
 
-### ðŸ§‘â€ðŸŽ“ Student
+###  Student
 | Feature | Details |
 |---------|---------|
 | Email OTP Registration | Secure 3-step signup: Email â†’ OTP â†’ Fill Details |
@@ -66,7 +66,7 @@ The application is built with a **dark-themed glassmorphism UI**, role-specific 
 | Notice Board | View college-wide announcements |
 | Forgot Password | 3-step OTP-based password reset |
 
-### ðŸ‘¨â€ðŸ« Teacher
+###  Teacher
 | Feature | Details |
 |---------|---------|
 | Email OTP Registration | Secure signup with email verification |
@@ -77,7 +77,7 @@ The application is built with a **dark-themed glassmorphism UI**, role-specific 
 | Notice Board | View college announcements |
 | Forgot Password | 3-step OTP password reset |
 
-### ðŸ›¡ï¸ Admin
+### Admin
 | Feature | Details |
 |---------|---------|
 | Secret Key Registration | Protected admin registration |
@@ -785,7 +785,7 @@ const API = axios.create({
 - [ ] ðŸŒ™ Dark / Light theme toggle
 - [ ] ðŸŒ Multi-language support (Hindi / English)
 - [ ] ðŸ“ˆ Analytics dashboard with visual charts (Recharts / Victory)
-- [ ] ðŸŽ“ Automated certificate generation on semester completion
+- [ ]  Automated certificate generation on semester completion
 
 ---
 

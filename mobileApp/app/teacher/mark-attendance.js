@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, FlatList, Pressable,
   ActivityIndicator, StatusBar, RefreshControl,
-  Alert, Image, Modal, ScrollView,
+  Alert, Image, Modal, ScrollView, TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,25 +24,23 @@ const isTheoryType = (sub) => {
   const t=(sub?.subjectType||"theory").toLowerCase(); return t==="theory";
 };
 
-// ── Date helpers ──────────────────────────────────────────
-const fmtDate     = (d)    => d.toISOString().split("T")[0];
-const displayDate = (s)    => {
+// ── Date helpers ──
+const fmtDate     = (d)   => d.toISOString().split("T")[0];
+const displayDate = (s)   => {
   const d = new Date(s+"T00:00:00");
   return d.toLocaleDateString("en-IN",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
 };
-const changeDate  = (s,n)  => { const d=new Date(s+"T00:00:00"); d.setDate(d.getDate()+n); return fmtDate(d); };
-const isToday     = (s)    => fmtDate(new Date())===s;
-const isFuture    = (s)    => s>fmtDate(new Date());
+const changeDate  = (s,n) => { const d=new Date(s+"T00:00:00"); d.setDate(d.getDate()+n); return fmtDate(d); };
+const isToday     = (s)   => fmtDate(new Date())===s;
+const isFuture    = (s)   => s>fmtDate(new Date());
 
-// ── Time helpers ──────────────────────────────────────────
+// ── Time helpers ──
 const timeToMin = (t) => {
   if (!t) return -1;
   const [hh,mm] = t.trim().split(":").map(Number);
   return hh*60+(mm||0);
 };
-const nowMin = () => {
-  const n=new Date(); return n.getHours()*60+n.getMinutes();
-};
+const nowMin = () => { const n=new Date(); return n.getHours()*60+n.getMinutes(); };
 const isCurrentClass = (slot) => {
   if (!slot) return false;
   try {
@@ -59,7 +57,6 @@ const isClassPast = (slot) => {
   } catch { return false; }
 };
 
-// Sort: current → upcoming → past
 const sortByTime = (list) => {
   const cur = list.filter(s=>isCurrentClass(s.timeSlot));
   const upc = list.filter(s=>!isCurrentClass(s.timeSlot)&&!isClassPast(s.timeSlot));
@@ -67,7 +64,6 @@ const sortByTime = (list) => {
   return [...cur,...upc,...pst];
 };
 
-// ── Last 30 days ──────────────────────────────────────────
 const getLast30 = () => {
   const days=[];
   for(let i=0;i<30;i++){
@@ -82,24 +78,33 @@ const LAST30=getLast30();
 
 // ════════════════════════════════════════════════════════
 
-// ── Subject Card ─────────────────────────────────────────
-const SubjectCard=({item,onPress})=>{
+// ── Subject Card ──
+const SubjectCard=({item,onPress,onShare})=>{
   const color=getColor(item.department);
   const short=item.department?.match(/\(([^)]+)\)/)?.[1]||item.department?.split(" ")[0]||"";
   const tl=(item.subjectType||"theory").toUpperCase();
   const tc=tl==="LAB"?"#34d399":tl==="BOTH"?"#a78bfa":"#00c6ff";
   const isCurr=isCurrentClass(item.timeSlot);
   const isPast=!isCurr&&isClassPast(item.timeSlot);
+  const isShared=item.isShared; // ✅ shared class flag
+
   return(
     <Pressable
-      style={[styles.subjectCard,isCurr&&styles.subjectCardNow,isPast&&{opacity:0.5}]}
+      style={[styles.subjectCard,isCurr&&styles.subjectCardNow,isPast&&{opacity:0.5},isShared&&styles.subjectCardShared]}
       onPress={onPress}
     >
-      <LinearGradient colors={isCurr?[color+"40",color+"18"]:["#1a2535","#1a2535"]} style={styles.subjectGrad}>
+      <LinearGradient colors={isCurr?[color+"40",color+"18"]:isShared?["rgba(167,139,250,0.15)","rgba(167,139,250,0.05)"]:["#1a2535","#1a2535"]} style={styles.subjectGrad}>
         {isCurr&&(
           <View style={styles.nowBadge}>
             <View style={styles.nowDot}/>
             <Text style={styles.nowText}>NOW</Text>
+          </View>
+        )}
+        {/* ✅ SHARED badge */}
+        {isShared&&(
+          <View style={styles.sharedBadge}>
+            <Ionicons name="swap-horizontal" size={9} color="#a78bfa"/>
+            <Text style={styles.sharedBadgeText}>SUBSTITUTE</Text>
           </View>
         )}
         <View style={[styles.subjIconBox,{backgroundColor:color+"22"}]}>
@@ -107,6 +112,12 @@ const SubjectCard=({item,onPress})=>{
         </View>
         <View style={{flex:1}}>
           <Text style={styles.subjName} numberOfLines={1}>{item.subjectName}</Text>
+          {/* ✅ Show original teacher if shared */}
+          {isShared&&item.originalTeacherName&&(
+            <Text style={styles.originalTeacher}>
+              <Ionicons name="person-outline" size={10} color="#64748b"/> Originally: {item.originalTeacherName}
+            </Text>
+          )}
           {item.subjectCode?<Text style={styles.subjCode}>{item.subjectCode}</Text>:null}
           <View style={styles.subjMeta}>
             <View style={[styles.mBadge,{backgroundColor:color+"18"}]}>
@@ -124,15 +135,35 @@ const SubjectCard=({item,onPress})=>{
                 <Text style={[styles.mBadgeTxt,isCurr&&{color:"#34d399"}]}>{item.timeSlot}</Text>
               </View>
             )}
+            {/* ✅ Show expiry for shared classes */}
+            {isShared&&item.sharedSlot?.expiresAt&&(
+              <View style={[styles.mBadge,{backgroundColor:"rgba(167,139,250,0.15)"}]}>
+                <Ionicons name="alarm-outline" size={9} color="#a78bfa"/>
+                <Text style={[styles.mBadgeTxt,{color:"#a78bfa"}]}>
+                  Until {new Date(item.sharedSlot.expiresAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={18} color="#374151"/>
+        <View style={{gap:6,alignItems:"center"}}>
+          {/* ✅ Share button — only for own subjects */}
+          {!isShared&&onShare&&(
+            <Pressable
+              style={styles.shareIconBtn}
+              onPress={(e)=>{e.stopPropagation?.();onShare(item);}}
+            >
+              <Ionicons name="swap-horizontal-outline" size={16} color="#a78bfa"/>
+            </Pressable>
+          )}
+          <Ionicons name="chevron-forward" size={18} color="#374151"/>
+        </View>
       </LinearGradient>
     </Pressable>
   );
 };
 
-// ── Student Row ───────────────────────────────────────────
+// ── Student Row ──
 const StudentRow=({item,status,onToggle})=>{
   const color=getColor(item.department);
   const ini=item.name?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"S";
@@ -160,7 +191,7 @@ const StudentRow=({item,status,onToggle})=>{
   );
 };
 
-// ── Date History Modal ────────────────────────────────────
+// ── Date History Modal ──
 const DateModal=({visible,onClose,markedDates,currentDate,onSelect})=>(
   <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <Pressable style={styles.dpOverlay} onPress={onClose}>
@@ -226,6 +257,229 @@ const DateModal=({visible,onClose,markedDates,currentDate,onSelect})=>(
   </Modal>
 );
 
+// ✅ NEW — Share Class Modal
+const ShareModal = ({ visible, subject, onClose }) => {
+  const [teachers,    setTeachers]    = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [sharing,     setSharing]     = useState(false);
+  const [selTeacher,  setSelTeacher]  = useState(null);
+  const [selSlot,     setSelSlot]     = useState(null);
+  const [search,      setSearch]      = useState("");
+  const [activeShares,setActiveShares]= useState([]);
+
+  React.useEffect(() => {
+    if (visible && subject) {
+      loadTeachers();
+      loadActiveShares();
+      setSelTeacher(null);
+      setSelSlot(null);
+      setSearch("");
+    }
+  }, [visible, subject]);
+
+  const loadTeachers = async () => {
+    setLoading(true);
+    try {
+      const r = await API.get("/subject-requests/teachers-list");
+      setTeachers(r.data?.teachers || []);
+    } catch { setTeachers([]); }
+    finally { setLoading(false); }
+  };
+
+  const loadActiveShares = async () => {
+    try {
+      const r = await API.get(`/subject-requests/${subject._id}/shares`);
+      setActiveShares(r.data?.shares || []);
+    } catch { setActiveShares([]); }
+  };
+
+  const handleShare = async () => {
+    if (!selTeacher || !selSlot) {
+      Alert.alert("Select teacher and time slot"); return;
+    }
+    setSharing(true);
+    try {
+      await API.post(`/subject-requests/${subject._id}/share`, {
+        teacherId:   selTeacher._id,
+        teacherName: selTeacher.name,
+        day:         selSlot.day,
+        startTime:   selSlot.startTime,
+        endTime:     selSlot.endTime,
+      });
+      Alert.alert(
+        "Class Shared ✅",
+        `${selTeacher.name} can now mark attendance for ${subject.subjectName} (${selSlot.day} ${selSlot.startTime})`
+      );
+      loadActiveShares();
+      setSelTeacher(null);
+      setSelSlot(null);
+    } catch (e) {
+      Alert.alert("Error", e.response?.data?.message || "Could not share class");
+    } finally { setSharing(false); }
+  };
+
+  const handleRemoveShare = async (shareId) => {
+    try {
+      await API.delete(`/subject-requests/${subject?._id}/share/${shareId}`);
+      setActiveShares(prev => prev.filter(s => s._id !== shareId));
+      Alert.alert("Removed", "Share removed successfully.");
+    } catch (e) {
+      Alert.alert("Error", "Could not remove share");
+    }
+  };
+
+  const filteredTeachers = teachers.filter(t =>
+    !search || t.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const slots = subject?.timetable || [];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.shareOverlay}>
+        <View style={styles.shareSheet}>
+          <View style={styles.dpHandle}/>
+
+          {/* Header */}
+          <View style={styles.shareHeader}>
+            <View style={styles.shareHeaderIcon}>
+              <Ionicons name="swap-horizontal" size={18} color="#a78bfa"/>
+            </View>
+            <View style={{flex:1}}>
+              <Text style={styles.shareTitle}>Share Class</Text>
+              <Text style={styles.shareSub} numberOfLines={1}>{subject?.subjectName}</Text>
+            </View>
+            <Pressable onPress={onClose} style={styles.dpClose}>
+              <Ionicons name="close" size={20} color="#64748b"/>
+            </Pressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom:30}}>
+
+            {/* Active shares */}
+            {activeShares.length > 0 && (
+              <View style={styles.activeSharesBox}>
+                <Text style={styles.shareSection}>CURRENTLY SHARED WITH</Text>
+                {activeShares.map(s => (
+                  <View key={s._id} style={styles.activeShareRow}>
+                    <View style={styles.activeShareLeft}>
+                      <View style={styles.activeShareAvatar}>
+                        <Text style={styles.activeShareAvatarTxt}>
+                          {s.teacherName?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"T"}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text style={styles.activeShareName}>{s.teacherName}</Text>
+                        <Text style={styles.activeShareSlot}>{s.day} · {s.startTime}</Text>
+                        <Text style={styles.activeShareExpiry}>
+                          Expires: {new Date(s.expiresAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}
+                        </Text>
+                      </View>
+                    </View>
+                    <Pressable
+                      style={styles.removeShareBtn}
+                      onPress={() => Alert.alert("Remove Share", `Remove share with ${s.teacherName}?`, [
+                        {text:"Cancel",style:"cancel"},
+                        {text:"Remove",style:"destructive",onPress:()=>handleRemoveShare(s._id)},
+                      ])}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#f87171"/>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Step 1: Select slot */}
+            <Text style={[styles.shareSection,{paddingHorizontal:16,marginTop:16}]}>1. SELECT TIME SLOT TO SHARE</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{paddingHorizontal:16,gap:8,paddingVertical:8}}>
+              {slots.map((slot,i) => {
+                const isSel = selSlot?.day===slot.day && selSlot?.startTime===slot.startTime;
+                return (
+                  <Pressable
+                    key={i}
+                    style={[styles.slotChip, isSel&&styles.slotChipSel]}
+                    onPress={() => setSelSlot(slot)}
+                  >
+                    <Text style={[styles.slotChipDay, isSel&&{color:"#a78bfa"}]}>{slot.day?.slice(0,3)}</Text>
+                    <Text style={[styles.slotChipTime, isSel&&{color:"#fff"}]}>{slot.startTime}</Text>
+                    {slot.room&&<Text style={styles.slotChipRoom}>{slot.room}</Text>}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {/* Step 2: Select teacher */}
+            <Text style={[styles.shareSection,{paddingHorizontal:16,marginTop:8}]}>2. SELECT SUBSTITUTE TEACHER</Text>
+            <View style={styles.searchBarShare}>
+              <Ionicons name="search-outline" size={14} color="#64748b"/>
+              <TextInput
+                style={styles.searchInputShare}
+                placeholder="Search teacher..."
+                placeholderTextColor="#374151"
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
+
+            {loading
+              ? <ActivityIndicator color="#a78bfa" style={{margin:20}}/>
+              : filteredTeachers.map(t => {
+                  const isSel = selTeacher?._id === t._id;
+                  const ini = t.name?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()||"T";
+                  return (
+                    <Pressable
+                      key={t._id}
+                      style={[styles.teacherRow, isSel&&styles.teacherRowSel]}
+                      onPress={() => setSelTeacher(t)}
+                    >
+                      <View style={[styles.teacherAvatar, isSel&&{backgroundColor:"rgba(167,139,250,0.3)"}]}>
+                        <Text style={[styles.teacherAvatarTxt, isSel&&{color:"#a78bfa"}]}>{ini}</Text>
+                      </View>
+                      <View style={{flex:1}}>
+                        <Text style={[styles.teacherName, isSel&&{color:"#a78bfa"}]}>{t.name}</Text>
+                        <Text style={styles.teacherIdTxt}>
+                          {t.department?.match(/\(([^)]+)\)/)?.[1] || t.department?.split(" ")[0] || ""}
+                          {t.teacherId ? " · " + t.teacherId : ""}
+                        </Text>
+                      </View>
+                      {isSel&&<Ionicons name="checkmark-circle" size={20} color="#a78bfa"/>}
+                    </Pressable>
+                  );
+                })
+            }
+
+            {/* Share button */}
+            <View style={{paddingHorizontal:16,marginTop:16}}>
+              {selTeacher&&selSlot&&(
+                <View style={styles.shareConfirmBox}>
+                  <Ionicons name="information-circle" size={14} color="#a78bfa"/>
+                  <Text style={styles.shareConfirmTxt}>
+                    {selTeacher.name} will be able to mark attendance for {selSlot.day} {selSlot.startTime} class. Access expires when class ends.
+                  </Text>
+                </View>
+              )}
+              <Pressable
+                style={[styles.shareBtn, (!selTeacher||!selSlot||sharing)&&{opacity:0.4}]}
+                onPress={handleShare}
+                disabled={!selTeacher||!selSlot||sharing}
+              >
+                <LinearGradient colors={["#7c3aed","#a78bfa"]} start={{x:0,y:0}} end={{x:1,y:0}} style={styles.shareBtnGrad}>
+                  {sharing
+                    ?<ActivityIndicator color="#fff"/>
+                    :<><Ionicons name="swap-horizontal" size={16} color="#fff"/><Text style={styles.shareBtnTxt}>Share This Class</Text></>
+                  }
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 // ════════════════════════════════════════════════════════
 export default function MarkAttendance(){
   const insets=useSafeAreaInsets();
@@ -234,7 +488,7 @@ export default function MarkAttendance(){
   const [allSubs,   setAllSubs]   = useState([]);
   const [subLoad,   setSubLoad]   = useState(true);
   const [refreshing,setRefreshing]= useState(false);
-  const [subTab,    setSubTab]    = useState("all"); // "all"|"theory"|"lab"
+  const [subTab,    setSubTab]    = useState("all");
 
   const [selSub,    setSelSub]    = useState(null);
   const [students,  setStudents]  = useState([]);
@@ -249,6 +503,10 @@ export default function MarkAttendance(){
   const [dateLd,      setDateLd]      = useState(false);
   const [markedDates, setMarkedDates] = useState([]);
   const [dateModal,   setDateModal]   = useState(false);
+
+  // ✅ Share modal state
+  const [shareModal,    setShareModal]    = useState(false);
+  const [shareSubject,  setShareSubject]  = useState(null);
 
   useFocusEffect(useCallback(()=>{
     loadSubs();
@@ -391,10 +649,12 @@ export default function MarkAttendance(){
   };
 
   // ════════════════════════════════════════════════════
-  // STEP 1 — Subject list with tabs + time sort
+  // STEP 1 — Subject list
   // ════════════════════════════════════════════════════
   if(!selSub){
     const currCnt=allSubs.filter(s=>isCurrentClass(s.timeSlot)).length;
+    const sharedCnt=allSubs.filter(s=>s.isShared).length;
+
     return(
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#0a0f1e"/>
@@ -405,13 +665,16 @@ export default function MarkAttendance(){
           <View style={styles.headerCtr}>
             <Text style={styles.headerTitle}>Mark Attendance</Text>
             <Text style={styles.headerSub}>
-              {currCnt>0?`${currCnt} class${currCnt>1?"es":""} in progress now`:"Select a subject to begin"}
+              {currCnt>0
+                ?`${currCnt} class${currCnt>1?"es":""} in progress now`
+                :sharedCnt>0
+                  ?`${sharedCnt} class${sharedCnt>1?"es":""} shared with you`
+                  :"Select a subject to begin"}
             </Text>
           </View>
           <View style={{width:40}}/>
         </LinearGradient>
 
-        {/* ── All / Theory / Lab tabs ── */}
         <View style={styles.subTabBar}>
           {[
             {k:"all",   label:"All",    icon:"apps-outline",  color:"#a78bfa", n:allSubs.length},
@@ -451,7 +714,7 @@ export default function MarkAttendance(){
              </View>
             :<FlatList
                data={filteredSubs}
-               keyExtractor={item=>item._id}
+               keyExtractor={item=>item._id+String(item.isShared||"")}
                contentContainerStyle={{padding:16,paddingBottom:40}}
                showsVerticalScrollIndicator={false}
                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={()=>loadSubs(true)} tintColor="#f59e0b"/>}
@@ -465,15 +728,37 @@ export default function MarkAttendance(){
                        </Text>
                      </View>
                    )}
+                   {/* ✅ Shared classes notice */}
+                   {sharedCnt>0&&(
+                     <View style={styles.sharedCallout}>
+                       <Ionicons name="swap-horizontal" size={14} color="#a78bfa"/>
+                       <Text style={styles.sharedCalloutTxt}>
+                         {sharedCnt} class{sharedCnt>1?"es":""} temporarily assigned to you
+                       </Text>
+                     </View>
+                   )}
                    <Text style={styles.listLbl}>
                      {filteredSubs.length} subject{filteredSubs.length!==1?"s":""}
                      {subTab!=="all"?` · ${subTab==="theory"?"Theory only":"Lab/Practical only"}`:""} · sorted by time
                    </Text>
                  </View>
                )}
-               renderItem={({item})=><SubjectCard item={item} onPress={()=>selectSub(item)}/>}
+               renderItem={({item})=>(
+                 <SubjectCard
+                   item={item}
+                   onPress={()=>selectSub(item)}
+                   onShare={!item.isShared ? (sub)=>{ setShareSubject(sub); setShareModal(true); } : null}
+                 />
+               )}
              />
         }
+
+        {/* ✅ Share Modal */}
+        <ShareModal
+          visible={shareModal}
+          subject={shareSubject}
+          onClose={()=>{ setShareModal(false); setShareSubject(null); }}
+        />
       </View>
     );
   }
@@ -500,9 +785,10 @@ export default function MarkAttendance(){
         <View style={styles.headerCtr}>
           <View style={styles.headerTitleRow}>
             {isCurr&&<View style={[styles.nowDot,{marginRight:6}]}/>}
+            {selSub.isShared&&<Ionicons name="swap-horizontal" size={14} color="#a78bfa" style={{marginRight:4}}/>}
             <Text style={styles.headerTitle} numberOfLines={1}>{selSub.subjectName}</Text>
           </View>
-          <Text style={styles.headerSub}>{section} · Sem {selSub.semester}</Text>
+          <Text style={styles.headerSub}>{section} · Sem {selSub.semester}{selSub.isShared?" · Substitute":""}</Text>
         </View>
         <View style={{width:40}}/>
       </LinearGradient>
@@ -516,13 +802,18 @@ export default function MarkAttendance(){
            showsVerticalScrollIndicator={false}
            ListHeaderComponent={()=>(
              <View>
-               {/* Subject banner */}
                <LinearGradient colors={[color+"30",color+"10"]} style={styles.subjBanner}>
                  <View style={[styles.subjIconBox,{backgroundColor:color+"22",marginRight:12}]}>
                    <Ionicons name={isLabType(selSub)?"flask":"book"} size={20} color={color}/>
                  </View>
                  <View style={{flex:1}}>
                    <Text style={[styles.subjName,{fontSize:15}]}>{selSub.subjectName}</Text>
+                   {/* ✅ Show original teacher if substitute */}
+                   {selSub.isShared&&selSub.originalTeacherName&&(
+                     <Text style={{color:"#a78bfa",fontSize:11,marginTop:2}}>
+                       Originally: {selSub.originalTeacherName}
+                     </Text>
+                   )}
                    <Text style={styles.subjCode}>{section} · Sem {selSub.semester}</Text>
                    {selSub.timeSlot&&(
                      <View style={styles.timePill}>
@@ -541,7 +832,6 @@ export default function MarkAttendance(){
                  )}
                </LinearGradient>
 
-               {/* ═══ DATE NAVIGATOR ═══ */}
                <View style={styles.dateNav}>
                  <Pressable style={styles.dateArrow} onPress={()=>goToDate(changeDate(date,-1))}>
                    <Ionicons name="chevron-back" size={20} color="#94a3b8"/>
@@ -582,7 +872,6 @@ export default function MarkAttendance(){
                  </Pressable>
                </View>
 
-               {/* Theory / Lab TABS — both type only */}
                {both&&(
                  <View style={styles.tabBar}>
                    {[
@@ -607,7 +896,6 @@ export default function MarkAttendance(){
                  </View>
                )}
 
-               {/* Stats */}
                <View style={styles.statsRow}>
                  {[
                    {n:cStat.present,label:"Present",bg:"rgba(52,211,153,0.15)",c:"#34d399"},
@@ -621,7 +909,6 @@ export default function MarkAttendance(){
                  ))}
                </View>
 
-               {/* Mark all */}
                <View style={styles.mAllRow}>
                  <Pressable style={styles.mAllP} onPress={()=>markAll("present")}>
                    <Ionicons name="checkmark-done" size={14} color="#34d399"/>
@@ -691,42 +978,47 @@ const styles=StyleSheet.create({
   headerTitle:     {color:"#fff",fontSize:17,fontWeight:"700"},
   headerSub:       {color:"#64748b",fontSize:11,marginTop:2},
 
-  // Step 1 tabs
   subTabBar:       {flexDirection:"row",gap:8,paddingHorizontal:16,paddingVertical:12,backgroundColor:"rgba(255,255,255,0.02)",borderBottomWidth:1,borderBottomColor:"rgba(255,255,255,0.05)"},
   subTab:          {flex:1,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:5,paddingVertical:9,borderRadius:12,borderWidth:1.5,borderColor:"rgba(255,255,255,0.07)",backgroundColor:"rgba(255,255,255,0.03)"},
   subTabLbl:       {color:"#374151",fontSize:11,fontWeight:"700"},
   subTabCnt:       {paddingHorizontal:6,paddingVertical:2,borderRadius:8,backgroundColor:"rgba(255,255,255,0.06)"},
   subTabCntTxt:    {color:"#374151",fontSize:10,fontWeight:"800"},
 
-  // Now callout
   nowCallout:      {flexDirection:"row",alignItems:"center",gap:8,backgroundColor:"rgba(52,211,153,0.1)",borderRadius:12,padding:12,marginBottom:10,borderWidth:1,borderColor:"rgba(52,211,153,0.25)"},
   nowCalloutTxt:   {color:"#34d399",fontSize:12,fontWeight:"600",flex:1},
+  // ✅ Shared callout
+  sharedCallout:   {flexDirection:"row",alignItems:"center",gap:8,backgroundColor:"rgba(167,139,250,0.1)",borderRadius:12,padding:12,marginBottom:10,borderWidth:1,borderColor:"rgba(167,139,250,0.25)"},
+  sharedCalloutTxt:{color:"#a78bfa",fontSize:12,fontWeight:"600",flex:1},
   listLbl:         {color:"#374151",fontSize:10,fontWeight:"700",letterSpacing:0.5,marginBottom:10},
 
-  // Subject card
-  subjectCard:     {borderRadius:16,marginBottom:10,overflow:"hidden",borderWidth:1,borderColor:"rgba(255,255,255,0.06)"},
-  subjectCardNow:  {borderColor:"rgba(52,211,153,0.4)",borderWidth:1.5},
-  subjectGrad:     {flexDirection:"row",alignItems:"center",padding:14,gap:12,borderRadius:16},
-  subjIconBox:     {width:44,height:44,borderRadius:12,justifyContent:"center",alignItems:"center"},
-  subjName:        {color:"#fff",fontSize:14,fontWeight:"700"},
-  subjCode:        {color:"#64748b",fontSize:11,marginTop:2},
-  subjMeta:        {flexDirection:"row",gap:6,marginTop:6,flexWrap:"wrap",alignItems:"center"},
-  mBadge:          {flexDirection:"row",alignItems:"center",gap:3,paddingHorizontal:8,paddingVertical:3,borderRadius:8,backgroundColor:"rgba(255,255,255,0.06)"},
-  mBadgeTxt:       {fontSize:10,fontWeight:"700",color:"#64748b"},
+  subjectCard:       {borderRadius:16,marginBottom:10,overflow:"hidden",borderWidth:1,borderColor:"rgba(255,255,255,0.06)"},
+  subjectCardNow:    {borderColor:"rgba(52,211,153,0.4)",borderWidth:1.5},
+  // ✅ Shared card style
+  subjectCardShared: {borderColor:"rgba(167,139,250,0.35)",borderWidth:1.5},
+  subjectGrad:       {flexDirection:"row",alignItems:"center",padding:14,gap:12,borderRadius:16},
+  subjIconBox:       {width:44,height:44,borderRadius:12,justifyContent:"center",alignItems:"center"},
+  subjName:          {color:"#fff",fontSize:14,fontWeight:"700"},
+  subjCode:          {color:"#64748b",fontSize:11,marginTop:2},
+  originalTeacher:   {color:"#64748b",fontSize:10,marginTop:1},
+  subjMeta:          {flexDirection:"row",gap:6,marginTop:6,flexWrap:"wrap",alignItems:"center"},
+  mBadge:            {flexDirection:"row",alignItems:"center",gap:3,paddingHorizontal:8,paddingVertical:3,borderRadius:8,backgroundColor:"rgba(255,255,255,0.06)"},
+  mBadgeTxt:         {fontSize:10,fontWeight:"700",color:"#64748b"},
 
-  // NOW badge
-  nowBadge:        {position:"absolute",top:8,right:48,flexDirection:"row",alignItems:"center",gap:4,backgroundColor:"rgba(52,211,153,0.2)",paddingHorizontal:8,paddingVertical:3,borderRadius:8,borderWidth:1,borderColor:"rgba(52,211,153,0.4)",zIndex:10},
-  nowText:         {color:"#34d399",fontSize:9,fontWeight:"900",letterSpacing:1},
-  nowDot:          {width:7,height:7,borderRadius:4,backgroundColor:"#34d399"},
+  nowBadge:          {position:"absolute",top:8,right:48,flexDirection:"row",alignItems:"center",gap:4,backgroundColor:"rgba(52,211,153,0.2)",paddingHorizontal:8,paddingVertical:3,borderRadius:8,borderWidth:1,borderColor:"rgba(52,211,153,0.4)",zIndex:10},
+  nowText:           {color:"#34d399",fontSize:9,fontWeight:"900",letterSpacing:1},
+  nowDot:            {width:7,height:7,borderRadius:4,backgroundColor:"#34d399"},
+  // ✅ Shared badge
+  sharedBadge:       {position:"absolute",top:8,right:48,flexDirection:"row",alignItems:"center",gap:4,backgroundColor:"rgba(167,139,250,0.2)",paddingHorizontal:8,paddingVertical:3,borderRadius:8,borderWidth:1,borderColor:"rgba(167,139,250,0.4)",zIndex:10},
+  sharedBadgeText:   {color:"#a78bfa",fontSize:9,fontWeight:"900",letterSpacing:0.5},
+  // ✅ Share icon button
+  shareIconBtn:      {width:32,height:32,borderRadius:10,backgroundColor:"rgba(167,139,250,0.12)",justifyContent:"center",alignItems:"center",borderWidth:1,borderColor:"rgba(167,139,250,0.25)"},
 
-  // Subject banner (step 2)
   subjBanner:      {flexDirection:"row",alignItems:"center",borderRadius:16,padding:14,marginBottom:12,borderWidth:1,borderColor:"rgba(255,255,255,0.06)"},
   alreadyBadge:    {flexDirection:"row",alignItems:"center",gap:4,backgroundColor:"rgba(52,211,153,0.15)",paddingHorizontal:8,paddingVertical:4,borderRadius:8},
   alreadyBadgeTxt: {color:"#34d399",fontSize:10,fontWeight:"700"},
   timePill:        {flexDirection:"row",alignItems:"center",gap:4,marginTop:4},
   timePillTxt:     {color:"#64748b",fontSize:10},
 
-  // Date navigator
   dateNav:         {flexDirection:"row",alignItems:"center",backgroundColor:"#1a2535",borderRadius:16,padding:12,marginBottom:14,borderWidth:1,borderColor:"rgba(255,255,255,0.06)"},
   dateArrow:       {width:40,height:40,borderRadius:12,backgroundColor:"rgba(255,255,255,0.05)",justifyContent:"center",alignItems:"center"},
   dateCtr:         {flex:1,alignItems:"center",paddingHorizontal:8},
@@ -741,7 +1033,6 @@ const styles=StyleSheet.create({
   notMkdPill:      {flexDirection:"row",alignItems:"center",gap:4,backgroundColor:"rgba(248,113,113,0.12)",paddingHorizontal:8,paddingVertical:2,borderRadius:8,borderWidth:1,borderColor:"rgba(248,113,113,0.3)"},
   notMkdPillTxt:   {color:"#f87171",fontSize:10,fontWeight:"600"},
 
-  // Theory / Lab tabs
   tabBar:          {flexDirection:"row",gap:10,marginBottom:14},
   tabBtn:          {flex:1,flexDirection:"row",alignItems:"center",gap:10,padding:12,borderRadius:14,borderWidth:1.5,borderColor:"rgba(255,255,255,0.08)",backgroundColor:"rgba(255,255,255,0.03)",position:"relative"},
   tabIcon:         {width:36,height:36,borderRadius:11,justifyContent:"center",alignItems:"center"},
@@ -749,20 +1040,17 @@ const styles=StyleSheet.create({
   tabStat:         {color:"#374151",fontSize:10,marginTop:2},
   tabDot:          {position:"absolute",top:7,right:7,width:7,height:7,borderRadius:4},
 
-  // Stats
   statsRow:        {flexDirection:"row",gap:8,marginBottom:12},
   cntBadge:        {flex:1,alignItems:"center",paddingVertical:10,borderRadius:12},
   cntNum:          {fontSize:18,fontWeight:"800"},
   cntLbl:          {color:"#64748b",fontSize:9,marginTop:2,fontWeight:"600"},
 
-  // Mark all
   mAllRow:         {flexDirection:"row",gap:10,marginBottom:16},
   mAllP:           {flex:1,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:6,backgroundColor:"rgba(52,211,153,0.1)",padding:11,borderRadius:12,borderWidth:1,borderColor:"rgba(52,211,153,0.2)"},
   mAllA:           {flex:1,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:6,backgroundColor:"rgba(248,113,113,0.1)",padding:11,borderRadius:12,borderWidth:1,borderColor:"rgba(248,113,113,0.2)"},
   mAllTxt:         {fontSize:13,fontWeight:"700"},
   secLbl:          {color:"#374151",fontSize:10,fontWeight:"800",letterSpacing:1,marginBottom:10},
 
-  // Student row
   stuRow:          {flexDirection:"row",alignItems:"center",backgroundColor:"#1a2535",borderRadius:14,padding:12,marginBottom:8,borderWidth:1,borderColor:"rgba(255,255,255,0.04)"},
   stuAvatar:       {width:44,height:44,borderRadius:22,justifyContent:"center",alignItems:"center",marginRight:12},
   stuAvatarImg:    {width:44,height:44,borderRadius:22},
@@ -775,17 +1063,14 @@ const styles=StyleSheet.create({
   presentBtn:      {backgroundColor:"rgba(52,211,153,0.15)"},
   absentBtn:       {backgroundColor:"rgba(248,113,113,0.15)"},
 
-  // Submit
   submitBtn:       {marginTop:20,borderRadius:16,overflow:"hidden"},
   submitGrad:      {flexDirection:"row",alignItems:"center",justifyContent:"center",gap:10,paddingVertical:18,borderRadius:16},
   submitTxt:       {color:"#fff",fontWeight:"800",fontSize:16},
 
-  // Empty
   emptyWrap:       {alignItems:"center",gap:8},
   emptyTitle:      {color:"#374151",fontSize:16,fontWeight:"700",textAlign:"center"},
   emptySub:        {color:"#1f2937",fontSize:13,textAlign:"center",marginTop:4,lineHeight:18},
 
-  // Date Modal
   dpOverlay:       {flex:1,backgroundColor:"rgba(0,0,0,0.8)",justifyContent:"flex-end"},
   dpSheet:         {backgroundColor:"#0f1923",borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:"75%",borderWidth:1,borderColor:"rgba(255,255,255,0.06)"},
   dpHandle:        {width:40,height:4,borderRadius:2,backgroundColor:"rgba(255,255,255,0.12)",alignSelf:"center",marginTop:12,marginBottom:4},
@@ -810,4 +1095,44 @@ const styles=StyleSheet.create({
   todayTagTxt:     {color:"#00c6ff",fontSize:9,fontWeight:"800"},
   sunTag:          {backgroundColor:"rgba(100,116,139,0.15)",paddingHorizontal:7,paddingVertical:2,borderRadius:5},
   sunTagTxt:       {color:"#64748b",fontSize:9,fontWeight:"800"},
+
+  // ✅ Share modal styles
+  shareOverlay:      {flex:1,backgroundColor:"rgba(0,0,0,0.8)",justifyContent:"flex-end"},
+  shareSheet:        {backgroundColor:"#0f1923",borderTopLeftRadius:24,borderTopRightRadius:24,maxHeight:"88%",borderWidth:1,borderColor:"rgba(167,139,250,0.15)"},
+  shareHeader:       {flexDirection:"row",alignItems:"center",gap:12,padding:20,paddingBottom:12},
+  shareHeaderIcon:   {width:38,height:38,borderRadius:12,backgroundColor:"rgba(167,139,250,0.12)",justifyContent:"center",alignItems:"center"},
+  shareTitle:        {color:"#fff",fontSize:16,fontWeight:"800"},
+  shareSub:          {color:"#64748b",fontSize:11,marginTop:2},
+  shareSection:      {color:"#374151",fontSize:10,fontWeight:"800",letterSpacing:1,marginBottom:8},
+  // Active shares
+  activeSharesBox:   {margin:16,backgroundColor:"rgba(167,139,250,0.06)",borderRadius:14,padding:12,borderWidth:1,borderColor:"rgba(167,139,250,0.15)"},
+  activeShareRow:    {flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingVertical:8},
+  activeShareLeft:   {flexDirection:"row",alignItems:"center",gap:10,flex:1},
+  activeShareAvatar: {width:36,height:36,borderRadius:18,backgroundColor:"rgba(167,139,250,0.2)",justifyContent:"center",alignItems:"center"},
+  activeShareAvatarTxt:{color:"#a78bfa",fontSize:13,fontWeight:"800"},
+  activeShareName:   {color:"#fff",fontSize:13,fontWeight:"700"},
+  activeShareSlot:   {color:"#64748b",fontSize:11,marginTop:1},
+  activeShareExpiry: {color:"#a78bfa",fontSize:10,marginTop:1},
+  removeShareBtn:    {padding:4},
+  // Slot chips
+  slotChip:          {paddingHorizontal:14,paddingVertical:10,borderRadius:12,backgroundColor:"rgba(255,255,255,0.05)",borderWidth:1,borderColor:"rgba(255,255,255,0.07)",alignItems:"center",minWidth:70},
+  slotChipSel:       {backgroundColor:"rgba(167,139,250,0.15)",borderColor:"#a78bfa"},
+  slotChipDay:       {color:"#64748b",fontSize:10,fontWeight:"700"},
+  slotChipTime:      {color:"#94a3b8",fontSize:13,fontWeight:"700",marginTop:2},
+  slotChipRoom:      {color:"#374151",fontSize:9,marginTop:2},
+  // Teacher search
+  searchBarShare:    {flexDirection:"row",alignItems:"center",gap:8,backgroundColor:"#1a2535",marginHorizontal:16,marginBottom:8,borderRadius:12,paddingHorizontal:14,paddingVertical:10,borderWidth:1,borderColor:"rgba(255,255,255,0.05)"},
+  searchInputShare:  {flex:1,color:"#fff",fontSize:14,paddingVertical:0},
+  teacherRow:        {flexDirection:"row",alignItems:"center",gap:12,paddingHorizontal:16,paddingVertical:12,borderBottomWidth:1,borderBottomColor:"rgba(255,255,255,0.04)"},
+  teacherRowSel:     {backgroundColor:"rgba(167,139,250,0.07)"},
+  teacherAvatar:     {width:40,height:40,borderRadius:20,backgroundColor:"rgba(255,255,255,0.06)",justifyContent:"center",alignItems:"center"},
+  teacherAvatarTxt:  {color:"#94a3b8",fontSize:14,fontWeight:"700"},
+  teacherName:       {color:"#fff",fontSize:14,fontWeight:"600"},
+  teacherIdTxt:      {color:"#374151",fontSize:11,marginTop:1},
+  // Confirm + Share button
+  shareConfirmBox:   {flexDirection:"row",alignItems:"flex-start",gap:8,backgroundColor:"rgba(167,139,250,0.08)",borderRadius:10,padding:10,marginBottom:12,borderWidth:1,borderColor:"rgba(167,139,250,0.2)"},
+  shareConfirmTxt:   {color:"#a78bfa",fontSize:12,flex:1,lineHeight:17},
+  shareBtn:          {borderRadius:14,overflow:"hidden"},
+  shareBtnGrad:      {flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8,paddingVertical:16},
+  shareBtnTxt:       {color:"#fff",fontWeight:"800",fontSize:15},
 });
