@@ -1,55 +1,73 @@
-const mongoose = require("mongoose");
+const express        = require("express");
+const router         = express.Router();
+const mongoose       = require("mongoose");
+const Subject        = require("../models/Subject");
+const SubjectRequest = require("../models/SubjectRequest"); // ✅ sirf require — koi schema nahi
+const User           = require("../models/User");
+const { verifyToken, isAdmin, isTeacher } = require("../middleware/authMiddleware");
 
-const timetableSlotSchema = new mongoose.Schema({
-  day:       { type: String, enum: ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"] },
-  startTime: { type: String },
-  endTime:   { type: String },
-  room:      { type: String, default: "" },
-}, { _id: false });
+// ── Get all subjects (admin) ──
+router.get("/", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { department, semester, college } = req.query;
+    const filter = {};
+    if (department) filter.department = department;
+    if (semester)   filter.semester   = Number(semester);
+    if (college)    filter.college    = college;
+    const subjects = await Subject.find(filter).sort({ semester: 1, name: 1 });
+    res.json({ success: true, subjects });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
-// ✅ NEW — class sharing schema
-const sharedWithSchema = new mongoose.Schema({
-  teacherId:   { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  teacherName: { type: String, required: true },
-  day:         { type: String },       // which day shared
-  startTime:   { type: String },       // which slot shared
-  endTime:     { type: String },
-  expiresAt:   { type: Date },         // auto-remove after this time
-  sharedAt:    { type: Date, default: Date.now },
-}, { _id: true });
+// ── Add subject (admin) ──
+router.post("/", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { name, code, type, college, department, semester, credits, description } = req.body;
+    if (!name || !college || !department || !semester) {
+      return res.status(400).json({ success: false, message: "name, college, department, semester required" });
+    }
+    const existing = await Subject.findOne({ code: code?.trim(), college, department, semester: Number(semester) });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Subject with this code already exists" });
+    }
+    const subject = await Subject.create({
+      name: name.trim(),
+      code: code?.trim() || "",
+      type: type || "Theory",
+      college,
+      department,
+      semester:    Number(semester),
+      credits:     credits || 0,
+      description: description || "",
+    });
+    res.status(201).json({ success: true, message: "Subject added!", subject });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
-const subjectRequestSchema = new mongoose.Schema({
-  // ── Teacher info ──
-  teacherId:   { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  teacherName: { type: String, required: true },
+// ── Update subject (admin) ──
+router.put("/:id", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const subject = await Subject.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!subject) return res.status(404).json({ success: false, message: "Subject not found" });
+    res.json({ success: true, subject });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
-  // ── Subject info ──
-  subjectName: { type: String, required: true },
-  subjectCode: { type: String, default: "" },
-  subjectId:   { type: mongoose.Schema.Types.ObjectId, ref: "Subject", default: null },
-  subjectType: { type: String, enum: ["Theory","Lab","Both"], default: "Theory" },
+// ── Delete subject (admin) ──
+router.delete("/:id", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const subject = await Subject.findByIdAndDelete(req.params.id);
+    if (!subject) return res.status(404).json({ success: false, message: "Subject not found" });
+    res.json({ success: true, message: "Subject deleted" });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
-  // ── Target class ──
-  college:       { type: String, required: true },
-  department:    { type: String, required: true },
-  semester:      { type: Number, required: true },
-  admissionYear: { type: String, required: true },
-  section:       { type: String, default: "All" },
-
-  // ── Admin assigned timetable ──
-  timetable: [timetableSlotSchema],
-
-  // ── Status ──
-  status: {
-    type:    String,
-    enum:    ["pending", "accepted", "rejected"],
-    default: "pending",
-  },
-  adminNote: { type: String, default: "" },
-
-  // ✅ NEW — class sharing
-  sharedWith: [sharedWithSchema],
-
-}, { timestamps: true });
-
-module.exports = mongoose.model("SubjectRequest", subjectRequestSchema);
+module.exports = router;
