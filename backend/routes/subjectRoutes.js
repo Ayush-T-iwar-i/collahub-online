@@ -20,31 +20,76 @@ router.get("/", verifyToken, isAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: e.message });
   }
 });
-
 // ── Add subject (admin) ──
 router.post("/", verifyToken, isAdmin, async (req, res) => {
   try {
-    const { name, code, type, college, department, semester, credits, description } = req.body;
+
+    console.log("📚 Add Subject Request:", req.body);
+
+    const {
+      name,
+      code,
+      type,
+      college,
+      department,
+      semester,
+      credits,
+      description
+    } = req.body;
+
+    // ── Validation ──
     if (!name || !college || !department || !semester) {
-      return res.status(400).json({ success: false, message: "name, college, department, semester required" });
+      return res.status(400).json({
+        success: false,
+        message: "name, college, department, semester required"
+      });
     }
-    const existing = await Subject.findOne({ code: code?.trim(), college, department, semester: Number(semester) });
+
+    // ── Duplicate check ──
+    let existing = null;
+
+    if (code && code.trim()) {
+      existing = await Subject.findOne({
+        code: code.trim(),
+        college,
+        department,
+        semester: Number(semester),
+      });
+    }
+
     if (existing) {
-      return res.status(400).json({ success: false, message: "Subject with this code already exists" });
+      return res.status(400).json({
+        success: false,
+        message: "Subject with this code already exists"
+      });
     }
+
+    // ── Create Subject ──
     const subject = await Subject.create({
       name: name.trim(),
       code: code?.trim() || "",
       type: type || "Theory",
       college,
       department,
-      semester:    Number(semester),
-      credits:     credits || 0,
+      semester: Number(semester),
+      credits: credits || 0,
       description: description || "",
     });
-    res.status(201).json({ success: true, message: "Subject added!", subject });
+
+    res.status(201).json({
+      success: true,
+      message: "Subject added!",
+      subject
+    });
+
   } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
+
+    console.log("❌ Subject Add Error:", e);
+
+    res.status(500).json({
+      success: false,
+      message: e.message
+    });
   }
 });
 

@@ -23,11 +23,14 @@ connectDB();
 // CORS — Production + Development both handle
 // ══════════════════════════════════════════════════════════
 const ALLOWED_ORIGINS = [
-  // Production — Railway URL (add yours here)
+
+  "https://university-hub-code.onrender.com",
+
+  // Production — Railway URL
   /^https:\/\/.*\.railway\.app$/,
   /^https:\/\/.*\.up\.railway\.app$/,
 
-  // Web production domain (add when you have one)
+  // Web production domain
   // "https://collahub.nims.edu.in",
 
   // Development — localhost

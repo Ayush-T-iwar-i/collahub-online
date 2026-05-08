@@ -1,27 +1,12 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
 
-const RAILWAY_URL = "https://collahub.up.railway.app"; // ✅ Railway URL
-// Example: "https://collahub-backend-production.railway.app"
 
-// Local development IP (when not using Railway)
-const LOCAL_IP = "10.188.33.222";
+
 
 // ── Auto URL select ───────────────────────────────────────
-const BASE_URL = (() => {
-  // Production — Railway URL is set
-  if (RAILWAY_URL && !RAILWAY_URL.includes("YOUR-APP-NAME")) {
-    return RAILWAY_URL;
-  }
-  // Local development fallback
-  switch (Platform.OS) {
-    case "android": return "http://10.0.2.2:5000";
-    case "ios":     return "http://localhost:5000";
-    case "web":     return "http://localhost:5000";
-    default:        return `http://${LOCAL_IP}:5000`;
-  }
-})();
+const SERVER_URL = "https://university-hub-code.onrender.com";
+
 
 if (__DEV__) console.log("🌐 API →", BASE_URL);
 
@@ -81,7 +66,7 @@ API.interceptors.response.use(
 
     if (!error.response) {
       return Promise.reject(
-        new Error("Cannot connect to server. Check internet or verify Railway URL.")
+        new Error("Cannot connect to server. Check internet or verify Render server.")
       );
     }
 
