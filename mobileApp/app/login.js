@@ -78,7 +78,10 @@ export default function LoginScreen() {
           {/* Logo */}
           <View style={styles.logoWrap}>
             <LinearGradient colors={["#7c3aed", "#a78bfa"]} style={styles.logoCircle}>
-              <Text style={styles.logoText}>C</Text>
+              <Image
+                source={require("../assets/favicon.png")}
+                style={styles.logoImage}
+              />
             </LinearGradient>
             <Text style={styles.appName}>COLLAहUB</Text>
             <Text style={styles.appTagline}>One App One World</Text>
@@ -170,7 +173,7 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <Text style={styles.footer}>COLLAहUB Â© 2026 {"\n"}Developed by Ayush Tiwari</Text>
+          <Text style={styles.footer}>COLLAहUB A© 2026 {"\n"}Developed by Ayush Tiwari</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -178,6 +181,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+
+  logoImage: { width: 50,height: 50,resizeMode: "contain",},
   container: { flex: 1, backgroundColor: "#080d17" },
   scroll: { flexGrow: 1, justifyContent: "center", padding: 24, paddingTop: 60 },
 

@@ -1,5 +1,3 @@
-// app/index.js
-// Checks persisted auth state and redirects to the correct role dashboard.
 
 import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
