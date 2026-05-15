@@ -14,20 +14,20 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import API from "../../services/api";
 
 const { width } = Dimensions.get("window");
-const IS_WEB = Platform.OS === "web";
+const IS_WEB    = Platform.OS === "web";
+const ACCENT    = "#f59e0b";
 
-// ── SafeImage ──
-const SafeImage = ({ uri, size = 44, initials = "?", color = "#f59e0b", style }) => {
-  const [hasError, setHasError] = React.useState(false);
-  const isValid = uri && !hasError &&
-    (uri.startsWith("http://") || uri.startsWith("https://"));
-  if (isValid) {
+// ── Safe image with initials fallback ────────────────────
+const SafeImage = ({ uri, size = 44, initials = "?", color = ACCENT, style }) => {
+  const [err, setErr] = React.useState(false);
+  const ok = uri && !err && (uri.startsWith("http://") || uri.startsWith("https://"));
+  if (ok) {
     return (
       <Image
         source={{ uri }}
         style={[{ width: size, height: size, borderRadius: size / 2 }, style]}
         resizeMode="cover"
-        onError={() => setHasError(true)}
+        onError={() => setErr(true)}
       />
     );
   }
@@ -44,61 +44,55 @@ const SafeImage = ({ uri, size = 44, initials = "?", color = "#f59e0b", style })
   );
 };
 
-// ── Info Row ──
-const InfoRow = ({ icon, label, value, color = "#f59e0b", delay = 0, last = false }) => {
+// ── Animated info row ─────────────────────────────────────
+const InfoRow = ({ icon, label, value, color = ACCENT, delay = 0, last = false }) => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(anim, { toValue: 1, duration: 450, delay, useNativeDriver: true }).start();
   }, []);
   return (
     <Animated.View style={[
-      styles.infoRow,
-      !last && styles.infoRowBorder,
-      {
-        opacity: anim,
-        transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
-      },
+      s.infoRow, !last && s.infoRowBorder,
+      { opacity: anim, transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] },
     ]}>
-      <View style={[styles.infoIconWrap, { backgroundColor: color + "18" }]}>
+      <View style={[s.infoIcon, { backgroundColor: color + "18" }]}>
         <Ionicons name={icon} size={16} color={color} />
       </View>
-      <View style={styles.infoContent}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue} numberOfLines={2}>{value || "—"}</Text>
+      <View style={s.infoContent}>
+        <Text style={s.infoLabel}>{label}</Text>
+        <Text style={s.infoValue} numberOfLines={2}>{value || "—"}</Text>
       </View>
     </Animated.View>
   );
 };
 
-const SectionHead = ({ icon, title, color = "#f59e0b" }) => (
-  <View style={styles.sectionHead}>
-    <View style={[styles.sectionHeadIcon, { backgroundColor: color + "18" }]}>
+const SectionHead = ({ icon, title, color = ACCENT }) => (
+  <View style={s.sectionHead}>
+    <View style={[s.sectionIcon, { backgroundColor: color + "18" }]}>
       <Ionicons name={icon} size={15} color={color} />
     </View>
-    <Text style={styles.sectionHeadText}>{title}</Text>
+    <Text style={s.sectionTitle}>{title}</Text>
   </View>
 );
 
-const deptShort = (dept = "") =>
-  dept.match(/\(([^)]+)\)/)?.[1] ||
-  dept.split(" ").filter(w => w.length > 2)[0]?.toUpperCase() ||
-  dept.slice(0, 8);
+const deptShort = (d = "") =>
+  d.match(/\(([^)]+)\)/)?.[1] || d.split(" ").filter(w => w.length > 2)[0]?.toUpperCase() || d.slice(0, 8);
 
-// ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 export default function TeacherProfile() {
   const router    = useRouter();
-  const cardRef   = useRef(null);   // used by react-native-view-shot on mobile
+  const cardRef   = useRef(null);
   const scrollY   = useRef(new Animated.Value(0)).current;
   const backCount = useRef(0);
 
-  const [teacher,           setTeacher]           = useState(null);
-  const [profileImage,      setProfileImage]      = useState(null);
-  const [uploading,         setUploading]         = useState(false);
-  const [downloading,       setDownloading]       = useState(false);
-  const [imageModal,        setImageModal]        = useState(false);
-  const [previewImageModal, setPreviewImageModal] = useState(false);
+  const [teacher,      setTeacher]      = useState(null);
+  const [profileImage, setProfileImage] = useState(null);
+  const [uploading,    setUploading]    = useState(false);
+  const [downloading,  setDownloading]  = useState(false);
+  const [photoModal,   setPhotoModal]   = useState(false);   // full screen view
+  const [changeModal,  setChangeModal]  = useState(false);   // change photo
 
-  // ── Load ──
+  // ── Load ─────────────────────────────────────────────────
   useFocusEffect(useCallback(() => {
     (async () => {
       const raw = await AsyncStorage.getItem("teacherData");
@@ -111,7 +105,7 @@ export default function TeacherProfile() {
     })();
   }, []));
 
-  // ── Hardware back ──
+  // ── Hardware back ─────────────────────────────────────────
   useFocusEffect(useCallback(() => {
     if (IS_WEB) return;
     const h = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -127,61 +121,31 @@ export default function TeacherProfile() {
     return () => h.remove();
   }, []));
 
-  // ── Upload photo ── FIXED ──
+  // ── Upload photo ──────────────────────────────────────────
   const changeProfileImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { Alert.alert("Permission needed", "Need gallery access"); return; }
-
+    if (!perm.granted) { Alert.alert("Permission Required", "Gallery access is needed."); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: true, aspect: [1, 1], quality: 0.85,
     });
     if (result.canceled) return;
-
-    const asset = result.assets[0];
-    const uri   = asset.uri;
-
-    // Close modal first, then show uploading state
-    setImageModal(false);
+    const uri = result.assets[0].uri;
+    setChangeModal(false);
     setUploading(true);
-
     try {
       const formData = new FormData();
-
       if (IS_WEB) {
-        // ✅ FIX: On web, expo-image-picker returns a blob URL or base64.
-        // We must fetch the blob and append it correctly.
-        let blob;
-        if (uri.startsWith("data:")) {
-          // base64 data URI → convert to Blob
-          const byteString = atob(uri.split(",")[1]);
-          const mimeType   = uri.split(",")[0].split(":")[1].split(";")[0];
-          const ab         = new ArrayBuffer(byteString.length);
-          const ia         = new Uint8Array(ab);
-          for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-          blob = new Blob([ab], { type: mimeType });
-        } else {
-          // blob URL
-          const res = await fetch(uri);
-          blob      = await res.blob();
-        }
+        const res  = await fetch(uri);
+        const blob = await res.blob();
         formData.append("profileImage", blob, "profile.jpg");
       } else {
-        // ✅ Mobile: straightforward FormData file append
-        formData.append("profileImage", {
-          uri,
-          name: "profile.jpg",
-          type: asset.mimeType || "image/jpeg",
-        });
+        formData.append("profileImage", { uri, name: "profile.jpg", type: "image/jpeg" });
       }
-
-      const resp   = await API.post("/user/upload-profile-image", formData, {
+      const resp   = await API.post("/teacher/upload-profile", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      const newUrl = resp.data?.imageUrl || resp.data?.profileImage;
-
+      const newUrl = resp.data?.profileImage;
       if (newUrl && newUrl.startsWith("http")) {
         setProfileImage(newUrl);
         const raw = await AsyncStorage.getItem("teacherData");
@@ -191,113 +155,85 @@ export default function TeacherProfile() {
           await AsyncStorage.setItem("teacherData", JSON.stringify(d));
           setTeacher(d);
         }
-        Alert.alert("Success", "Profile photo updated.");
-      } else {
-        Alert.alert("Notice", "Upload succeeded but no image URL returned.");
+        Alert.alert("Updated! ✅", "Profile photo has been updated.");
       }
-    } catch (e) {
-      console.log("Upload error:", e);
+    } catch {
       Alert.alert("Error", "Photo upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
   };
 
-  // ── Download ID card ── FIXED ──
+  // ── Download ID card → gallery ────────────────────────────
   const downloadCard = async () => {
     setDownloading(true);
     try {
       if (IS_WEB) {
-        // ✅ FIX: Use ref-based DOM node lookup instead of getElementById,
-        // which is unreliable with React Native Web's nativeID rendering.
         const html2canvas = (await import("html2canvas")).default;
-
-        // cardRef.current is the underlying DOM node on web via React Native Web
-        const el = cardRef.current;
-        if (!el) {
-          Alert.alert("Error", "Card element not found. Please scroll to the ID card section first.");
-          setDownloading(false);
-          return;
-        }
-
-        const canvas = await html2canvas(el, {
-          backgroundColor: "#1a1000",
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-        });
-
-        const link      = document.createElement("a");
-        link.download   = `${teacher?.teacherId || "teacher"}-id-card.png`;
-        link.href       = canvas.toDataURL("image/png");
-        document.body.appendChild(link);
+        const el = document.getElementById("teacher-id-card");
+        if (!el) { Alert.alert("Error", "ID card not found."); setDownloading(false); return; }
+        const canvas = await html2canvas(el, { backgroundColor: "#1a1000", scale: 2 });
+        const link   = document.createElement("a");
+        link.download = `${teacher?.teacherId || "teacher"}-id-card.png`;
+        link.href     = canvas.toDataURL("image/png");
         link.click();
-        document.body.removeChild(link);
-        Alert.alert("Downloaded!", "ID card saved to your downloads.");
-
       } else {
-        // ✅ FIX: Import correctly and pass cardRef.current (the actual ref node)
-        const { captureRef }   = await import("react-native-view-shot");
-        const MediaLibrary     = await import("expo-media-library");
-
-        const { status } = await MediaLibrary.requestPermissionsAsync();
+        // Step 1: Ask permission FIRST (before gallery opens)
+        const MediaLibrary = await import("expo-media-library");
+        const { status }   = await MediaLibrary.requestPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert("Permission Required", "Allow media library access to save ID card.");
+          Alert.alert("Permission Required", "Please allow gallery access to save the ID card.");
           setDownloading(false);
           return;
         }
 
-        if (!cardRef.current) {
-          Alert.alert("Error", "Card not ready. Please try again.");
-          setDownloading(false);
-          return;
-        }
-
-        // ✅ FIX: Pass cardRef.current, not cardRef
+        // Step 2: Capture card as image
+        const { captureRef } = await import("react-native-view-shot");
         const uri = await captureRef(cardRef.current, {
           format:  "png",
           quality: 1,
           result:  "tmpfile",
         });
 
-        await MediaLibrary.saveToLibraryAsync(uri);
-        Alert.alert("Saved! ✅", "ID card saved to your gallery.");
+        // Step 3: Save to gallery in CollaHub album
+        const asset = await MediaLibrary.createAssetAsync(uri);
+        try {
+          const album = await MediaLibrary.getAlbumAsync("CollaHub");
+          if (album) {
+            await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+          } else {
+            await MediaLibrary.createAlbumAsync("CollaHub", asset, false);
+          }
+        } catch {
+          // Album step failed — asset still saved to camera roll
+        }
+        Alert.alert("Saved! ✅", "ID card saved to gallery in CollaHub album.");
       }
     } catch (e) {
-      console.log("Download error:", e);
-      Alert.alert("Error", "Failed to save ID card. Please try again.");
+      console.log("Download error:", e.message);
+      Alert.alert("Error", "Download failed. Please try again.");
     } finally {
       setDownloading(false);
     }
   };
 
   if (!teacher) return (
-    <View style={styles.loader}>
-      <ActivityIndicator size="large" color="#f59e0b" />
-      <Text style={styles.loaderText}>Loading profile...</Text>
+    <View style={s.loader}>
+      <ActivityIndicator size="large" color={ACCENT} />
+      <Text style={s.loaderText}>Loading profile...</Text>
     </View>
   );
 
-  const initials      = teacher.name?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "T";
-  const deptShortName = deptShort(teacher.department || "");
-  const imgSrc        = profileImage;
+  const initials = teacher.name?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "T";
+  const deptName = deptShort(teacher.department || "");
 
-  const heroH    = scrollY.interpolate({ inputRange: [0, 120], outputRange: [300, 170], extrapolate: "clamp" });
+  const heroH    = scrollY.interpolate({ inputRange: [0, 120], outputRange: [300, 175], extrapolate: "clamp" });
   const avatarSc = scrollY.interpolate({ inputRange: [0, 100], outputRange: [1, 0.72],  extrapolate: "clamp" });
   const nameFade = scrollY.interpolate({ inputRange: [50, 110], outputRange: [1, 0],    extrapolate: "clamp" });
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-
-      {/* ✅ Uploading overlay shown at screen level (outside modal) so it's always visible */}
-      {uploading && (
-        <View style={styles.globalUploadingOverlay}>
-          <ActivityIndicator size="large" color="#f59e0b" />
-          <Text style={styles.globalUploadingText}>Uploading photo...</Text>
-        </View>
-      )}
 
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
@@ -308,179 +244,168 @@ export default function TeacherProfile() {
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 60 }}
       >
-        {/* ══ HERO ══ */}
-        <Animated.View style={[styles.hero, { height: heroH }]}>
+        {/* ─── HERO ─── */}
+        <Animated.View style={[s.hero, { height: heroH }]}>
           <LinearGradient colors={["#0d0800", "#1a1000", "#0a0600"]} style={StyleSheet.absoluteFillObject} />
-          <View style={styles.deco1} />
-          <View style={styles.deco2} />
-          <View style={styles.deco3} />
+          <View style={s.deco1} />
+          <View style={s.deco2} />
 
-          <View style={styles.heroBar}>
-            <Pressable onPress={() => router.back()} style={styles.heroBarBtn}>
+          <View style={s.heroBar}>
+            <Pressable onPress={() => router.back()} style={s.heroBtn}>
               <Ionicons name="arrow-back" size={20} color="#fff" />
             </Pressable>
-            <Text style={styles.heroBarTitle}>My Profile</Text>
-            <Pressable onPress={() => setImageModal(true)} style={styles.heroBarBtn}>
+            <Text style={s.heroBarTitle}>My Profile</Text>
+            <Pressable onPress={() => setChangeModal(true)} style={s.heroBtn}>
               <Ionicons name="camera-outline" size={20} color="#fff" />
             </Pressable>
           </View>
 
-          <Animated.View style={[styles.avatarWrap, { transform: [{ scale: avatarSc }] }]}>
-            <View style={styles.avatarRingOuter}>
-              <View style={styles.avatarRingInner}>
-                <Pressable onPress={() => profileImage && setPreviewImageModal(true)}>
-                  <SafeImage uri={imgSrc} size={94} initials={initials} color="#f59e0b" />
-                </Pressable>
+          {/* Avatar — tap to view full screen */}
+          <Animated.View style={[s.avatarWrap, { transform: [{ scale: avatarSc }] }]}>
+            <Pressable
+              onPress={() => profileImage && setPhotoModal(true)}
+              style={s.avatarRingOuter}
+            >
+              <View style={s.avatarRingInner}>
+                <SafeImage uri={profileImage} size={94} initials={initials} color={ACCENT} />
               </View>
-            </View>
-            {/* ✅ Camera FAB always shown (uploading indicator moved to global overlay) */}
-            <Pressable style={styles.cameraFab} onPress={() => setImageModal(true)}>
-              <MaterialIcons name="camera-alt" size={13} color="#fff" />
             </Pressable>
+            {uploading
+              ? <View style={s.avatarLoading}><ActivityIndicator size="small" color="#fff" /></View>
+              : <Pressable style={s.cameraFab} onPress={() => setChangeModal(true)}>
+                  <MaterialIcons name="camera-alt" size={13} color="#fff" />
+                </Pressable>
+            }
           </Animated.View>
 
-          <Animated.View style={[styles.heroNameWrap, { opacity: nameFade }]}>
-            <Text style={styles.heroName} numberOfLines={1}>{teacher.name}</Text>
-            <Text style={styles.heroId}>{teacher.teacherId || teacher.email}</Text>
+          <Animated.View style={[s.heroName, { opacity: nameFade }]}>
+            <Text style={s.heroNameText} numberOfLines={1}>{teacher.name}</Text>
+            <Text style={s.heroIdText}>{teacher.teacherId || teacher.email}</Text>
           </Animated.View>
         </Animated.View>
 
-        {/* ══ QUICK STATS ══ */}
-        <View style={styles.statsStrip}>
+        {/* ─── STATS STRIP ─── */}
+        <View style={s.statsStrip}>
           {[
-            { label: "Dept",    value: deptShortName || "—",                                   color: "#f59e0b" },
-            { label: "College", value: teacher.college ? teacher.college.split(" ")[0] : "—", color: "#a78bfa" },
-            { label: "Role",    value: "Faculty",                                               color: "#34d399" },
-            { label: "ID",      value: teacher.teacherId || "—",                              color: "#fb923c" },
-          ].map((s, i, arr) => (
+            { label: "Dept",    value: deptName                                           || "—", color: ACCENT    },
+            { label: "College", value: teacher.college?.split(" ")[0]                     || "—", color: "#a78bfa" },
+            { label: "Role",    value: "Faculty",                                                 color: "#34d399" },
+            { label: "ID",      value: teacher.teacherId                                  || "—", color: "#fb923c" },
+          ].map((item, i, arr) => (
             <React.Fragment key={i}>
-              <View style={styles.statItem}>
-                <Text style={[styles.statItemVal, { color: s.color }]} numberOfLines={1}>{s.value}</Text>
-                <Text style={styles.statItemLabel}>{s.label}</Text>
+              <View style={s.statItem}>
+                <Text style={[s.statVal, { color: item.color }]} numberOfLines={1}>{item.value}</Text>
+                <Text style={s.statLabel}>{item.label}</Text>
               </View>
-              {i < arr.length - 1 && <View style={styles.statDivider} />}
+              {i < arr.length - 1 && <View style={s.statDivider} />}
             </React.Fragment>
           ))}
         </View>
 
-        {/* ══ ACADEMIC CARD ══ */}
-        <View style={styles.card}>
-          <SectionHead icon="school-outline" title="Academic Details" color="#f59e0b" />
-          <View style={styles.acadRow}>
+        {/* ─── ACADEMIC DETAILS ─── */}
+        <View style={s.card}>
+          <SectionHead icon="school-outline" title="Academic Details" color={ACCENT} />
+          <View style={s.acadRow}>
             {[
               {
-                label: teacher.department?.match(/\(([^)]+)\)/)?.[1] || "Dept", sub: "Department",
-                color: "#f59e0b",
-                content: <View style={[styles.acadCircle, { borderColor: "rgba(245,158,11,0.4)", backgroundColor: "rgba(245,158,11,0.15)" }]}>
-                  <Ionicons name="school" size={22} color="#f59e0b" />
-                </View>,
-                bg: ["rgba(245,158,11,0.1)", "rgba(245,158,11,0.03)"], border: "rgba(245,158,11,0.2)",
+                label: teacher.department?.match(/\(([^)]+)\)/)?.[1] || "Dept",
+                sub: "Department", color: ACCENT,
+                icon: "school",
               },
-              {
-                label: "Faculty", sub: "Role",
-                color: "#34d399",
-                content: <View style={[styles.acadCircle, { borderColor: "rgba(52,211,153,0.4)", backgroundColor: "rgba(52,211,153,0.15)" }]}>
-                  <Ionicons name="person" size={22} color="#34d399" />
-                </View>,
-                bg: ["rgba(52,211,153,0.1)", "rgba(52,211,153,0.03)"], border: "rgba(52,211,153,0.2)",
-              },
-              {
-                label: teacher.college?.split(" ")[1] || "NIMS", sub: "College",
-                color: "#a78bfa",
-                content: <View style={[styles.acadCircle, { borderColor: "rgba(167,139,250,0.4)", backgroundColor: "rgba(167,139,250,0.15)" }]}>
-                  <Ionicons name="business" size={22} color="#a78bfa" />
-                </View>,
-                bg: ["rgba(167,139,250,0.1)", "rgba(167,139,250,0.03)"], border: "rgba(167,139,250,0.2)",
-              },
+              { label: "Faculty", sub: "Role",    color: "#34d399", icon: "person"   },
+              { label: teacher.college?.split(" ")[1] || "College", sub: "College", color: "#a78bfa", icon: "business" },
             ].map((box, i) => (
-              <LinearGradient key={i} colors={box.bg}
-                style={[styles.acadBox, { borderColor: box.border }]}>
-                {box.content}
-                <Text style={[styles.acadBoxTitle, { color: box.color }]} numberOfLines={1}>{box.label}</Text>
-                <Text style={styles.acadBoxSub}>{box.sub}</Text>
+              <LinearGradient key={i}
+                colors={[box.color + "15", box.color + "05"]}
+                style={[s.acadBox, { borderColor: box.color + "25" }]}
+              >
+                <View style={[s.acadCircle, { borderColor: box.color + "40", backgroundColor: box.color + "15" }]}>
+                  <Ionicons name={box.icon} size={22} color={box.color} />
+                </View>
+                <Text style={[s.acadLabel, { color: box.color }]} numberOfLines={1}>{box.label}</Text>
+                <Text style={s.acadSub}>{box.sub}</Text>
               </LinearGradient>
             ))}
           </View>
-
           {teacher.department && (
-            <View style={styles.deptBadge}>
-              <Ionicons name="code-working-outline" size={12} color="#f59e0b" />
-              <Text style={styles.deptBadgeText} numberOfLines={1}>{teacher.department}</Text>
+            <View style={s.infoBadge}>
+              <Ionicons name="code-working-outline" size={12} color={ACCENT} />
+              <Text style={[s.infoBadgeText, { color: ACCENT }]} numberOfLines={2}>{teacher.department}</Text>
             </View>
           )}
           {teacher.college && (
-            <View style={[styles.deptBadge, { marginTop: 8, borderColor: "rgba(167,139,250,0.3)", backgroundColor: "rgba(167,139,250,0.07)" }]}>
+            <View style={[s.infoBadge, { marginTop: 8, borderColor: "rgba(167,139,250,0.3)", backgroundColor: "rgba(167,139,250,0.07)" }]}>
               <Ionicons name="business-outline" size={12} color="#a78bfa" />
-              <Text style={[styles.deptBadgeText, { color: "#a78bfa" }]} numberOfLines={1}>{teacher.college}</Text>
+              <Text style={[s.infoBadgeText, { color: "#a78bfa" }]} numberOfLines={2}>{teacher.college}</Text>
             </View>
           )}
         </View>
 
-        {/* ══ PERSONAL INFO ══ */}
-        <View style={styles.card}>
+        {/* ─── PERSONAL INFO ─── */}
+        <View style={s.card}>
           <SectionHead icon="person-circle-outline" title="Personal Information" color="#a78bfa" />
-          <View style={styles.infoCard}>
+          <View style={s.infoCard}>
             {[
-              { icon: "mail-outline",             label: "Email",      value: teacher.email,     color: "#f59e0b", delay: 0   },
+              { icon: "mail-outline",             label: "Email",      value: teacher.email,     color: ACCENT,    delay: 0   },
               { icon: "call-outline",             label: "Phone",      value: teacher.phone,     color: "#34d399", delay: 60  },
               { icon: "card-outline",             label: "Teacher ID", value: teacher.teacherId, color: "#a78bfa", delay: 120 },
-              { icon: "shield-checkmark-outline", label: "Role",       value: "Teacher",         color: "#34d399", delay: 240 },
+              { icon: "shield-checkmark-outline", label: "Role",       value: "Teacher",         color: "#34d399", delay: 180 },
             ].map((item, i, arr) => (
               <InfoRow key={i} {...item} last={i === arr.length - 1} />
             ))}
           </View>
         </View>
 
-        {/* ══ TEACHER ID CARD ══ */}
-        <View style={styles.card}>
-          <SectionHead icon="id-card-outline" title="Teacher ID Card" color="#f59e0b" />
+        {/* ─── ID CARD ─── */}
+        <View style={s.card}>
+          <SectionHead icon="id-card-outline" title="Teacher ID Card" color={ACCENT} />
 
-          {/*
-            ✅ FIX: ref={cardRef} on this View works for both:
-              - Mobile: react-native-view-shot uses cardRef.current directly
-              - Web: html2canvas uses cardRef.current (the DOM node)
-            collapsable={false} ensures React Native doesn't optimize away the node.
-          */}
-          <View ref={cardRef} collapsable={false} style={styles.idCardOuter}>
-            <LinearGradient colors={["#1a1000", "#0d0800", "#1a0e00"]} style={styles.idCard}>
+          <View ref={cardRef} collapsable={false} nativeID="teacher-id-card" style={s.idOuter}>
+            <LinearGradient colors={["#1a1000", "#0d0800", "#1a0e00"]} style={s.idCard}>
               <LinearGradient colors={["#f59e0b", "#d97706", "#b45309"]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.idStripe} />
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.idStripe} />
 
-              <View style={styles.idHeader}>
-                <View style={styles.idLogo}>
-                  <Ionicons name="school" size={16} color="#f59e0b" />
+              {/* Header */}
+              <View style={s.idHeader}>
+                <View style={s.idLogoBox}>
+                  <Ionicons name="school" size={16} color={ACCENT} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.idCollegeName} numberOfLines={1}>{teacher.college || "College"}</Text>
-                  <Text style={styles.idCollegeSub}>COLLAHUB Academic System</Text>
+                  <Text style={s.idCollegeName} numberOfLines={1}>{teacher.college || "College"}</Text>
+                  <Text style={s.idCollegeSub}>CollaHub Academic System</Text>
                 </View>
-                <View style={styles.idTypeBadge}>
-                  <Text style={styles.idTypeText}>FACULTY</Text>
+                <View style={s.idTypePill}>
+                  <Text style={s.idTypeText}>FACULTY</Text>
                 </View>
               </View>
 
-              <View style={styles.idBody}>
-                <View style={styles.idPhotoFrame}>
-                  <SafeImage uri={imgSrc} size={78} initials={initials} color="#f59e0b"
-                    style={{ width: "100%", height: "100%", borderRadius: 12 }} />
+              {/* Body */}
+              <View style={s.idBody}>
+                <View style={s.idPhotoFrame}>
+                  <SafeImage
+                    uri={profileImage}
+                    size={78}
+                    initials={initials}
+                    color={ACCENT}
+                    style={{ width: "100%", height: "100%", borderRadius: 12 }}
+                  />
                 </View>
-                <View style={styles.idDetails}>
-                  <Text style={styles.idName} numberOfLines={1}>{teacher.name}</Text>
-                  <Text style={styles.idTeacherId}>{teacher.teacherId || "—"}</Text>
-                  <View style={styles.idDivider} />
-                  <Text style={styles.idDept} numberOfLines={2}>{teacher.department || "—"}</Text>
-                  <Text style={styles.idEmail} numberOfLines={1}>{teacher.email}</Text>
-                  {teacher.phone ? <Text style={styles.idPhone}>{teacher.phone}</Text> : null}
-                  <View style={styles.idBadgesRow}>
-                    <View style={styles.idBadge}>
-                      <Text style={styles.idBadgeText}>Faculty</Text>
-                    </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.idName} numberOfLines={1}>{teacher.name}</Text>
+                  <Text style={s.idTeacherId}>{teacher.teacherId || "—"}</Text>
+                  <View style={s.idDivider} />
+                  <Text style={s.idDept} numberOfLines={2}>{teacher.department || "—"}</Text>
+                  <Text style={s.idEmail} numberOfLines={1}>{teacher.email}</Text>
+                  {teacher.phone && <Text style={s.idPhone}>{teacher.phone}</Text>}
+                  <View style={s.idBadges}>
+                    <View style={s.idBadge}><Text style={s.idBadgeText}>Faculty</Text></View>
                   </View>
                 </View>
               </View>
 
-              <View style={styles.idFooter}>
-                <View style={styles.idQrWrap}>
+              {/* Footer */}
+              <View style={s.idFooter}>
+                <View style={s.idQr}>
                   <QRCode
                     value={JSON.stringify({
                       id:   teacher.teacherId || teacher._id,
@@ -492,71 +417,94 @@ export default function TeacherProfile() {
                     color="#ffffff"
                   />
                 </View>
-                <View style={styles.idFooterRight}>
-                  <View style={styles.idValidBadge}>
+                <View style={{ alignItems: "flex-end", gap: 5 }}>
+                  <View style={s.idValidBadge}>
                     <Ionicons name="checkmark-circle" size={11} color="#34d399" />
-                    <Text style={styles.idValidText}>VALID</Text>
+                    <Text style={s.idValidText}>VALID</Text>
                   </View>
-                  <Text style={styles.idBatchLabel}>
+                  <Text style={s.idBatch}>
                     {teacher.createdAt
                       ? new Date(teacher.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })
                       : "Faculty"}
                   </Text>
-                  <Text style={styles.idWatermark}>COLLAHUB</Text>
+                  <Text style={s.idWatermark}>COLLAHUB</Text>
                 </View>
               </View>
 
-              <LinearGradient colors={["#f59e0b22", "transparent"]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.idBottomStripe} />
+              <LinearGradient colors={[ACCENT + "22", "transparent"]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.idBottomStripe} />
             </LinearGradient>
           </View>
 
-          <Pressable style={[styles.downloadBtn, downloading && { opacity: 0.7 }]}
-            onPress={downloadCard} disabled={downloading}>
+          <Pressable
+            style={[s.downloadBtn, downloading && { opacity: 0.7 }]}
+            onPress={downloadCard}
+            disabled={downloading}
+          >
             <LinearGradient colors={["#d97706", "#f59e0b"]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.downloadGrad}>
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.downloadGrad}>
               {downloading
                 ? <ActivityIndicator color="#fff" size="small" />
-                : <><Ionicons name="download-outline" size={17} color="#fff" /><Text style={styles.downloadText}>Download ID Card</Text></>
+                : <>
+                    <Ionicons name="download-outline" size={18} color="#fff" />
+                    <Text style={s.downloadText}>Download ID Card</Text>
+                  </>
               }
             </LinearGradient>
           </Pressable>
-          <Text style={styles.downloadHint}>
-            {IS_WEB ? "PNG download starts from your browser." : "Saved to your gallery."}
+          <Text style={s.downloadHint}>
+            {IS_WEB ? "PNG will be downloaded via browser" : "Saved to gallery in CollaHub album"}
           </Text>
         </View>
       </Animated.ScrollView>
 
-      {/* ✅ Full Image Preview Modal */}
-      <Modal visible={previewImageModal} transparent animationType="fade">
-        <Pressable style={styles.fullImageModalBg} onPress={() => setPreviewImageModal(false)}>
-          {profileImage && (
-            <Image source={{ uri: profileImage }} style={styles.fullImagePreview} resizeMode="contain" />
-          )}
-          <View style={styles.closePreviewBtn}>
+      {/* ─── FULL SCREEN PHOTO VIEW ─── */}
+      <Modal visible={photoModal} transparent animationType="fade" onRequestClose={() => setPhotoModal(false)}>
+        <Pressable style={s.photoOverlay} onPress={() => setPhotoModal(false)}>
+          <View style={s.photoClose}>
             <Ionicons name="close" size={22} color="#fff" />
+          </View>
+          <SafeImage uri={profileImage} size={280} initials={initials} color={ACCENT}
+            style={{ borderRadius: 20 }} />
+          <View style={s.photoInfo}>
+            <Text style={s.photoName}>{teacher.name}</Text>
+            <Text style={s.photoRole}>Faculty · {deptName}</Text>
           </View>
         </Pressable>
       </Modal>
 
-      {/* ══ IMAGE MODAL ══ */}
-      <Modal visible={imageModal} transparent animationType="fade">
-        <Pressable style={styles.imgModalBg} onPress={() => setImageModal(false)}>
-          <View style={styles.imgModalCard}>
-            <Text style={styles.imgModalTitle}>Change Profile Photo</Text>
-            <View style={styles.imgPreviewWrap}>
-              <SafeImage uri={imgSrc} size={120} initials={initials} color="#f59e0b" />
+      {/* ─── CHANGE PHOTO BOTTOM SHEET ─── */}
+      <Modal visible={changeModal} transparent animationType="slide" onRequestClose={() => setChangeModal(false)}>
+        <Pressable style={s.sheetOverlay} onPress={() => setChangeModal(false)}>
+          <View style={s.sheet}>
+            <View style={s.sheetHandle} />
+
+            <View style={s.sheetAvatarWrap}>
+              <SafeImage uri={profileImage} size={110} initials={initials} color={ACCENT}
+                style={{ borderRadius: 55, borderWidth: 3, borderColor: ACCENT + "60" }} />
+              {uploading && (
+                <View style={s.sheetAvatarOverlay}>
+                  <ActivityIndicator size="large" color={ACCENT} />
+                  <Text style={s.sheetUploadText}>Uploading...</Text>
+                </View>
+              )}
             </View>
-            <Pressable style={styles.imgPickBtn} onPress={changeProfileImage}>
+
+            <Text style={s.sheetTitle}>Change Profile Photo</Text>
+            <Text style={s.sheetSub}>Choose a clear photo for your ID card</Text>
+
+            <Pressable style={s.sheetBtn} onPress={changeProfileImage} disabled={uploading}>
               <LinearGradient colors={["#d97706", "#f59e0b"]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.imgPickGrad}>
-                <Ionicons name="image-outline" size={17} color="#fff" />
-                <Text style={styles.imgPickText}>Select from Gallery</Text>
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.sheetBtnGrad}>
+                <Ionicons name="image-outline" size={18} color="#fff" />
+                <Text style={s.sheetBtnText}>Select from Gallery</Text>
               </LinearGradient>
             </Pressable>
-            <Pressable style={styles.imgCancelBtn} onPress={() => setImageModal(false)}>
-              <Text style={styles.imgCancelText}>Cancel</Text>
+
+            <Pressable style={s.sheetCancel} onPress={() => setChangeModal(false)}>
+              <Text style={s.sheetCancelText}>Cancel</Text>
             </Pressable>
+            <View style={{ height: 20 }} />
           </View>
         </Pressable>
       </Modal>
@@ -564,100 +512,112 @@ export default function TeacherProfile() {
   );
 }
 
-const styles = StyleSheet.create({
-  container:              { flex: 1, backgroundColor: "#070a0d" },
-  loader:                 { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#070a0d", gap: 14 },
-  loaderText:             { color: "#374151", fontSize: 13 },
+const s = StyleSheet.create({
+  container:          { flex: 1, backgroundColor: "#070a0d" },
+  loader:             { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#070a0d", gap: 14 },
+  loaderText:         { color: "#374151", fontSize: 13 },
 
-  // ✅ Global uploading overlay (screen-level, always visible regardless of modal state)
-  globalUploadingOverlay: {
-    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-    zIndex: 9999,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    justifyContent: "center", alignItems: "center", gap: 14,
-  },
-  globalUploadingText:    { color: "#f59e0b", fontSize: 14, fontWeight: "700" },
+  // Hero
+  hero:               { alignItems: "center", justifyContent: "flex-end", paddingBottom: 24, overflow: "hidden" },
+  deco1:              { position: "absolute", width: 220, height: 220, borderRadius: 110, top: -80, left: -60, backgroundColor: "rgba(245,158,11,0.06)" },
+  deco2:              { position: "absolute", width: 160, height: 160, borderRadius: 80, top: 30, right: -40, backgroundColor: "rgba(167,139,250,0.05)" },
+  heroBar:            { position: "absolute", top: 52, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 },
+  heroBtn:            { width: 40, height: 40, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  heroBarTitle:       { color: "#fff", fontSize: 16, fontWeight: "700" },
+  avatarWrap:         { alignItems: "center", marginBottom: 14, position: "relative" },
+  avatarRingOuter:    { width: 104, height: 104, borderRadius: 52, borderWidth: 2, borderColor: "rgba(245,158,11,0.5)", padding: 3, justifyContent: "center", alignItems: "center" },
+  avatarRingInner:    { width: 94, height: 94, borderRadius: 47, overflow: "hidden", borderWidth: 2, borderColor: "rgba(245,158,11,0.2)" },
+  avatarLoading:      { position: "absolute", width: 104, height: 104, borderRadius: 52, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
+  cameraFab:          { position: "absolute", bottom: 2, right: 2, width: 30, height: 30, borderRadius: 15, backgroundColor: "#d97706", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "#070a0d" },
+  heroName:           { alignItems: "center" },
+  heroNameText:       { color: "#fff", fontSize: 21, fontWeight: "800" },
+  heroIdText:         { color: "#64748b", fontSize: 12, marginTop: 4 },
 
-  hero:                { alignItems: "center", justifyContent: "flex-end", paddingBottom: 24, overflow: "hidden" },
-  deco1:               { position: "absolute", width: 220, height: 220, borderRadius: 110, top: -80,  left: -60,   backgroundColor: "rgba(245,158,11,0.06)" },
-  deco2:               { position: "absolute", width: 160, height: 160, borderRadius: 80,  top: 30,   right: -40,  backgroundColor: "rgba(167,139,250,0.05)" },
-  deco3:               { position: "absolute", width: 100, height: 100, borderRadius: 50,  bottom: 0, left: "30%", backgroundColor: "rgba(52,211,153,0.04)" },
-  heroBar:             { position: "absolute", top: 52, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 },
-  heroBarBtn:          { width: 40, height: 40, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
-  heroBarTitle:        { color: "#fff", fontSize: 16, fontWeight: "700" },
-  avatarWrap:          { alignItems: "center", marginBottom: 14, position: "relative" },
-  avatarRingOuter:     { width: 104, height: 104, borderRadius: 52, borderWidth: 2, borderColor: "rgba(245,158,11,0.5)", padding: 3, justifyContent: "center", alignItems: "center" },
-  avatarRingInner:     { width: 94, height: 94, borderRadius: 47, overflow: "hidden", borderWidth: 2, borderColor: "rgba(245,158,11,0.2)" },
-  cameraFab:           { position: "absolute", bottom: 2, right: 2, width: 28, height: 28, borderRadius: 14, backgroundColor: "#d97706", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "#070a0d" },
-  heroNameWrap:        { alignItems: "center" },
-  heroName:            { color: "#fff", fontSize: 21, fontWeight: "800", letterSpacing: 0.3 },
-  heroId:              { color: "#4b5563", fontSize: 12, marginTop: 4 },
-  statsStrip:          { flexDirection: "row", backgroundColor: "#121008", marginHorizontal: 16, marginTop: -1, borderRadius: 18, borderWidth: 1, borderColor: "rgba(245,158,11,0.12)", paddingVertical: 14, paddingHorizontal: 10, justifyContent: "space-around", alignItems: "center" },
-  statItem:            { alignItems: "center", flex: 1 },
-  statItemVal:         { fontSize: 13, fontWeight: "800" },
-  statItemLabel:       { color: "#374151", fontSize: 10, fontWeight: "600", marginTop: 2 },
-  statDivider:         { width: 1, height: 28, backgroundColor: "rgba(245,158,11,0.15)" },
-  card:                { marginHorizontal: 16, marginTop: 16, backgroundColor: "#0f0b04", borderRadius: 20, padding: 18, borderWidth: 1, borderColor: "rgba(245,158,11,0.1)" },
-  sectionHead:         { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
-  sectionHeadIcon:     { width: 32, height: 32, borderRadius: 10, justifyContent: "center", alignItems: "center" },
-  sectionHeadText:     { color: "#cbd5e1", fontSize: 14, fontWeight: "700", letterSpacing: 0.3 },
-  acadRow:             { flexDirection: "row", gap: 10, marginBottom: 14, flexWrap: "wrap" },
-  acadBox:             { flexGrow: 1, flexBasis: "30%", minWidth: 92, borderRadius: 16, padding: 12, alignItems: "center", gap: 6, borderWidth: 1 },
-  acadCircle:          { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },
-  acadBoxTitle:        { fontSize: 11, fontWeight: "700", textAlign: "center" },
-  acadBoxSub:          { color: "#374151", fontSize: 9, textAlign: "center" },
-  deptBadge:           { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "rgba(245,158,11,0.3)", backgroundColor: "rgba(245,158,11,0.07)", flexShrink: 1 },
-  deptBadgeText:       { color: "#f59e0b", fontSize: 12, fontWeight: "600", flexShrink: 1 },
-  infoCard:            { borderRadius: 14, overflow: "hidden", backgroundColor: "#0a0800" },
-  infoRow:             { flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 14 },
-  infoRowBorder:       { borderBottomWidth: 1, borderBottomColor: "rgba(245,158,11,0.08)" },
-  infoIconWrap:        { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center", marginRight: 12 },
-  infoContent:         { flex: 1 },
-  infoLabel:           { color: "#374151", fontSize: 10, fontWeight: "600", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 },
-  infoValue:           { color: "#e2e8f0", fontSize: 13, fontWeight: "600" },
-  idCardOuter:         { borderRadius: 20, overflow: "hidden", marginBottom: 14, elevation: 8, shadowColor: "#f59e0b", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 },
-  idCard:              { borderRadius: 20, overflow: "hidden" },
-  idStripe:            { height: 5, width: "100%" },
-  idHeader:            { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },
-  idLogo:              { width: 34, height: 34, borderRadius: 10, backgroundColor: "rgba(245,158,11,0.12)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(245,158,11,0.25)" },
-  idCollegeName:       { color: "#fff", fontSize: 13, fontWeight: "700" },
-  idCollegeSub:        { color: "#374151", fontSize: 9, marginTop: 1 },
-  idTypeBadge:         { backgroundColor: "rgba(245,158,11,0.12)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "rgba(245,158,11,0.25)" },
-  idTypeText:          { color: "#f59e0b", fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
-  idBody:              { flexDirection: "row", gap: 14, padding: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)", flexWrap: "wrap" },
-  idPhotoFrame:        { width: 78, height: 78, borderRadius: 14, overflow: "hidden", borderWidth: 2, borderColor: "rgba(245,158,11,0.3)" },
-  idDetails:           { flex: 1, minWidth: 170 },
-  idName:              { color: "#fff", fontSize: 15, fontWeight: "800", marginBottom: 3 },
-  idTeacherId:         { color: "#f59e0b", fontSize: 11, fontWeight: "700", marginBottom: 8 },
-  idDivider:           { height: 1, backgroundColor: "rgba(255,255,255,0.07)", marginBottom: 8 },
-  idDept:              { color: "#94a3b8", fontSize: 10, marginBottom: 2, lineHeight: 15 },
-  idEmail:             { color: "#64748b", fontSize: 10, marginBottom: 2 },
-  idPhone:             { color: "#64748b", fontSize: 10, marginBottom: 4 },
-  idBadgesRow:         { flexDirection: "row", gap: 5, flexWrap: "wrap", marginTop: 4 },
-  idBadge:             { backgroundColor: "rgba(245,158,11,0.15)", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  idBadgeText:         { color: "#f59e0b", fontSize: 9, fontWeight: "700" },
-  idFooter:            { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, gap: 12, flexWrap: "wrap" },
-  idQrWrap:            { backgroundColor: "rgba(255,255,255,0.04)", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  idFooterRight:       { alignItems: "flex-end", gap: 5 },
-  idValidBadge:        { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(52,211,153,0.12)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  idValidText:         { color: "#34d399", fontSize: 9, fontWeight: "800", letterSpacing: 1 },
-  idBatchLabel:        { color: "#64748b", fontSize: 10 },
-  idWatermark:         { color: "rgba(245,158,11,0.12)", fontSize: 16, fontWeight: "900", letterSpacing: 4, marginTop: 2 },
-  idBottomStripe:      { height: 3, width: "100%" },
-  downloadBtn:         { borderRadius: 14, overflow: "hidden" },
-  downloadGrad:        { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 15 },
-  downloadText:        { color: "#fff", fontWeight: "700", fontSize: 15 },
-  downloadHint:        { color: "#1f2937", fontSize: 11, textAlign: "center", marginTop: 8 },
-  imgModalBg:          { flex: 1, backgroundColor: "rgba(0,0,0,0.82)", justifyContent: "center", alignItems: "center" },
-  imgModalCard:        { backgroundColor: "#0f0b04", borderRadius: 24, padding: 24, width: width - 60, alignItems: "center", borderWidth: 1, borderColor: "rgba(245,158,11,0.15)" },
-  imgModalTitle:       { color: "#fff", fontSize: 16, fontWeight: "800", marginBottom: 16 },
-  imgPreviewWrap:      { width: 120, height: 120, borderRadius: 60, overflow: "hidden", marginBottom: 20, borderWidth: 2, borderColor: "rgba(245,158,11,0.4)" },
-  imgPickBtn:          { borderRadius: 14, overflow: "hidden", width: "100%", marginBottom: 10 },
-  imgPickGrad:         { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14 },
-  imgPickText:         { color: "#fff", fontWeight: "700", fontSize: 14 },
-  imgCancelBtn:        { paddingVertical: 12, width: "100%", alignItems: "center" },
-  imgCancelText:       { color: "#4b5563", fontWeight: "600", fontSize: 14 },
-  fullImageModalBg:    { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
-  fullImagePreview:    { width: "90%", height: "70%", borderRadius: 16 },
-  closePreviewBtn:     { position: "absolute", top: 52, right: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.1)", justifyContent: "center", alignItems: "center" },
+  // Stats strip
+  statsStrip:         { flexDirection: "row", backgroundColor: "#121008", marginHorizontal: 16, marginTop: -1, borderRadius: 18, borderWidth: 1, borderColor: "rgba(245,158,11,0.12)", paddingVertical: 14, paddingHorizontal: 10, justifyContent: "space-around", alignItems: "center" },
+  statItem:           { alignItems: "center", flex: 1 },
+  statVal:            { fontSize: 13, fontWeight: "800" },
+  statLabel:          { color: "#374151", fontSize: 10, fontWeight: "600", marginTop: 2 },
+  statDivider:        { width: 1, height: 28, backgroundColor: "rgba(245,158,11,0.15)" },
+
+  // Cards
+  card:               { marginHorizontal: 16, marginTop: 16, backgroundColor: "#0f0b04", borderRadius: 20, padding: 18, borderWidth: 1, borderColor: "rgba(245,158,11,0.1)" },
+  sectionHead:        { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
+  sectionIcon:        { width: 32, height: 32, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  sectionTitle:       { color: "#cbd5e1", fontSize: 14, fontWeight: "700" },
+
+  // Academic
+  acadRow:            { flexDirection: "row", gap: 10, marginBottom: 14, flexWrap: "wrap" },
+  acadBox:            { flexGrow: 1, flexBasis: "30%", minWidth: 90, borderRadius: 16, padding: 12, alignItems: "center", gap: 6, borderWidth: 1 },
+  acadCircle:         { width: 46, height: 46, borderRadius: 23, justifyContent: "center", alignItems: "center" },
+  acadLabel:          { fontSize: 11, fontWeight: "700", textAlign: "center" },
+  acadSub:            { color: "#374151", fontSize: 9, textAlign: "center" },
+  infoBadge:          { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "rgba(245,158,11,0.3)", backgroundColor: "rgba(245,158,11,0.07)" },
+  infoBadgeText:      { fontSize: 12, fontWeight: "600", flex: 1 },
+
+  // Info rows
+  infoCard:           { borderRadius: 14, overflow: "hidden", backgroundColor: "#0a0800" },
+  infoRow:            { flexDirection: "row", alignItems: "center", paddingVertical: 13, paddingHorizontal: 14 },
+  infoRowBorder:      { borderBottomWidth: 1, borderBottomColor: "rgba(245,158,11,0.08)" },
+  infoIcon:           { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center", marginRight: 12 },
+  infoContent:        { flex: 1 },
+  infoLabel:          { color: "#64748b", fontSize: 10, fontWeight: "600", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 },
+  infoValue:          { color: "#e2e8f0", fontSize: 13, fontWeight: "600" },
+
+  // ID Card
+  idOuter:            { borderRadius: 20, overflow: "hidden", marginBottom: 14, elevation: 8, shadowColor: ACCENT, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 },
+  idCard:             { borderRadius: 20, overflow: "hidden" },
+  idStripe:           { height: 5 },
+  idHeader:           { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },
+  idLogoBox:          { width: 34, height: 34, borderRadius: 10, backgroundColor: "rgba(245,158,11,0.12)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(245,158,11,0.25)" },
+  idCollegeName:      { color: "#fff", fontSize: 13, fontWeight: "700" },
+  idCollegeSub:       { color: "#64748b", fontSize: 9, marginTop: 1 },
+  idTypePill:         { backgroundColor: "rgba(245,158,11,0.12)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: "rgba(245,158,11,0.25)" },
+  idTypeText:         { color: ACCENT, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  idBody:             { flexDirection: "row", gap: 14, padding: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)", flexWrap: "wrap" },
+  idPhotoFrame:       { width: 78, height: 78, borderRadius: 14, overflow: "hidden", borderWidth: 2, borderColor: "rgba(245,158,11,0.3)" },
+  idName:             { color: "#fff", fontSize: 15, fontWeight: "800", marginBottom: 3 },
+  idTeacherId:        { color: ACCENT, fontSize: 11, fontWeight: "700", marginBottom: 8 },
+  idDivider:          { height: 1, backgroundColor: "rgba(255,255,255,0.07)", marginBottom: 8 },
+  idDept:             { color: "#94a3b8", fontSize: 10, marginBottom: 2, lineHeight: 15 },
+  idEmail:            { color: "#64748b", fontSize: 10, marginBottom: 2 },
+  idPhone:            { color: "#64748b", fontSize: 10, marginBottom: 4 },
+  idBadges:           { flexDirection: "row", gap: 5, flexWrap: "wrap", marginTop: 4 },
+  idBadge:            { backgroundColor: "rgba(245,158,11,0.15)", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  idBadgeText:        { color: ACCENT, fontSize: 9, fontWeight: "700" },
+  idFooter:           { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, flexWrap: "wrap", gap: 10 },
+  idQr:               { backgroundColor: "rgba(255,255,255,0.04)", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  idValidBadge:       { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(52,211,153,0.12)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  idValidText:        { color: "#34d399", fontSize: 9, fontWeight: "800", letterSpacing: 1 },
+  idBatch:            { color: "#64748b", fontSize: 10 },
+  idWatermark:        { color: "rgba(245,158,11,0.15)", fontSize: 14, fontWeight: "900", letterSpacing: 3, marginTop: 2 },
+  idBottomStripe:     { height: 3 },
+
+  // Download
+  downloadBtn:        { borderRadius: 14, overflow: "hidden" },
+  downloadGrad:       { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
+  downloadText:       { color: "#fff", fontWeight: "700", fontSize: 15 },
+  downloadHint:       { color: "#374151", fontSize: 11, textAlign: "center", marginTop: 8 },
+
+  // Full photo view
+  photoOverlay:       { flex: 1, backgroundColor: "rgba(0,0,0,0.96)", justifyContent: "center", alignItems: "center", gap: 20 },
+  photoClose:         { position: "absolute", top: 52, right: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.1)", justifyContent: "center", alignItems: "center" },
+  photoInfo:          { alignItems: "center", gap: 4 },
+  photoName:          { color: "#fff", fontSize: 20, fontWeight: "800" },
+  photoRole:          { color: "#64748b", fontSize: 13 },
+
+  // Change photo bottom sheet
+  sheetOverlay:       { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  sheet:              { backgroundColor: "#0f0b04", borderTopLeftRadius: 28, borderTopRightRadius: 28, alignItems: "center", paddingHorizontal: 24, paddingTop: 8, borderWidth: 1, borderColor: "rgba(245,158,11,0.1)" },
+  sheetHandle:        { width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.15)", marginBottom: 24 },
+  sheetAvatarWrap:    { width: 116, height: 116, borderRadius: 58, overflow: "hidden", marginBottom: 16, position: "relative" },
+  sheetAvatarOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.65)", justifyContent: "center", alignItems: "center", gap: 8 },
+  sheetUploadText:    { color: ACCENT, fontSize: 12, fontWeight: "600" },
+  sheetTitle:         { color: "#fff", fontSize: 18, fontWeight: "800", marginBottom: 4 },
+  sheetSub:           { color: "#64748b", fontSize: 13, marginBottom: 24, textAlign: "center" },
+  sheetBtn:           { width: "100%", borderRadius: 14, overflow: "hidden", marginBottom: 10 },
+  sheetBtnGrad:       { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16 },
+  sheetBtnText:       { color: "#fff", fontWeight: "700", fontSize: 15 },
+  sheetCancel:        { paddingVertical: 14, width: "100%", alignItems: "center" },
+  sheetCancelText:    { color: "#64748b", fontWeight: "600", fontSize: 14 },
 });
