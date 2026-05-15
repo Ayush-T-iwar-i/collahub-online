@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 // ── Auto URL select ───────────────────────────────────────
-const SERVER_URL = "https://university-hub-code.onrender.com";
+const BASE_URL = "https://university-hub-code.onrender.com";
 
 
 if (__DEV__) console.log("🌐 API →", BASE_URL);
@@ -19,7 +19,6 @@ const API = axios.create({
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// ── Request: token attach ─────────────────────────────────
 API.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem("accessToken");
@@ -31,7 +30,7 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ── Response: auto token refresh ──────────────────────────
+
 let isRefreshing = false;
 let failedQueue  = [];
 
@@ -70,7 +69,7 @@ API.interceptors.response.use(
       );
     }
 
-    // 401 — token expired, try refresh
+    
     if (
       error.response?.status === 401 &&
       !orig._retry &&

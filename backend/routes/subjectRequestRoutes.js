@@ -1,22 +1,17 @@
-const express        = require("express");
-const router         = express.Router();
+const express = require("express");
+const router = express.Router();
 const SubjectRequest = require("../models/SubjectRequest");
-const Subject        = require("../models/Subject");
-const User           = require("../models/User");
-const Timetable      = require("../models/Timetable");
+const Subject = require("../models/Subject");
+const User = require("../models/User");
+const Timetable = require("../models/Timetable");
 const { verifyToken, isAdmin, isTeacher } = require("../middleware/authMiddleware");
 
-// ════════════════════════════════════════════
-// SPECIFIC ROUTES PEHLE — PARAM ROUTES BAAD
-// ════════════════════════════════════════════
-
-// ── Teacher: Available subjects (same college + dept) ──
 router.get("/available-subjects", verifyToken, isTeacher, async (req, res) => {
   try {
     const teacher = await User.findById(req.user.id).select("college department");
     if (!teacher) return res.status(404).json({ success: false, message: "Teacher not found" });
     const subjects = await Subject.find({
-      college:    teacher.college,
+      college: teacher.college,
       department: teacher.department,
     }).sort({ semester: 1, name: 1 });
     res.json({ success: true, subjects, teacher });
@@ -44,7 +39,7 @@ router.get("/my-subjects", verifyToken, isTeacher, async (req, res) => {
     // 1. Own accepted subjects
     const ownSubjects = await SubjectRequest.find({
       teacherId: req.user.id,
-      status:    "accepted",
+      status: "accepted",
     }).sort({ createdAt: -1 });
 
     // 2. Subjects shared with this teacher — find all where sharedWith has this teacher
@@ -67,17 +62,17 @@ router.get("/my-subjects", verifyToken, isTeacher, async (req, res) => {
       activeShares.forEach(share => {
         sharedFormatted.push({
           ...sub.toObject(),
-          _id:          sub._id,
-          isShared:     true,               // ✅ flag for frontend
+          _id: sub._id,
+          isShared: true,               // ✅ flag for frontend
           originalTeacherName: sub.teacherName,
           // Override timetable to show only shared slot
           timetable: sub.timetable.filter(
             t => t.day === share.day && t.startTime === share.startTime
           ),
           sharedSlot: {
-            day:       share.day,
+            day: share.day,
             startTime: share.startTime,
-            endTime:   share.endTime,
+            endTime: share.endTime,
             expiresAt: share.expiresAt,
           },
         });
@@ -85,7 +80,7 @@ router.get("/my-subjects", verifyToken, isTeacher, async (req, res) => {
     });
 
     res.json({
-      success:  true,
+      success: true,
       subjects: [...ownSubjects, ...sharedFormatted],
     });
   } catch (e) {
@@ -98,9 +93,9 @@ router.get("/teachers-list", verifyToken, isTeacher, async (req, res) => {
   try {
     const me = await User.findById(req.user.id).select("college department");
     const teachers = await User.find({
-      role:    "teacher",
+      role: "teacher",
       college: me.college,          // ✅ same college — sabhi departments
-      _id:     { $ne: req.user.id }, // exclude self
+      _id: { $ne: req.user.id }, // exclude self
     }).select("name teacherId email department _id").sort({ department: 1, name: 1 });
     res.json({ success: true, teachers });
   } catch (e) {
@@ -114,9 +109,9 @@ router.get("/teachers-list", verifyToken, isTeacher, async (req, res) => {
 router.post("/:id/share", verifyToken, isTeacher, async (req, res) => {
   try {
     const subject = await SubjectRequest.findOne({
-      _id:       req.params.id,
+      _id: req.params.id,
       teacherId: req.user.id,   // only owner can share
-      status:    "accepted",
+      status: "accepted",
     });
     if (!subject) {
       return res.status(404).json({ success: false, message: "Subject not found or not yours" });
@@ -160,12 +155,12 @@ router.post("/:id/share", verifyToken, isTeacher, async (req, res) => {
     }
 
     subject.sharedWith.push({
-      teacherId:   targetTeacher._id,
+      teacherId: targetTeacher._id,
       teacherName: targetTeacher.name,
       day,
       startTime,
-      endTime:     endTime || "",
-      expiresAt:   expiry,
+      endTime: endTime || "",
+      expiresAt: expiry,
     });
 
     await subject.save();
@@ -174,11 +169,11 @@ router.post("/:id/share", verifyToken, isTeacher, async (req, res) => {
     try {
       const Notification = require("../models/Notification");
       await Notification.create({
-        userId:  teacherId,
-        title:   "Class Assigned to You",
+        userId: teacherId,
+        title: "Class Assigned to You",
         message: `${subject.teacherName} has shared "${subject.subjectName}" class (${day} ${startTime}) with you. Please mark attendance.`,
-        type:    "class_share",
-        isRead:  false,
+        type: "class_share",
+        isRead: false,
       });
     } catch (e) {
       console.log("Notification error:", e.message);
@@ -198,9 +193,9 @@ router.post("/:id/share", verifyToken, isTeacher, async (req, res) => {
 router.delete("/:id/share/:shareId", verifyToken, isTeacher, async (req, res) => {
   try {
     const subject = await SubjectRequest.findOne({
-      _id:       req.params.id,
+      _id: req.params.id,
       teacherId: req.user.id,
-      status:    "accepted",
+      status: "accepted",
     });
     if (!subject) {
       return res.status(404).json({ success: false, message: "Subject not found" });
@@ -221,7 +216,7 @@ router.delete("/:id/share/:shareId", verifyToken, isTeacher, async (req, res) =>
 router.get("/:id/shares", verifyToken, isTeacher, async (req, res) => {
   try {
     const subject = await SubjectRequest.findOne({
-      _id:       req.params.id,
+      _id: req.params.id,
       teacherId: req.user.id,
     });
     if (!subject) return res.status(404).json({ success: false, message: "Not found" });
@@ -239,11 +234,11 @@ router.get("/teacher-timetable", verifyToken, isTeacher, async (req, res) => {
   try {
     const requests = await SubjectRequest.find({
       teacherId: req.user.id,
-      status:    "accepted",
+      status: "accepted",
       timetable: { $exists: true, $ne: [] },
     }).sort({ subjectName: 1 });
 
-    const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const byDay = {};
     DAYS.forEach(d => { byDay[d] = []; });
     const allSlots = [];
@@ -251,19 +246,19 @@ router.get("/teacher-timetable", verifyToken, isTeacher, async (req, res) => {
     requests.forEach(req => {
       (req.timetable || []).forEach(slot => {
         const obj = {
-          _id:           slot._id,
-          subjectName:   req.subjectName,
-          subjectCode:   req.subjectCode,
-          subjectId:     req.subjectId,
-          day:           slot.day,
-          startTime:     slot.startTime,
-          endTime:       slot.endTime,
-          room:          slot.room || "",
-          semester:      req.semester,
-          section:       req.section,
+          _id: slot._id,
+          subjectName: req.subjectName,
+          subjectCode: req.subjectCode,
+          subjectId: req.subjectId,
+          day: slot.day,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          room: slot.room || "",
+          semester: req.semester,
+          section: req.section,
           admissionYear: req.admissionYear,
-          department:    req.department,
-          college:       req.college,
+          department: req.department,
+          college: req.college,
         };
         if (byDay[slot.day]) byDay[slot.day].push(obj);
         allSlots.push(obj);
@@ -291,16 +286,16 @@ router.get("/student-timetable", verifyToken, async (req, res) => {
     }
 
     const requests = await SubjectRequest.find({
-      college:       student.college,
-      department:    student.department,
-      semester:      Number(student.semester),
+      college: student.college,
+      department: student.department,
+      semester: Number(student.semester),
       admissionYear: String(student.admissionYear),
-      status:        "accepted",
-      timetable:     { $exists: true, $ne: [] },
+      status: "accepted",
+      timetable: { $exists: true, $ne: [] },
       $or: [{ section: "All" }, { section: student.section || "A" }],
     }).sort({ subjectName: 1 });
 
-    const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const byDay = {};
     DAYS.forEach(d => { byDay[d] = []; });
     const allSlots = [];
@@ -308,19 +303,19 @@ router.get("/student-timetable", verifyToken, async (req, res) => {
     requests.forEach(req => {
       (req.timetable || []).forEach(slot => {
         const obj = {
-          subjectName:   req.subjectName,
-          subjectCode:   req.subjectCode,
-          subjectId:     req.subjectId,
-          teacherName:   req.teacherName,
-          teacherId:     req.teacherId,
-          day:           slot.day,
-          startTime:     slot.startTime,
-          endTime:       slot.endTime,
-          room:          slot.room || "",
-          semester:      req.semester,
-          section:       req.section,
+          subjectName: req.subjectName,
+          subjectCode: req.subjectCode,
+          subjectId: req.subjectId,
+          teacherName: req.teacherName,
+          teacherId: req.teacherId,
+          day: slot.day,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          room: slot.room || "",
+          semester: req.semester,
+          section: req.section,
           admissionYear: req.admissionYear,
-          department:    req.department,
+          department: req.department,
         };
         if (byDay[slot.day]) byDay[slot.day].push(obj);
         allSlots.push(obj);
@@ -332,13 +327,13 @@ router.get("/student-timetable", verifyToken, async (req, res) => {
     });
 
     res.json({
-      success:   true,
+      success: true,
       timetable: byDay,
-      slots:     allSlots,
+      slots: allSlots,
       student: {
-        college:       student.college,
-        department:    student.department,
-        semester:      student.semester,
+        college: student.college,
+        department: student.department,
+        semester: student.semester,
         admissionYear: student.admissionYear,
       },
     });
@@ -356,20 +351,20 @@ router.get("/student-subjects", verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: "Only students" });
     }
     const subjects = await SubjectRequest.find({
-      college:       student.college,
-      department:    student.department,
-      semester:      student.semester,
+      college: student.college,
+      department: student.department,
+      semester: student.semester,
       admissionYear: student.admissionYear,
-      status:        "accepted",
+      status: "accepted",
       $or: [{ section: "All" }, { section: student.section || "A" }],
     }).sort({ subjectName: 1 });
     res.json({
       success: true,
       subjects,
       info: {
-        college:       student.college,
-        department:    student.department,
-        semester:      student.semester,
+        college: student.college,
+        department: student.department,
+        semester: student.semester,
         admissionYear: student.admissionYear,
       }
     });
@@ -388,26 +383,26 @@ router.get("/admin-subjects", verifyToken, async (req, res) => {
     }
     const subjects = await Subject.find({
       department: student.department,
-      semester:   Number(student.semester),
+      semester: Number(student.semester),
     }).sort({ name: 1 });
     const formatted = subjects.map(s => ({
-      _id:         s._id,
+      _id: s._id,
       subjectName: s.name,
       subjectCode: s.code,
-      type:        s.type,
-      college:     s.college,
-      department:  s.department,
-      semester:    s.semester,
-      credits:     s.credits,
+      type: s.type,
+      college: s.college,
+      department: s.department,
+      semester: s.semester,
+      credits: s.credits,
       description: s.description,
     }));
     res.json({
-      success:  true,
+      success: true,
       subjects: formatted,
       info: {
-        college:       student.college,
-        department:    student.department,
-        semester:      student.semester,
+        college: student.college,
+        department: student.department,
+        semester: student.semester,
         admissionYear: student.admissionYear,
       }
     });
@@ -442,12 +437,12 @@ router.post("/", verifyToken, isTeacher, async (req, res) => {
     }
 
     const existing = await SubjectRequest.findOne({
-      teacherId:     req.user.id,
+      teacherId: req.user.id,
       subjectName,
-      semester:      Number(semester),
+      semester: Number(semester),
       admissionYear: String(admissionYear),
-      section:       section || "All",
-      status:        { $in: ["pending", "accepted"] },
+      section: section || "All",
+      status: { $in: ["pending", "accepted"] },
     });
     if (existing) {
       return res.status(400).json({
@@ -458,16 +453,16 @@ router.post("/", verifyToken, isTeacher, async (req, res) => {
 
     const teacher = await User.findById(req.user.id).select("name");
     const request = await SubjectRequest.create({
-      teacherId:     req.user.id,
-      teacherName:   teacher.name,
-      subjectId:     subjectId || null,
+      teacherId: req.user.id,
+      teacherName: teacher.name,
+      subjectId: subjectId || null,
       subjectName,
-      subjectCode:   subjectCode || "",
+      subjectCode: subjectCode || "",
       college,
       department,
-      semester:      Number(semester),
+      semester: Number(semester),
       admissionYear: String(admissionYear),
-      section:       section || "All",
+      section: section || "All",
     });
 
     res.status(201).json({ success: true, message: "Request sent to admin!", request });
@@ -487,9 +482,9 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
     if (timetable && timetable.length > 0) {
       for (const slot of timetable) {
         const teacherConflict = await SubjectRequest.findOne({
-          _id:       { $ne: request._id },
+          _id: { $ne: request._id },
           teacherId: request.teacherId,
-          status:    "accepted",
+          status: "accepted",
           timetable: { $elemMatch: { day: slot.day, startTime: slot.startTime } },
         });
         if (teacherConflict) {
@@ -512,7 +507,7 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
 
         if (slot.room && slot.room.trim()) {
           const roomConflict = await SubjectRequest.findOne({
-            _id:    { $ne: request._id },
+            _id: { $ne: request._id },
             status: "accepted",
             timetable: {
               $elemMatch: { day: slot.day, startTime: slot.startTime, room: slot.room.trim() },
@@ -527,12 +522,12 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
         }
 
         const batchConflict = await SubjectRequest.findOne({
-          _id:           { $ne: request._id },
-          college:       request.college,
-          department:    request.department,
-          semester:      request.semester,
+          _id: { $ne: request._id },
+          college: request.college,
+          department: request.department,
+          semester: request.semester,
           admissionYear: request.admissionYear,
-          status:        "accepted",
+          status: "accepted",
           $or: [{ section: "All" }, { section: request.section }],
           timetable: { $elemMatch: { day: slot.day, startTime: slot.startTime } },
         });
@@ -545,7 +540,7 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
       }
     }
 
-    request.status    = "accepted";
+    request.status = "accepted";
     request.adminNote = "";
     if (timetable && timetable.length > 0) request.timetable = timetable;
     await request.save();
@@ -554,11 +549,11 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
       await Timetable.findOneAndUpdate(
         { subjectId: request.subjectId, teacherId: request.teacherId },
         {
-          subjectId:     request.subjectId,
-          teacherId:     request.teacherId,
-          college:       request.college,
-          department:    request.department,
-          semester:      request.semester,
+          subjectId: request.subjectId,
+          teacherId: request.teacherId,
+          college: request.college,
+          department: request.department,
+          semester: request.semester,
           admissionYear: request.admissionYear,
           slots: timetable.map((s, i) => ({
             day: s.day, startTime: s.startTime, endTime: s.endTime,
@@ -572,11 +567,11 @@ router.put("/:id/accept", verifyToken, isAdmin, async (req, res) => {
     try {
       const Notification = require("../models/Notification");
       await Notification.create({
-        userId:  request.teacherId,
-        title:   "Subject Request Accepted",
+        userId: request.teacherId,
+        title: "Subject Request Accepted",
         message: `Your request for "${request.subjectName}" has been accepted. Timetable has been assigned.`,
-        type:    "subject_request",
-        isRead:  false,
+        type: "subject_request",
+        isRead: false,
       });
     } catch (e) { console.log("Notification error:", e.message); }
 
@@ -599,11 +594,11 @@ router.put("/:id/reject", verifyToken, isAdmin, async (req, res) => {
     try {
       const Notification = require("../models/Notification");
       await Notification.create({
-        userId:  request.teacherId,
-        title:   "Subject Request Rejected",
+        userId: request.teacherId,
+        title: "Subject Request Rejected",
         message: `Your request for "${request.subjectName}" has been rejected.${req.body.note ? ` Reason: ${req.body.note}` : ""}`,
-        type:    "subject_request",
-        isRead:  false,
+        type: "subject_request",
+        isRead: false,
       });
     } catch (e) { console.log("Notification error:", e.message); }
 
@@ -621,15 +616,15 @@ router.get("/:id/students", verifyToken, isTeacher, async (req, res) => {
 
     // Check if own subject OR shared with this teacher
     let subject = await SubjectRequest.findOne({
-      _id:       req.params.id,
+      _id: req.params.id,
       teacherId: req.user.id,
-      status:    "accepted",
+      status: "accepted",
     });
 
     // If not own, check if shared
     if (!subject) {
       subject = await SubjectRequest.findOne({
-        _id:    req.params.id,
+        _id: req.params.id,
         status: "accepted",
         sharedWith: {
           $elemMatch: {
@@ -645,10 +640,10 @@ router.get("/:id/students", verifyToken, isTeacher, async (req, res) => {
     }
 
     const filter = {
-      role:          "student",
-      college:       subject.college,
-      department:    subject.department,
-      semester:      subject.semester,
+      role: "student",
+      college: subject.college,
+      department: subject.department,
+      semester: subject.semester,
       admissionYear: subject.admissionYear,
     };
     if (subject.section && subject.section !== "All") filter.section = subject.section;
@@ -658,15 +653,15 @@ router.get("/:id/students", verifyToken, isTeacher, async (req, res) => {
       .sort({ name: 1 });
 
     res.json({
-      success:  true,
+      success: true,
       students,
       subject: {
-        name:          subject.subjectName,
-        code:          subject.subjectCode,
-        semester:      subject.semester,
-        section:       subject.section,
+        name: subject.subjectName,
+        code: subject.subjectCode,
+        semester: subject.semester,
+        section: subject.section,
         admissionYear: subject.admissionYear,
-        department:    subject.department,
+        department: subject.department,
       }
     });
   } catch (e) {
@@ -678,9 +673,9 @@ router.get("/:id/students", verifyToken, isTeacher, async (req, res) => {
 router.delete("/:id", verifyToken, isTeacher, async (req, res) => {
   try {
     const request = await SubjectRequest.findOne({
-      _id:       req.params.id,
+      _id: req.params.id,
       teacherId: req.user.id,
-      status:    "pending",
+      status: "pending",
     });
     if (!request) return res.status(404).json({ success: false, message: "Pending request not found" });
     await request.deleteOne();
