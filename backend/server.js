@@ -24,28 +24,32 @@ connectDB();
 // ══════════════════════════════════════════════════════════
 const ALLOWED_ORIGINS = [
 
+  // Render backend
   "https://university-hub-code.onrender.com",
 
-/^https:\/\/.*\.onrender\.com$/,
-  // Web development domain
-  
+  // Production frontend domains
+  "https://collahub.online",
+  "https://www.collahub.online",
+  "https://app.collahub.online",
 
+  // Any Vercel preview deployment
+  /^https:\/\/.*\.vercel\.app$/,
 
-  // Web production domain
-  // "https://collahub.nims.edu.in",
+  // Any Render deployment
+  /^https:\/\/.*\.onrender\.com$/,
 
-  // Development — localhost
+  // Localhost
   "http://localhost:8081",
   "http://localhost:8082",
   "http://localhost:8083",
   "http://localhost:3000",
   "http://localhost:5000",
 
-  // Development — Android emulator
+  // Android emulator
   "http://10.0.2.2:8081",
   "http://10.0.2.2:5000",
 
-  // Development — Real devices on LAN
+  // LAN devices
   /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
   /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
   /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(:\d+)?$/,
