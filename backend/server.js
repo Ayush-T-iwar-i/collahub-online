@@ -26,9 +26,10 @@ const ALLOWED_ORIGINS = [
 
   "https://university-hub-code.onrender.com",
 
-  // Production — Railway URL
-  /^https:\/\/.*\.railway\.app$/,
-  /^https:\/\/.*\.up\.railway\.app$/,
+/^https:\/\/.*\.onrender\.com$/,
+  // Web development domain
+  
+
 
   // Web production domain
   // "https://collahub.nims.edu.in",
