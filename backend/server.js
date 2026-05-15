@@ -1,17 +1,17 @@
 require("dotenv").config();
 
-const express   = require("express");
-const cors      = require("cors");
-const helmet    = require("helmet");
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
-const connectDB      = require("./config/db");
-const errorHandler   = require("./middleware/errorHandler");
-const logger         = require("./middleware/logger");
+const connectDB = require("./config/db");
+const errorHandler = require("./middleware/errorHandler");
+const logger = require("./middleware/logger");
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 5000;
-const ENV  = process.env.NODE_ENV || "development";
+const ENV = process.env.NODE_ENV || "development";
 
 // ── Trust Proxy — is ESSENTIAL for Railway ─────────────
 app.set("trust proxy", 1);
@@ -76,9 +76,9 @@ app.use(cors({
       }
     }
   },
-  methods:      ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-refresh-token", "Cache-Control", "Pragma"],
-  credentials:  true,
+  credentials: true,
   preflightContinue: false,
   optionsSuccessStatus: 204,
 }));
@@ -86,8 +86,8 @@ app.use(cors({
 // ── Helmet ────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: false,
-  crossOriginOpenerPolicy:   false,
-  contentSecurityPolicy:     false, // Expo web needs this disabled
+  crossOriginOpenerPolicy: false,
+  contentSecurityPolicy: false, // Expo web needs this disabled
 }));
 
 // ── Rate Limiting ─────────────────────────────────────────
@@ -96,7 +96,7 @@ const authLimiter = rateLimit({
   max: ENV === "production" ? 10 : 100, // More lenient in dev
   message: { success: false, message: "Too many attempts, try again after 15 minutes." },
   standardHeaders: true,
-  legacyHeaders:   false,
+  legacyHeaders: false,
   skip: (req) => ENV === "development", // Skip in dev
 });
 
@@ -105,7 +105,7 @@ const adminLimiter = rateLimit({
   max: 500,
   message: { success: false, message: "Too many requests, please try again later." },
   standardHeaders: true,
-  legacyHeaders:   false,
+  legacyHeaders: false,
 });
 
 const generalLimiter = rateLimit({
@@ -113,22 +113,19 @@ const generalLimiter = rateLimit({
   max: ENV === "production" ? 200 : 1000,
   message: { success: false, message: "Too many requests, please try again later." },
   standardHeaders: true,
-  legacyHeaders:   false,
+  legacyHeaders: false,
   skip: (req) => ENV === "development",
 });
 
-app.use("/auth",  authLimiter);
-app.use("/otp",   authLimiter);
+app.use("/auth", authLimiter);
+app.use("/otp", authLimiter);
 app.use("/admin", adminLimiter);
 app.use(generalLimiter);
 
-// ── Body parsers ──────────────────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// ── MongoDB injection protection ──────────────────────────
-// Manual sanitization compatible with Express 5.
-// express-mongo-sanitize currently has compatibility issues with Express 5.
+
 app.use((req, res, next) => {
   const sanitize = (obj) => {
     if (obj && typeof obj === "object") {
@@ -141,17 +138,16 @@ app.use((req, res, next) => {
       });
     }
   };
-  if (req.body)  sanitize(req.body);
+  if (req.body) sanitize(req.body);
   if (req.query) {
-    // query is read-only in Express 5 — skip sanitizing
+ 
   }
   next();
 });
 
-// ── Logger ────────────────────────────────────────────────
 app.use(logger);
 
-// ── Cache headers — 304 fix ───────────────────────────────
+
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -188,13 +184,13 @@ app.get("/health", (req, res) => {
 if (ENV !== "production") {
   app.get("/debug/env", (req, res) => {
     res.json({
-      NODE_ENV:     process.env.NODE_ENV,
-      PORT:         process.env.PORT,
-      EMAIL_USER:   process.env.EMAIL_USER ? "✅ SET" : "❌ MISSING",
-      EMAIL_PASS:   process.env.EMAIL_PASS ? "✅ SET" : "❌ MISSING",
-      MONGODB_URI:  process.env.MONGODB_URI ? "✅ SET" : "❌ MISSING",
-      JWT_SECRET:   process.env.JWT_SECRET ? "✅ SET" : "❌ MISSING",
-      CLOUD_NAME:   process.env.CLOUD_NAME ? "✅ SET" : "❌ MISSING",
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT,
+      EMAIL_USER: process.env.EMAIL_USER ? "✅ SET" : "❌ MISSING",
+      EMAIL_PASS: process.env.EMAIL_PASS ? "✅ SET" : "❌ MISSING",
+      MONGODB_URI: process.env.MONGODB_URI ? "✅ SET" : "❌ MISSING",
+      JWT_SECRET: process.env.JWT_SECRET ? "✅ SET" : "❌ MISSING",
+      CLOUD_NAME: process.env.CLOUD_NAME ? "✅ SET" : "❌ MISSING",
     });
   });
 }
@@ -202,33 +198,33 @@ if (ENV !== "production") {
 // ══════════════════════════════════════════════════════════
 // ROUTES
 // ══════════════════════════════════════════════════════════
-app.use("/auth",             require("./routes/authRoutes"));
-app.use("/admin",            require("./routes/adminRoutes"));
-app.use("/students",         require("./routes/studentTeacherRoutes"));
-app.use("/teachers",         require("./routes/teacherManageRoutes"));
-app.use("/student",          require("./routes/studentRoutes"));
-app.use("/teacher",          require("./routes/teacherRoutes"));
-app.use("/user",             require("./routes/userRoutes"));
-app.use("/rooms",            require("./routes/roomRoutes"));
-app.use("/subjects",         require("./routes/subjectRoutes"));
-app.use("/timetable",        require("./routes/timetableRoutes"));
-app.use("/attendance",       require("./routes/attendanceRoutes"));
+app.use("/auth", require("./routes/authRoutes"));
+app.use("/admin", require("./routes/adminRoutes"));
+app.use("/students", require("./routes/studentTeacherRoutes"));
+app.use("/teachers", require("./routes/teacherManageRoutes"));
+app.use("/student", require("./routes/studentRoutes"));
+app.use("/teacher", require("./routes/teacherRoutes"));
+app.use("/user", require("./routes/userRoutes"));
+app.use("/rooms", require("./routes/roomRoutes"));
+app.use("/subjects", require("./routes/subjectRoutes"));
+app.use("/timetable", require("./routes/timetableRoutes"));
+app.use("/attendance", require("./routes/attendanceRoutes"));
 app.use("/subject-requests", require("./routes/subjectRequestRoutes"));
-app.use("/assignments",      require("./routes/assignmentRoutes"));
-app.use("/submissions",      require("./routes/submissionRoutes"));
-app.use("/results",          require("./routes/resultRoutes"));
-app.use("/notices",          require("./routes/noticeRoutes"));
-app.use("/notifications",    require("./routes/notificationRoutes"));
-app.use("/dashboard",        require("./routes/dashboardRoutes"));
-app.use("/courses",          require("./routes/courseRoutes"));
-app.use("/leaves",           require("./routes/leaveRoutes"));
-app.use("/notes",            require("./routes/noteRoutes"));
-app.use("/otp",              require("./routes/otpRoutes"));
-app.use("/announcements",    require("./routes/announcementRoutes"));
-app.use("/api/posts",        require("./routes/postRoutes"));
-app.use("/super-admin",      require("./routes/superAdminRoutes"));
-app.use("/biometric",        require("./routes/biometricRoutes"));
-app.use("/teacher-notes",    require("./routes/noteRoutes"));
+app.use("/assignments", require("./routes/assignmentRoutes"));
+app.use("/submissions", require("./routes/submissionRoutes"));
+app.use("/results", require("./routes/resultRoutes"));
+app.use("/notices", require("./routes/noticeRoutes"));
+app.use("/notifications", require("./routes/notificationRoutes"));
+app.use("/dashboard", require("./routes/dashboardRoutes"));
+app.use("/courses", require("./routes/courseRoutes"));
+app.use("/leaves", require("./routes/leaveRoutes"));
+app.use("/notes", require("./routes/noteRoutes"));
+app.use("/otp", require("./routes/otpRoutes"));
+app.use("/announcements", require("./routes/announcementRoutes"));
+app.use("/api/posts", require("./routes/postRoutes"));
+app.use("/super-admin", require("./routes/superAdminRoutes"));
+app.use("/biometric", require("./routes/biometricRoutes"));
+app.use("/teacher-notes", require("./routes/noteRoutes"));
 
 // ── 404 handler ───────────────────────────────────────────
 app.use((req, res) => {
@@ -252,10 +248,10 @@ app.listen(PORT, "0.0.0.0", () => {
 
   // Check critical env vars at startup
   const missing = [];
-  if (!process.env.MONGODB_URI)  missing.push("MONGODB_URI");
-  if (!process.env.JWT_SECRET)   missing.push("JWT_SECRET");
-  if (!process.env.EMAIL_USER)   missing.push("EMAIL_USER");
-  if (!process.env.EMAIL_PASS)   missing.push("EMAIL_PASS");
+  if (!process.env.MONGODB_URI) missing.push("MONGODB_URI");
+  if (!process.env.JWT_SECRET) missing.push("JWT_SECRET");
+  if (!process.env.EMAIL_USER) missing.push("EMAIL_USER");
+  if (!process.env.EMAIL_PASS) missing.push("EMAIL_PASS");
 
   if (missing.length > 0) {
     console.warn("⚠️  Missing environment variables:", missing.join(", "));
