@@ -1,206 +1,341 @@
 // app/admin/teacher-attendance.js
-// Teacher Biometric Gate Attendance — same college only
+// FULLY FIXED RESPONSIVE UI VERSION
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
-  View, Text, StyleSheet, FlatList, Pressable,
-  ActivityIndicator, TextInput, StatusBar,
-  ScrollView, RefreshControl, Modal, Alert,
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  TextInput,
+  StatusBar,
+  ScrollView,
+  RefreshControl,
+  Modal,
+  Alert,
+  SafeAreaView,
+  Dimensions,
+  Platform,
 } from "react-native";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import API from "../../services/api";
 
-// ── Helpers ──────────────────────────────────────────────
+const { width } = Dimensions.get("window");
+
 const fmtTime = (iso) => {
   if (!iso) return "—";
   return new Date(iso).toLocaleTimeString("en-IN", {
-    hour: "2-digit", minute: "2-digit", hour12: true,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
   });
 };
+
 const fmtDate = (iso) => {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit", month: "short", year: "numeric",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 };
-const today = () => new Date().toISOString().split("T")[0];
-const initials = (name = "") =>
-  name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
 
-// ── Stat Card ────────────────────────────────────────────
+const today = () => new Date().toISOString().split("T")[0];
+
+const initials = (name = "") =>
+  name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase() || "?";
+
 const StatCard = ({ icon, label, value, color }) => (
   <LinearGradient
-    colors={[color + "18", color + "06"]}
-    style={[styles.statCard, { borderColor: color + "30" }]}
+    colors={[color + "20", color + "08"]}
+    style={[styles.statCard, { borderColor: color + "35" }]}
   >
-    <View style={[styles.statIcon, { backgroundColor: color + "18" }]}>
-      <Ionicons name={icon} size={17} color={color} />
+    <View style={[styles.statIcon, { backgroundColor: color + "20" }]}>
+      <Ionicons name={icon} size={18} color={color} />
     </View>
-    <Text style={[styles.statVal, { color }]}>{value ?? "—"}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
+
+    <Text style={[styles.statValue, { color }]} numberOfLines={1}>
+      {value ?? "—"}
+    </Text>
+
+    <Text style={styles.statLabel} numberOfLines={1}>
+      {label}
+    </Text>
   </LinearGradient>
 );
 
-// ── Teacher Row ───────────────────────────────────────────
 const TeacherRow = ({ item, onPress }) => {
   const isIn = item.lastPunch?.punchType === "CheckIn";
-  const statusColor = !item.lastPunch ? "#374151"
-    : isIn ? "#34d399" : "#f87171";
-  const statusText = !item.lastPunch ? "No Punch"
-    : isIn ? "Checked In" : "Checked Out";
+
+  const statusColor = !item.lastPunch
+    ? "#64748b"
+    : isIn
+    ? "#34d399"
+    : "#f87171";
+
+  const statusText = !item.lastPunch
+    ? "Absent"
+    : isIn
+    ? "Checked In"
+    : "Checked Out";
 
   return (
     <Pressable style={styles.teacherRow} onPress={() => onPress(item)}>
-      {/* Avatar */}
-      <View style={[styles.avatar, { backgroundColor: statusColor + "20" }]}>
-        <Text style={[styles.avatarText, { color: statusColor }]}>
-          {initials(item.name)}
-        </Text>
+      {/* LEFT */}
+      <View style={styles.rowLeft}>
+        <View
+          style={[
+            styles.avatar,
+            { backgroundColor: statusColor + "20" },
+          ]}
+        >
+          <Text style={[styles.avatarText, { color: statusColor }]}>
+            {initials(item.name)}
+          </Text>
+        </View>
+
+        <View style={styles.teacherInfo}>
+          <Text style={styles.teacherName} numberOfLines={1}>
+            {item.name}
+          </Text>
+
+          <Text style={styles.teacherMeta} numberOfLines={1}>
+            {item.department || "—"}
+          </Text>
+
+          <Text style={styles.teacherSub} numberOfLines={1}>
+            {item.teacherId || item.email || "—"}
+          </Text>
+        </View>
       </View>
 
-      {/* Info */}
-      <View style={styles.teacherInfo}>
-        <Text style={styles.teacherName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.teacherMeta} numberOfLines={1}>
-          {item.department || "—"} · {item.teacherId || item.email}
+      {/* RIGHT */}
+      <View style={styles.rowRight}>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor: statusColor + "15",
+              borderColor: statusColor + "35",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.statusDot,
+              { backgroundColor: statusColor },
+            ]}
+          />
+
+          <Text
+            style={[styles.statusText, { color: statusColor }]}
+            numberOfLines={1}
+          >
+            {statusText}
+          </Text>
+        </View>
+
+        <Text style={styles.punchCount}>
+          {item.todayPunches || 0} punches
         </Text>
+
         {item.lastPunch && (
-          <Text style={styles.teacherTime}>
-            Last punch: {fmtTime(item.lastPunch.punchTime)}
+          <Text style={styles.lastTime}>
+            {fmtTime(item.lastPunch.punchTime)}
           </Text>
         )}
-      </View>
-
-      {/* Status */}
-      <View style={styles.teacherRight}>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + "18", borderColor: statusColor + "40" }]}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
-        </View>
-        <Text style={styles.punchCount}>{item.todayPunches || 0} punches</Text>
-        <Ionicons name="chevron-forward" size={14} color="#374151" />
       </View>
     </Pressable>
   );
 };
 
-// ── Punch Log Row ─────────────────────────────────────────
-const PunchRow = ({ item, index }) => {
+const PunchRow = ({ item }) => {
   const isIn = item.punchType === "CheckIn";
+
   const color = isIn ? "#34d399" : "#f87171";
+
   return (
-    <View style={[styles.punchRow, index > 0 && { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.04)" }]}>
-      <View style={[styles.punchIcon, { backgroundColor: color + "18" }]}>
-        <Ionicons name={isIn ? "enter-outline" : "exit-outline"} size={14} color={color} />
+    <View style={styles.punchRow}>
+      <View
+        style={[
+          styles.punchIcon,
+          { backgroundColor: color + "18" },
+        ]}
+      >
+        <Ionicons
+          name={isIn ? "enter-outline" : "exit-outline"}
+          size={14}
+          color={color}
+        />
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.punchType, { color }]}>{isIn ? "Check In" : "Check Out"}</Text>
-        <Text style={styles.punchDate}>{fmtDate(item.punchTime)}</Text>
+
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[styles.punchType, { color }]}>
+          {isIn ? "Check In" : "Check Out"}
+        </Text>
+
+        <Text style={styles.punchDate}>
+          {fmtDate(item.punchTime)}
+        </Text>
       </View>
-      <View style={styles.punchRight}>
-        <Text style={styles.punchTime}>{fmtTime(item.punchTime)}</Text>
-        <View style={[styles.modeBadge, {
-          backgroundColor: item.verifyMode === "Face"
-            ? "rgba(167,139,250,0.15)" : "rgba(245,158,11,0.12)"
-        }]}>
-          <Ionicons
-            name={item.verifyMode === "Face" ? "scan-outline" : "finger-print-outline"}
-            size={9}
-            color={item.verifyMode === "Face" ? "#a78bfa" : "#f59e0b"}
-          />
-          <Text style={[styles.modeBadgeText, {
-            color: item.verifyMode === "Face" ? "#a78bfa" : "#f59e0b"
-          }]}>{item.verifyMode || "—"}</Text>
+
+      <View style={{ alignItems: "flex-end" }}>
+        <Text style={styles.punchTime}>
+          {fmtTime(item.punchTime)}
+        </Text>
+
+        <View
+          style={[
+            styles.modeBadge,
+            {
+              backgroundColor:
+                item.verifyMode === "Face"
+                  ? "rgba(167,139,250,0.15)"
+                  : "rgba(245,158,11,0.15)",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.modeText,
+              {
+                color:
+                  item.verifyMode === "Face"
+                    ? "#a78bfa"
+                    : "#f59e0b",
+              },
+            ]}
+          >
+            {item.verifyMode || "—"}
+          </Text>
         </View>
       </View>
     </View>
   );
 };
 
-// ════════════════════════════════════════════════════════
-//  MAIN SCREEN
-// ════════════════════════════════════════════════════════
 export default function TeacherAttendance() {
   const router = useRouter();
+
   const intervalRef = useRef(null);
 
   const [adminCollege, setAdminCollege] = useState("");
   const [teachers, setTeachers] = useState([]);
   const [stats, setStats] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all"); // all | in | out | absent
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [filter, setFilter] = useState("all");
+
   const [selectedDate, setSelectedDate] = useState(today());
 
-  // Detail modal
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // MODAL
   const [detailModal, setDetailModal] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [teacherLogs, setTeacherLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
-  // ── Load admin college ──────────────────────────────
-  useFocusEffect(useCallback(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem("adminData");
-        if (raw) {
-          const d = JSON.parse(raw);
-          const college = d.college || d.user?.college || "";
-          setAdminCollege(college);
-          loadTeacherAttendance(college, selectedDate);
-        }
-      } catch {}
-    })();
-  }, [selectedDate]));
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const raw = await AsyncStorage.getItem("adminData");
 
-  // ── Auto refresh every 15s ──────────────────────────
+          if (raw) {
+            const d = JSON.parse(raw);
+
+            const college =
+              d.college || d.user?.college || "";
+
+            setAdminCollege(college);
+
+            loadTeacherAttendance(college, selectedDate);
+          }
+        } catch (e) {}
+      })();
+    }, [selectedDate])
+  );
+
   useEffect(() => {
     if (autoRefresh && adminCollege) {
       intervalRef.current = setInterval(() => {
-        loadTeacherAttendance(adminCollege, selectedDate, false);
+        loadTeacherAttendance(
+          adminCollege,
+          selectedDate,
+          false
+        );
       }, 15000);
     }
+
     return () => clearInterval(intervalRef.current);
   }, [autoRefresh, adminCollege, selectedDate]);
 
-  // ── Load teacher attendance ─────────────────────────
-  const loadTeacherAttendance = async (college, date, showLoader = true) => {
+  const loadTeacherAttendance = async (
+    college,
+    date,
+    showLoader = true
+  ) => {
     if (showLoader) setLoading(true);
+
     try {
-      const res = await API.get("/biometric/teacher-attendance", {
-        params: { college, date },
-      });
-      const data = res.data;
-      setTeachers(data.teachers || []);
-      setStats(data.stats || null);
+      const res = await API.get(
+        "/biometric/teacher-attendance",
+        {
+          params: { college, date },
+        }
+      );
+
+      setTeachers(res.data?.teachers || []);
+      setStats(res.data?.stats || null);
+
       setLastUpdated(new Date());
     } catch (e) {
-      // Silently fail on auto-refresh
-      if (showLoader) Alert.alert("Error", "Could not load teacher attendance");
+      if (showLoader) {
+        Alert.alert(
+          "Error",
+          "Could not load teacher attendance"
+        );
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  // ── Load individual teacher punch logs ──────────────
   const openTeacherDetail = async (teacher) => {
     setSelectedTeacher(teacher);
+
     setDetailModal(true);
+
     setLogsLoading(true);
+
     try {
-      const res = await API.get("/biometric/teacher-logs", {
-        params: {
-          userId: teacher._id,
-          date: selectedDate,
-        },
-      });
+      const res = await API.get(
+        "/biometric/teacher-logs",
+        {
+          params: {
+            userId: teacher._id,
+            date: selectedDate,
+          },
+        }
+      );
+
       setTeacherLogs(res.data?.logs || []);
     } catch {
       setTeacherLogs([]);
@@ -209,157 +344,256 @@ export default function TeacherAttendance() {
     }
   };
 
-  // ── Filter teachers ─────────────────────────────────
-  const filtered = teachers.filter(t => {
-    // Search filter
+  const filtered = teachers.filter((t) => {
     if (search) {
       const q = search.toLowerCase();
-      if (!t.name?.toLowerCase().includes(q) &&
+
+      if (
+        !t.name?.toLowerCase().includes(q) &&
         !t.department?.toLowerCase().includes(q) &&
-        !t.teacherId?.toLowerCase().includes(q)) return false;
+        !t.teacherId?.toLowerCase().includes(q)
+      ) {
+        return false;
+      }
     }
-    // Status filter
-    if (filter === "in") return t.lastPunch?.punchType === "CheckIn";
-    if (filter === "out") return t.lastPunch?.punchType === "CheckOut";
+
+    if (filter === "in")
+      return t.lastPunch?.punchType === "CheckIn";
+
+    if (filter === "out")
+      return t.lastPunch?.punchType === "CheckOut";
+
     if (filter === "absent") return !t.lastPunch;
+
     return true;
   });
 
-  // ── Date navigation ─────────────────────────────────
-  const changeDate = (direction) => {
+  const changeDate = (dir) => {
     const d = new Date(selectedDate);
-    d.setDate(d.getDate() + direction);
-    const newDate = d.toISOString().split("T")[0];
-    setSelectedDate(newDate);
+
+    d.setDate(d.getDate() + dir);
+
+    setSelectedDate(d.toISOString().split("T")[0]);
   };
 
   const isToday = selectedDate === today();
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#070d1a" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="#070d1a"
+      />
 
-      {/* ── Header ── */}
-      <LinearGradient colors={["#070d1a", "#0b1a30"]} style={styles.header}>
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace("/admin/dashboard")} style={styles.headerBtn}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Teacher Attendance</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>
-            {adminCollege
-              ? adminCollege.split(" ").slice(0, 3).join(" ")
-              : "Loading..."
-            } · {autoRefresh ? "Live" : "Paused"}
-          </Text>
-        </View>
-        {/* Auto refresh toggle */}
+      {/* HEADER */}
+      <LinearGradient
+        colors={["#070d1a", "#0b1a30"]}
+        style={styles.header}
+      >
         <Pressable
-          onPress={() => setAutoRefresh(p => !p)}
-          style={[styles.headerBtn, {
-            backgroundColor: autoRefresh
-              ? "rgba(52,211,153,0.15)"
-              : "rgba(255,255,255,0.06)"
-          }]}
+          style={styles.headerBtn}
+          onPress={() =>
+            router.canGoBack()
+              ? router.back()
+              : router.replace("/admin/dashboard")
+          }
         >
           <Ionicons
-            name={autoRefresh ? "radio-button-on" : "radio-button-off"}
+            name="arrow-back"
+            size={20}
+            color="#fff"
+          />
+        </Pressable>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.headerTitle}>
+            Teacher Attendance
+          </Text>
+
+          <Text style={styles.headerSub} numberOfLines={1}>
+            {adminCollege || "Loading..."}
+          </Text>
+        </View>
+
+        <Pressable
+          style={styles.headerBtn}
+          onPress={() => setAutoRefresh(!autoRefresh)}
+        >
+          <Ionicons
+            name={
+              autoRefresh
+                ? "radio-button-on"
+                : "radio-button-off"
+            }
             size={18}
             color={autoRefresh ? "#34d399" : "#64748b"}
           />
         </Pressable>
-        {/* Manual refresh */}
-        <Pressable
-          onPress={() => loadTeacherAttendance(adminCollege, selectedDate)}
-          style={styles.headerBtn}
-        >
-          <Ionicons name="refresh" size={18} color="#f59e0b" />
-        </Pressable>
       </LinearGradient>
 
-      {/* ── Date Selector ── */}
+      {/* DATE */}
       <View style={styles.dateRow}>
-        <Pressable onPress={() => changeDate(-1)} style={styles.dateArrow}>
-          <Ionicons name="chevron-back" size={18} color="#64748b" />
+        <Pressable
+          style={styles.dateArrow}
+          onPress={() => changeDate(-1)}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={18}
+            color="#94a3b8"
+          />
         </Pressable>
+
         <View style={styles.dateCenter}>
           <Text style={styles.dateText}>
-            {new Date(selectedDate).toLocaleDateString("en-IN", {
-              weekday: "long", day: "2-digit", month: "long",
-            })}
+            {new Date(selectedDate).toLocaleDateString(
+              "en-IN",
+              {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+              }
+            )}
           </Text>
+
           {isToday && (
             <View style={styles.todayBadge}>
-              <Text style={styles.todayBadgeText}>TODAY</Text>
+              <Text style={styles.todayText}>
+                TODAY
+              </Text>
             </View>
           )}
         </View>
+
         <Pressable
-          onPress={() => changeDate(1)}
-          style={[styles.dateArrow, isToday && { opacity: 0.3 }]}
+          style={[
+            styles.dateArrow,
+            isToday && { opacity: 0.3 },
+          ]}
           disabled={isToday}
+          onPress={() => changeDate(1)}
         >
-          <Ionicons name="chevron-forward" size={18} color="#64748b" />
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color="#94a3b8"
+          />
         </Pressable>
       </View>
 
-      {/* ── Stats Row ── */}
+      {/* STATS */}
       {stats && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.statsRow}
         >
-          <StatCard icon="people"         label="Total"      value={stats.total}     color="#a78bfa" />
-          <StatCard icon="enter-outline"  label="Present"    value={stats.present}   color="#34d399" />
-          <StatCard icon="close-circle"   label="Absent"     value={stats.absent}    color="#f87171" />
-          <StatCard icon="time-outline"   label="Punches"    value={stats.totalPunches} color="#f59e0b" />
+          <StatCard
+            icon="people"
+            label="Total"
+            value={stats.total}
+            color="#a78bfa"
+          />
+
+          <StatCard
+            icon="enter-outline"
+            label="Present"
+            value={stats.present}
+            color="#34d399"
+          />
+
+          <StatCard
+            icon="close-circle"
+            label="Absent"
+            value={stats.absent}
+            color="#f87171"
+          />
+
+          <StatCard
+            icon="time-outline"
+            label="Punches"
+            value={stats.totalPunches}
+            color="#f59e0b"
+          />
         </ScrollView>
       )}
 
-      {/* ── Search ── */}
+      {/* SEARCH */}
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
-          <Ionicons name="search" size={14} color="#374151" />
+          <Ionicons
+            name="search"
+            size={15}
+            color="#64748b"
+          />
+
           <TextInput
             style={styles.searchInput}
-            placeholder="Search teacher name, ID, dept..."
-            placeholderTextColor="#1f2937"
+            placeholder="Search teachers..."
+            placeholderTextColor="#475569"
             value={search}
             onChangeText={setSearch}
           />
+
           {!!search && (
             <Pressable onPress={() => setSearch("")}>
-              <Ionicons name="close-circle" size={15} color="#374151" />
+              <Ionicons
+                name="close-circle"
+                size={16}
+                color="#64748b"
+              />
             </Pressable>
           )}
         </View>
       </View>
 
-      {/* ── Filter Chips ── */}
+      {/* FILTERS */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}
       >
         {[
-          { key: "all",    label: "All Teachers", color: "#a78bfa" },
-          { key: "in",     label: "Checked In",   color: "#34d399" },
-          { key: "out",    label: "Checked Out",  color: "#f87171" },
-          { key: "absent", label: "Absent",       color: "#374151" },
-        ].map(f => (
+          {
+            key: "all",
+            label: "All",
+            color: "#a78bfa",
+          },
+          {
+            key: "in",
+            label: "Checked In",
+            color: "#34d399",
+          },
+          {
+            key: "out",
+            label: "Checked Out",
+            color: "#f87171",
+          },
+          {
+            key: "absent",
+            label: "Absent",
+            color: "#64748b",
+          },
+        ].map((f) => (
           <Pressable
             key={f.key}
             onPress={() => setFilter(f.key)}
             style={[
-              styles.chip,
+              styles.filterChip,
               filter === f.key && {
-                backgroundColor: f.color + "18",
-                borderColor: f.color + "60",
+                borderColor: f.color,
+                backgroundColor: f.color + "15",
               },
             ]}
           >
-            <Text style={[styles.chipText, filter === f.key && { color: f.color }]}>
+            <Text
+              style={[
+                styles.filterText,
+                filter === f.key && {
+                  color: f.color,
+                },
+              ]}
+            >
               {f.label}
             </Text>
           </Pressable>
@@ -367,16 +601,20 @@ export default function TeacherAttendance() {
       </ScrollView>
 
       <Text style={styles.countText}>
-        {filtered.length} teachers · Last updated: {lastUpdated ? fmtTime(lastUpdated) : "—"}
+        {filtered.length} teachers
       </Text>
 
-      {/* ── Teacher List ── */}
+      {/* LIST */}
       {loading ? (
-        <ActivityIndicator size="large" color="#f59e0b" style={{ marginTop: 50 }} />
+        <ActivityIndicator
+          size="large"
+          color="#f59e0b"
+          style={{ marginTop: 60 }}
+        />
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={i => i._id}
+          keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -384,303 +622,521 @@ export default function TeacherAttendance() {
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true);
-                loadTeacherAttendance(adminCollege, selectedDate, false);
+
+                loadTeacherAttendance(
+                  adminCollege,
+                  selectedDate,
+                  false
+                );
               }}
               tintColor="#f59e0b"
             />
           }
+          renderItem={({ item }) => (
+            <TeacherRow
+              item={item}
+              onPress={openTeacherDetail}
+            />
+          )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="person-outline" size={44} color="#1f2937" />
-              <Text style={styles.emptyTitle}>No teachers found</Text>
+              <Ionicons
+                name="people-outline"
+                size={52}
+                color="#1e293b"
+              />
+
+              <Text style={styles.emptyTitle}>
+                No Teachers Found
+              </Text>
+
               <Text style={styles.emptySub}>
-                {filter !== "all"
-                  ? "Change filter to see more"
-                  : "No biometric punches today"}
+                No attendance records available
               </Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <TeacherRow item={item} onPress={openTeacherDetail} />
-          )}
         />
       )}
 
-      {/* ════ DETAIL MODAL ════ */}
+      {/* DETAIL MODAL */}
       <Modal
         visible={detailModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setDetailModal(false)}
       >
         <View style={styles.overlay}>
-          <View style={styles.detailSheet}>
-            <View style={styles.handle} />
+          <View style={styles.modal}>
+            <View style={styles.modalHandle} />
 
-            {/* Modal Header */}
-            <View style={styles.detailHeader}>
-              <View style={[styles.detailAvatar, {
-                backgroundColor: selectedTeacher?.lastPunch
-                  ? "rgba(52,211,153,0.15)"
-                  : "rgba(100,116,139,0.15)"
-              }]}>
-                <Text style={[styles.detailAvatarText, {
-                  color: selectedTeacher?.lastPunch ? "#34d399" : "#64748b"
-                }]}>
-                  {initials(selectedTeacher?.name || "")}
-                </Text>
-              </View>
+            <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.detailName}>{selectedTeacher?.name}</Text>
-                <Text style={styles.detailMeta}>
-                  {selectedTeacher?.department || "—"} · {selectedTeacher?.teacherId || "—"}
+                <Text
+                  style={styles.modalTitle}
+                  numberOfLines={1}
+                >
+                  {selectedTeacher?.name}
                 </Text>
-                <Text style={styles.detailCollege} numberOfLines={1}>
-                  {selectedTeacher?.college || adminCollege}
+
+                <Text
+                  style={styles.modalSub}
+                  numberOfLines={1}
+                >
+                  {selectedTeacher?.department}
                 </Text>
               </View>
+
               <Pressable
                 style={styles.closeBtn}
                 onPress={() => setDetailModal(false)}
               >
-                <Ionicons name="close" size={18} color="#64748b" />
+                <Ionicons
+                  name="close"
+                  size={18}
+                  color="#94a3b8"
+                />
               </Pressable>
             </View>
-
-            {/* Stats for this teacher */}
-            <View style={styles.detailStats}>
-              <View style={styles.detailStat}>
-                <Text style={[styles.detailStatVal, { color: "#34d399" }]}>
-                  {selectedTeacher?.todayPunches || 0}
-                </Text>
-                <Text style={styles.detailStatLabel}>Today's Punches</Text>
-              </View>
-              <View style={styles.detailStatDiv} />
-              <View style={styles.detailStat}>
-                <Text style={[styles.detailStatVal, {
-                  color: selectedTeacher?.lastPunch ? "#34d399" : "#f87171"
-                }]}>
-                  {selectedTeacher?.lastPunch ? "Present" : "Absent"}
-                </Text>
-                <Text style={styles.detailStatLabel}>Today's Status</Text>
-              </View>
-              <View style={styles.detailStatDiv} />
-              <View style={styles.detailStat}>
-                <Text style={[styles.detailStatVal, { color: "#f59e0b" }]}>
-                  {selectedTeacher?.lastPunch
-                    ? fmtTime(selectedTeacher.lastPunch.punchTime)
-                    : "—"}
-                </Text>
-                <Text style={styles.detailStatLabel}>Last Punch</Text>
-              </View>
-            </View>
-
-            {/* Punch logs */}
-            <Text style={styles.detailSectionTitle}>
-              Punch History — {new Date(selectedDate).toLocaleDateString("en-IN", {
-                day: "2-digit", month: "short",
-              })}
-            </Text>
 
             {logsLoading ? (
               <ActivityIndicator
                 size="small"
                 color="#f59e0b"
-                style={{ marginTop: 20 }}
+                style={{ marginTop: 30 }}
               />
-            ) : teacherLogs.length === 0 ? (
-              <View style={styles.noLogs}>
-                <Ionicons name="time-outline" size={32} color="#1f2937" />
-                <Text style={styles.noLogsText}>No punch records for this date</Text>
-              </View>
             ) : (
               <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.logsContainer}
+                contentContainerStyle={{
+                  paddingBottom: 40,
+                }}
               >
-                {teacherLogs.map((log, i) => (
-                  <PunchRow key={log._id || i} item={log} index={i} />
-                ))}
+                {teacherLogs.length === 0 ? (
+                  <View style={styles.noLogs}>
+                    <Ionicons
+                      name="time-outline"
+                      size={40}
+                      color="#1e293b"
+                    />
+
+                    <Text style={styles.noLogsText}>
+                      No punch records
+                    </Text>
+                  </View>
+                ) : (
+                  teacherLogs.map((log, i) => (
+                    <PunchRow
+                      key={log._id || i}
+                      item={log}
+                    />
+                  ))
+                )}
               </ScrollView>
             )}
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#070d1a" },
+  container: {
+    flex: 1,
+    backgroundColor: "#070d1a",
+  },
 
-  // Header
   header: {
-    flexDirection: "row", alignItems: "center",
-    paddingTop: 52, paddingBottom: 14, paddingHorizontal: 16, gap: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "android" ? 18 : 10,
+    paddingBottom: 14,
+    gap: 12,
   },
+
   headerBtn: {
-    width: 38, height: 38, borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.06)",
-    justifyContent: "center", alignItems: "center",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.06)",
   },
-  headerTitle: { color: "#fff", fontSize: 17, fontWeight: "800" },
-  headerSub: { color: "#374151", fontSize: 11, marginTop: 1 },
 
-  // Date row
+  headerTitle: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  headerSub: {
+    color: "#e6e8eb",
+    fontSize: 11,
+    marginTop: 2,
+  },
+
   dateRow: {
-    flexDirection: "row", alignItems: "center",
-    marginHorizontal: 16, marginTop: 12, marginBottom: 4,
-    backgroundColor: "#0f1b2d", borderRadius: 14,
-    paddingVertical: 10, paddingHorizontal: 8,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.06)",
+    marginHorizontal: 16,
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#0f172a",
+    borderRadius: 16,
+    padding: 10,
   },
+
   dateArrow: {
-    width: 36, height: 36, borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.05)",
-    justifyContent: "center", alignItems: "center",
   },
+
   dateCenter: {
-    flex: 1, alignItems: "center",
-    flexDirection: "row", justifyContent: "center", gap: 8,
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
   },
-  dateText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+
+  dateText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+
   todayBadge: {
+    marginTop: 5,
     backgroundColor: "rgba(245,158,11,0.15)",
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 8, borderWidth: 1,
-    borderColor: "rgba(245,158,11,0.3)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  todayBadgeText: { color: "#f59e0b", fontSize: 9, fontWeight: "800" },
 
-  // Stats
-  statsRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
+  todayText: {
+    color: "#f59e0b",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+
+  statsRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
+  },
+
   statCard: {
-    borderRadius: 14, padding: 12, alignItems: "center",
-    minWidth: 85, borderWidth: 1, gap: 5,
+    width: width * 0.24,
+    minWidth: 95,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    borderWidth: 1,
   },
+
   statIcon: {
-    width: 34, height: 34, borderRadius: 10,
-    justifyContent: "center", alignItems: "center",
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
   },
-  statVal: { fontSize: 20, fontWeight: "900" },
-  statLabel: { color: "#374151", fontSize: 10, fontWeight: "600" },
 
-  // Search
-  searchRow: { paddingHorizontal: 16, marginBottom: 10 },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "900",
+  },
+
+  statLabel: {
+    color: "#94a3b8",
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: "600",
+  },
+
+  searchRow: {
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+
   searchBox: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: "#0f1b2d", borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10, gap: 8,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.06)",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0f172a",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
   },
-  searchInput: { flex: 1, color: "#fff", fontSize: 13 },
 
-  // Filter
-  filterRow: { paddingHorizontal: 16, gap: 8, marginBottom: 8 },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+  searchInput: {
+    flex: 1,
+    color: "#fff",
+    fontSize: 14,
+    marginLeft: 8,
+  },
+
+  filterRow: {
+    paddingHorizontal: 10,
+    gap: 11,
+    paddingBottom: 10,
+  },
+
+  filterChip: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
   },
-  chipText: { color: "#374151", fontSize: 12, fontWeight: "600" },
-  countText: { color: "#1f2937", fontSize: 11, paddingHorizontal: 16, marginBottom: 6 },
 
-  // Teacher list
-  list: { paddingHorizontal: 16, paddingBottom: 40 },
+  filterText: {
+    color: "#94a3b8",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  countText: {
+    color: "#475569",
+    fontSize: 11,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+
+  list: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+
   teacherRow: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: "#0f1b2d", borderRadius: 14,
-    padding: 12, marginBottom: 8, gap: 12,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "#0f172a",
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
   },
+
+  rowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+  },
+
+  rowRight: {
+    alignItems: "flex-end",
+    maxWidth: 110,
+    marginLeft: 10,
+  },
+
   avatar: {
-    width: 44, height: 44, borderRadius: 22,
-    justifyContent: "center", alignItems: "center",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  avatarText: { fontSize: 14, fontWeight: "800" },
-  teacherInfo: { flex: 1 },
-  teacherName: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  teacherMeta: { color: "#64748b", fontSize: 11, marginTop: 2 },
-  teacherTime: { color: "#374151", fontSize: 10, marginTop: 2 },
-  teacherRight: { alignItems: "flex-end", gap: 4 },
+
+  avatarText: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  teacherInfo: {
+    flex: 1,
+    marginLeft: 12,
+    minWidth: 0,
+  },
+
+  teacherName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  teacherMeta: {
+    color: "#94a3b8",
+    fontSize: 11,
+    marginTop: 2,
+  },
+
+  teacherSub: {
+    color: "#475569",
+    fontSize: 10,
+    marginTop: 2,
+  },
+
   statusBadge: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 8, borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  statusDot: { width: 5, height: 5, borderRadius: 3 },
-  statusText: { fontSize: 10, fontWeight: "700" },
-  punchCount: { color: "#374151", fontSize: 10 },
 
-  // Empty
-  empty: { alignItems: "center", paddingTop: 60, gap: 10 },
-  emptyTitle: { color: "#374151", fontSize: 15, fontWeight: "700" },
-  emptySub: { color: "#1f2937", fontSize: 12, textAlign: "center" },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
+  },
 
-  // Detail Modal
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "flex-end" },
-  detailSheet: {
-    backgroundColor: "#0a1220",
-    borderTopLeftRadius: 26, borderTopRightRadius: 26,
+  statusText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
+  punchCount: {
+    color: "#64748b",
+    fontSize: 10,
+    marginTop: 6,
+  },
+
+  lastTime: {
+    color: "#cbd5e1",
+    fontSize: 10,
+    marginTop: 2,
+    fontWeight: "700",
+  },
+
+  empty: {
+    alignItems: "center",
+    paddingTop: 80,
+  },
+
+  emptyTitle: {
+    color: "#94a3b8",
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 12,
+  },
+
+  emptySub: {
+    color: "#475569",
+    fontSize: 12,
+    marginTop: 6,
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.82)",
+    justifyContent: "flex-end",
+  },
+
+  modal: {
+    backgroundColor: "#0f172a",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     maxHeight: "80%",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.07)",
+    paddingHorizontal: 18,
+    paddingBottom: 20,
+    paddingTop: 10,
   },
-  handle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    alignSelf: "center", marginTop: 12, marginBottom: 4,
+
+  modalHandle: {
+    width: 42,
+    height: 5,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignSelf: "center",
+    marginBottom: 12,
   },
-  detailHeader: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)",
+
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
   },
-  detailAvatar: {
-    width: 48, height: 48, borderRadius: 24,
-    justifyContent: "center", alignItems: "center",
+
+  modalTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
   },
-  detailAvatarText: { fontSize: 16, fontWeight: "800" },
-  detailName: { color: "#fff", fontSize: 15, fontWeight: "800" },
-  detailMeta: { color: "#64748b", fontSize: 12, marginTop: 2 },
-  detailCollege: { color: "#374151", fontSize: 11, marginTop: 2 },
+
+  modalSub: {
+    color: "#94a3b8",
+    fontSize: 12,
+    marginTop: 3,
+  },
+
   closeBtn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.06)",
-    justifyContent: "center", alignItems: "center",
   },
-  detailStats: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.05)",
-  },
-  detailStat: { flex: 1, alignItems: "center" },
-  detailStatVal: { fontSize: 16, fontWeight: "900" },
-  detailStatLabel: { color: "#374151", fontSize: 10, fontWeight: "600", marginTop: 3 },
-  detailStatDiv: { width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.06)" },
-  detailSectionTitle: {
-    color: "#374151", fontSize: 10, fontWeight: "800",
-    letterSpacing: 1, textTransform: "uppercase",
-    paddingHorizontal: 20, paddingVertical: 12,
-  },
-  logsContainer: { paddingHorizontal: 20, paddingBottom: 40 },
+
   punchRow: {
-    flexDirection: "row", alignItems: "center",
-    paddingVertical: 12, gap: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#111c30",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
   },
+
   punchIcon: {
-    width: 32, height: 32, borderRadius: 10,
-    justifyContent: "center", alignItems: "center",
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
   },
-  punchType: { fontSize: 13, fontWeight: "700" },
-  punchDate: { color: "#64748b", fontSize: 11, marginTop: 2 },
-  punchRight: { alignItems: "flex-end", gap: 4 },
-  punchTime: { color: "#fff", fontSize: 13, fontWeight: "700" },
+
+  punchType: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  punchDate: {
+    color: "#64748b",
+    fontSize: 11,
+    marginTop: 3,
+  },
+
+  punchTime: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
   modeBadge: {
-    flexDirection: "row", alignItems: "center", gap: 3,
-    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6,
+    marginTop: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  modeBadgeText: { fontSize: 9, fontWeight: "700" },
-  noLogs: { alignItems: "center", paddingVertical: 30, gap: 8 },
-  noLogsText: { color: "#374151", fontSize: 13 },
+
+  modeText: {
+    fontSize: 9,
+    fontWeight: "700",
+  },
+
+  noLogs: {
+    alignItems: "center",
+    paddingVertical: 50,
+  },
+
+  noLogsText: {
+    color: "#64748b",
+    marginTop: 12,
+    fontSize: 13,
+  },
 });

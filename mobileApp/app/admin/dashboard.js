@@ -30,7 +30,6 @@ const CAT_COLORS = {
 };
 const ROLE_COLORS = { admin: "#a78bfa", teacher: "#f59e0b", student: "#00c6ff" };
 
-// â”€â”€ Stat Card â”€â”€
 const StatCard = ({ icon, label, value, color, onPress, badge }) => (
   <Pressable
     style={[styles.statCard, { borderTopColor: color }]}
@@ -40,7 +39,7 @@ const StatCard = ({ icon, label, value, color, onPress, badge }) => (
     <View style={[styles.statIconWrap, { backgroundColor: color + "18" }]}>
       <Ionicons name={icon} size={18} color={color} />
     </View>
-    <Text style={[styles.statValue, { color }]}>{value ?? "â€”"}</Text>
+    <Text style={[styles.statValue, { color }]}>{value ?? ""}</Text>
     <Text style={styles.statLabel}>{label}</Text>
     {badge > 0 && (
       <View style={[styles.statBadge, { backgroundColor: color }]}>
@@ -50,7 +49,7 @@ const StatCard = ({ icon, label, value, color, onPress, badge }) => (
   </Pressable>
 );
 
-// â”€â”€ Menu Card â”€â”€
+
 const MenuCard = ({ icon, label, subtitle, color, onPress, badge }) => (
   <Pressable style={styles.menuCard} onPress={onPress} android_ripple={{ color: color + "20" }}>
     <View style={[styles.menuIconWrap, { backgroundColor: color + "18" }]}>
@@ -71,8 +70,6 @@ const MenuCard = ({ icon, label, subtitle, color, onPress, badge }) => (
 
 
 
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 export default function AdminDashboard() {
   const router = useRouter();
   const [adminData,    setAdminData]    = useState(null);
@@ -160,7 +157,7 @@ export default function AdminDashboard() {
           <View>
             <Text style={styles.headerTitle}>Admin Panel</Text>
             <Text style={styles.headerSub} numberOfLines={1}>
-              {adminData?.college ? adminData.college.split(" ").slice(0,3).join(" ") : "COLLAHUB"}
+              {adminData?.college ? adminData.college.split(" ").slice(-50).join(" ") : "COLLAHUB"}
             </Text>
           </View>
         </View>
@@ -186,8 +183,8 @@ export default function AdminDashboard() {
               start={{x:0,y:0}} end={{x:1,y:1}}
               style={styles.welcomeCard}>
               <View style={styles.welcomeLeft}>
-                <Text style={styles.welcomeHi}>Hello, {adminData?.name?.split(" ")[0]||"Admin"} ðŸ‘‹</Text>
-                <Text style={styles.welcomeRole}>Administrator â€¢ COLLAHUB</Text>
+                <Text style={styles.welcomeHi}>Hello, {adminData?.name?.split(" ")[0]||"Admin"} </Text>
+                <Text style={styles.welcomeRole}>Administrator COLLAHUB</Text>
                 {adminData?.college && (
                   <Text style={styles.welcomeCollege} numberOfLines={2}>{adminData.college}</Text>
                 )}
@@ -200,7 +197,7 @@ export default function AdminDashboard() {
               </View>
             </LinearGradient>
 
-            <Text style={styles.sectionLabel}>OVERVIEW â€” YOUR COLLEGE</Text>
+            <Text style={styles.sectionLabel}>OVERVIEW YOUR COLLEGE</Text>
             <View style={styles.statsRow}>
               <StatCard icon="people"        label="Students" value={stats?.totalStudents} color="#00c6ff" onPress={() => router.push("/admin/manage-students")} />
               <StatCard icon="person"        label="Teachers" value={stats?.totalTeachers} color="#f59e0b" onPress={() => router.push("/admin/manage-teachers")} />
