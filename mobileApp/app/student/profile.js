@@ -263,7 +263,8 @@ export default function StudentProfile() {
         <View style={s.statsStrip}>
           {[
             { label: "Semester", value: student.semester ? `Sem ${student.semester}` : "—", color: ACCENT    },
-            { label: "Section",  value: student.section    || "—",                           color: "#a78bfa" },
+            { label: "Section",  value: student.section    || "—",
+              { label: "subSection",  value: student.subSection    || "—",                           color: "#a78bfa" },
             { label: "Batch",    value: student.admissionYear || "—",                         color: "#34d399" },
             { label: "Dept",     value: deptName             || "—",                          color: "#f59e0b" },
           ].map((item, i, arr) => (
@@ -284,6 +285,7 @@ export default function StudentProfile() {
             {[
               { label: "Semester", sub: "Academic Progress", color: ACCENT,    content: <Text style={[s.acadNum, { color: ACCENT }]}>{student.semester || "?"}</Text> },
               { label: "Section",  sub: "Division",          color: "#a78bfa", content: <Text style={[s.acadNum, { color: "#a78bfa", fontSize: 18 }]}>{student.section || "?"}</Text> },
+              { label: "Group",  sub: "Division",          color: "#a78bfa", content: <Text style={[s.acadNum, { color: "#a78bfa", fontSize: 18 }]}>{student.subSection || "?"}</Text> },
               { label: student.admissionYear || "—", sub: "Batch Year", color: "#34d399", content: <Ionicons name="calendar" size={24} color="#34d399" /> },
             ].map((box, i) => (
               <LinearGradient key={i}
@@ -398,6 +400,7 @@ export default function StudentProfile() {
                   <View style={s.idBadges}>
                     {student.semester && <View style={s.idBadge}><Text style={s.idBadgeText}>Sem {student.semester}</Text></View>}
                     {student.section  && <View style={[s.idBadge, { backgroundColor: "rgba(167,139,250,0.2)" }]}><Text style={[s.idBadgeText, { color: "#a78bfa" }]}>Sec {student.section}</Text></View>}
+                    {student.subSection  && <View style={[s.idBadge, { backgroundColor: "rgba(167,139,250,0.2)" }]}><Text style={[s.idBadgeText, { color: "#a78bfa" }]}>Sec {student.subSection}</Text></View>}
                     {student.gender   && <View style={[s.idBadge, { backgroundColor: "rgba(251,146,60,0.15)" }]}><Text style={[s.idBadgeText, { color: "#fb923c" }]}>{student.gender}</Text></View>}
                   </View>
                 </View>
