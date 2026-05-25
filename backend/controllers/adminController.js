@@ -174,7 +174,7 @@ const updateBatchSemester = async (req, res) => {
 
 const assignSection = async (req, res) => {
   try {
-    const { department, admissionYear, section } = req.body;
+    const { department, admissionYear, section, subSection } = req.body;
     if (!admissionYear || !section)
       return res.status(400).json({ message: "admissionYear and section required" });
 
@@ -182,7 +182,7 @@ const assignSection = async (req, res) => {
     const filter = { role: "student", college: admin.college, admissionYear: String(admissionYear) };
     if (department) filter.department = department;
 
-    const result = await User.updateMany(filter, { $set: { section } });
+    const result = await User.updateMany(filter, { $set: { section, ...(subSection && {SubSection})} });
     res.json({
       success: true,
       message: `${result.modifiedCount} students assigned to Section ${section}`,

@@ -292,7 +292,11 @@ router.get("/student-timetable", verifyToken, async (req, res) => {
       admissionYear: String(student.admissionYear),
       status: "accepted",
       timetable: { $exists: true, $ne: [] },
-      $or: [{ section: "All" }, { section: student.section || "A" }],
+      $or: [
+        { section: "All" },
+        { section: student.section },
+        ...(student.subSection ? [{ subSection: student.subSection }] : []),
+      ],
     }).sort({ subjectName: 1 });
 
     const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];

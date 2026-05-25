@@ -37,7 +37,8 @@ const subjectRequestSchema = new mongoose.Schema({
   department:    { type: String, required: true },
   semester:      { type: Number, required: true },
   admissionYear: { type: String, required: true },
-  section:       { type: String, default: "All" },   // A / B / C / All
+  section:       { type: String, default: "All" },
+  subSection: { type: String, default: "All" },   // A / B / C / All
 
   // Admin-assigned timetable slots
   timetable: [timetableSlotSchema],

@@ -32,6 +32,7 @@ const COLLEGE_DEPARTMENTS = {
 
 const SEMESTERS = [1,2,3,4,5,6,7,8];
 const SECTIONS  = ["A","B","C","D"];
+const SUB_SECTIONS = ["A1","A2","A3","B1","B2","B3","C1","C2","D1","D2"];
 const YEARS     = ["All","2021","2022","2023","2024","2025","2026"];
 
 const REQUIRED_FIELDS = ["name","email","admissionYear","department"];
@@ -83,6 +84,7 @@ export default function ManageStudents() {
   const [batchYear,     setBatchYear]     = useState("2023");
   const [batchDept,     setBatchDept]     = useState("All");
   const [batchSection,  setBatchSection]  = useState("A");
+  const [batchSubSection, setBatchSubSection] = useState("");
   const [batchSemester, setBatchSemester] = useState(1);
   const [batchLoading,  setBatchLoading]  = useState(false);
 
@@ -158,6 +160,7 @@ export default function ManageStudents() {
           department: batchDept === "All" ? undefined : batchDept,
           newSemester: batchSemester,
         });
+        subSection: batchSubSection || undefined,
         Alert.alert("Done!", res.data.message);
       } else {
         const res = await API.put("/admin/assign-section", {
