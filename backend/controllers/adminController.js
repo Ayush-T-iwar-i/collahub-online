@@ -182,7 +182,7 @@ const assignSection = async (req, res) => {
     const filter = { role: "student", college: admin.college, admissionYear: String(admissionYear) };
     if (department) filter.department = department;
 
-    const result = await User.updateMany(filter, { $set: { section, ...(subSection && {SubSection})} });
+    const result = await User.updateMany(filter, { $set: { section, ...(subSection && {subSection})} });
     res.json({
       success: true,
       message: `${result.modifiedCount} students assigned to Section ${section}`,
