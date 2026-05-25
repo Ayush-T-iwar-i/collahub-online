@@ -260,23 +260,51 @@ export default function StudentProfile() {
         </Animated.View>
 
         {/* ─── STATS STRIP ─── */}
-        <View style={s.statsStrip}>
-          {[
-            { label: "Semester", value: student.semester ? `Sem ${student.semester}` : "—", color: ACCENT    },
-            { label: "Section",  value: student.section    || "—",
-              { label: "subSection",  value: student.subSection    || "—",                           color: "#a78bfa" },
-            { label: "Batch",    value: student.admissionYear || "—",                         color: "#34d399" },
-            { label: "Dept",     value: deptName             || "—",                          color: "#f59e0b" },
-          ].map((item, i, arr) => (
-            <React.Fragment key={i}>
-              <View style={s.statItem}>
-                <Text style={[s.statVal, { color: item.color }]}>{item.value}</Text>
-                <Text style={s.statLabel}>{item.label}</Text>
-              </View>
-              {i < arr.length - 1 && <View style={s.statDivider} />}
-            </React.Fragment>
-          ))}
-        </View>
+<View style={s.statsStrip}>
+  {[
+    {
+      label: "Semester",
+      value: student.semester ? `Sem ${student.semester}` : "—",
+      color: ACCENT,
+    },
+    {
+      label: "Section",
+      value: student.section || "—",
+      color: "#a78bfa",
+    },
+    {
+      label: "Sub Section",
+      value: student.subSection || "—",
+      color: "#a78bfa",
+    },
+    {
+      label: "Batch",
+      value: student.admissionYear || "—",
+      color: "#34d399",
+    },
+    {
+      label: "Dept",
+      value: deptName || "—",
+      color: "#f59e0b",
+    },
+  ].map((item, i, arr) => (
+    <React.Fragment key={i}>
+      <View style={s.statItem}>
+        <Text style={[s.statVal, { color: item.color }]}>
+          {item.value}
+        </Text>
+
+        <Text style={s.statLabel}>
+          {item.label}
+        </Text>
+      </View>
+
+      {i < arr.length - 1 && (
+        <View style={s.statDivider} />
+      )}
+    </React.Fragment>
+  ))}
+</View>
 
         {/* ─── ACADEMIC DETAILS ─── */}
         <View style={s.card}>
