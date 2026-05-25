@@ -425,12 +425,69 @@ export default function StudentProfile() {
                   <Text style={s.idDept} numberOfLines={2}>{student.department || "—"}</Text>
                   <Text style={s.idEmail} numberOfLines={1}>{student.email}</Text>
                   {student.phone && <Text style={s.idPhone}>{student.phone}</Text>}
-                  <View style={s.idBadges}>
-                    {student.semester && <View style={s.idBadge}><Text style={s.idBadgeText}>Sem {student.semester}</Text></View>}
-                    {student.section  && <View style={[s.idBadge, { backgroundColor: "rgba(167,139,250,0.2)" }]}><Text style={[s.idBadgeText, { color: "#a78bfa" }]}>Sec {student.section}</Text></View>}
-                    {student.subSection  && <View style={[s.idBadge, { backgroundColor: "rgba(167,139,250,0.2)" }]}><Text style={[s.idBadgeText, { color: "#a78bfa" }]}>Sec {student.subSection}</Text></View>}
-                    {student.gender   && <View style={[s.idBadge, { backgroundColor: "rgba(251,146,60,0.15)" }]}><Text style={[s.idBadgeText, { color: "#fb923c" }]}>{student.gender}</Text></View>}
-                  </View>
+         <View style={s.idBadges}>
+  {student.semester && (
+    <View style={s.idBadge}>
+      <Text style={s.idBadgeText}>
+        Sem {student.semester}
+      </Text>
+    </View>
+  )}
+
+  {student.section && (
+    <View
+      style={[
+        s.idBadge,
+        { backgroundColor: "rgba(167,139,250,0.2)" },
+      ]}
+    >
+      <Text
+        style={[
+          s.idBadgeText,
+          { color: "#a78bfa" },
+        ]}
+      >
+        Sec {student.section}
+      </Text>
+    </View>
+  )}
+
+  {student.subSection && (
+    <View
+      style={[
+        s.idBadge,
+        { backgroundColor: "rgba(59,130,246,0.15)" },
+      ]}
+    >
+      <Text
+        style={[
+          s.idBadgeText,
+          { color: "#3b82f6" },
+        ]}
+      >
+        Group {student.subSection}
+      </Text>
+    </View>
+  )}
+
+  {student.gender && (
+    <View
+      style={[
+        s.idBadge,
+        { backgroundColor: "rgba(251,146,60,0.15)" },
+      ]}
+    >
+      <Text
+        style={[
+          s.idBadgeText,
+          { color: "#fb923c" },
+        ]}
+      >
+        {student.gender}
+      </Text>
+    </View>
+  )}
+</View>
                 </View>
               </View>
 
