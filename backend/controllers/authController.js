@@ -249,7 +249,7 @@ exports.loginVerifyOtp = async (req, res) => {
         studentId:    user.studentId,
         admissionYear: user.admissionYear,
         semester:     user.semester,
-        section:      user.section,\
+        section:      user.section,
         subSection:   user.subSection,
         gender:       user.gender,
         teacherId:    user.teacherId,
