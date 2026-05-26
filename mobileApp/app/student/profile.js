@@ -67,6 +67,7 @@ export default function StudentProfile() {
 
   useFocusEffect(useCallback(() => {
     (async () => {
+      // Load from AsyncStorage first (instant)
       const raw = await AsyncStorage.getItem("studentData");
       if (raw) {
         const d = JSON.parse(raw);
@@ -74,6 +75,16 @@ export default function StudentProfile() {
         const img = d.profileImage;
         setProfileImage(img && img.startsWith("http") ? img : null);
       }
+      // Then fetch fresh from server (gets latest subSection etc.)
+      try {
+        const res = await API.get("/student/me");
+        if (res.data?.student) {
+          const fresh = res.data.student;
+          setStudent(fresh);
+          if (fresh.profileImage) setProfileImage(fresh.profileImage);
+          await AsyncStorage.setItem("studentData", JSON.stringify(fresh));
+        }
+      } catch {}
     })();
   }, []));
 
@@ -268,13 +279,12 @@ export default function StudentProfile() {
       color: ACCENT,
     },
     {
-      label: "Section",
-      value: student.section || "—",
-      color: "#a78bfa",
-    },
-    {
-      label: "Sub Section",
-      value: student.subSection || "—",
+      label: "Section / Group",
+      value: student.section
+        ? student.subSection
+          ? `${student.section} · ${student.subSection}`
+          : student.section
+        : "—",
       color: "#a78bfa",
     },
     {
@@ -290,18 +300,12 @@ export default function StudentProfile() {
   ].map((item, i, arr) => (
     <React.Fragment key={i}>
       <View style={s.statItem}>
-        <Text style={[s.statVal, { color: item.color }]}>
+        <Text style={[s.statVal, { color: item.color }]} numberOfLines={1} adjustsFontSizeToFit>
           {item.value}
         </Text>
-
-        <Text style={s.statLabel}>
-          {item.label}
-        </Text>
+        <Text style={s.statLabel}>{item.label}</Text>
       </View>
-
-      {i < arr.length - 1 && (
-        <View style={s.statDivider} />
-      )}
+      {i < arr.length - 1 && <View style={s.statDivider} />}
     </React.Fragment>
   ))}
 </View>
@@ -311,9 +315,14 @@ export default function StudentProfile() {
           <SectionHead icon="school-outline" title="Academic Details" color={ACCENT} />
           <View style={s.acadRow}>
             {[
-              { label: "Semester", sub: "Academic Progress", color: ACCENT,    content: <Text style={[s.acadNum, { color: ACCENT }]}>{student.semester || "?"}</Text> },
-              { label: "Section",  sub: "Division",          color: "#a78bfa", content: <Text style={[s.acadNum, { color: "#a78bfa", fontSize: 18 }]}>{student.section || "?"}</Text> },
-              { label: "Group",  sub: "Division",          color: "#a78bfa", content: <Text style={[s.acadNum, { color: "#a78bfa", fontSize: 18 }]}>{student.subSection || "?"}</Text> },
+              { label: "Semester", sub: "Current Sem", color: ACCENT,    content: <Text style={[s.acadNum, { color: ACCENT }]}>{student.semester || "?"}</Text> },
+              { label: "Section",  sub: "Division",    color: "#a78bfa", content: <Text style={[s.acadNum, { color: "#a78bfa", fontSize: 18 }]}>{student.section || "?"}</Text> },
+              ...(student.subSection ? [{
+                label: "Group",
+                sub: "Sub-Section",
+                color: "#60a5fa",
+                content: <Text style={[s.acadNum, { color: "#60a5fa", fontSize: 18 }]}>{student.subSection}</Text>
+              }] : []),
               { label: student.admissionYear || "—", sub: "Batch Year", color: "#34d399", content: <Ionicons name="calendar" size={24} color="#34d399" /> },
             ].map((box, i) => (
               <LinearGradient key={i}
