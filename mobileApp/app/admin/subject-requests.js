@@ -142,10 +142,11 @@ const TimetableModal = ({ visible, request, onClose, onSaved }) => {
 
           // Same batch busy (same semester + year + section)
           const sameBatch =
-            r.semester === req.semester &&
-            r.admissionYear === req.admissionYear &&
-            { label: "Sub-sec", value: student.subSection || "—", color: "#34d399" },
-            (r.section === "All" || req.section === "All" || r.section === req.section);
+  r.admissionYear === req.admissionYear &&
+  (r.section === "All" ||
+    req.section === "All" ||
+    r.section === req.section);
+
           if (sameBatch) bBusy[key] = r.subjectName;
 
           // Room booked
