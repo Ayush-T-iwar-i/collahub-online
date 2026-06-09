@@ -4,26 +4,6 @@ const jwt    = require("jsonwebtoken");
 
 // ─── Helpers ──────────────────────────────────────────────
 
-const generateStudentId = async (department, admissionYear) => {
-  const match    = department?.match(/\(([^)]+)\)/);
-  const deptCode = match
-    ? match[1].toUpperCase()
-    : department?.split(" ").filter(w => w.length > 2)[0]?.toUpperCase() || "DEPT";
-
-  const prefix = `${admissionYear || new Date().getFullYear()}-${deptCode}-`;
-
-  const last = await User.findOne({ role: "student", studentId: { $regex: `^${prefix}` } })
-    .sort({ studentId: -1 }).select("studentId").lean();
-
-  let next = 1;
-  if (last?.studentId) {
-    const parts = last.studentId.split("-");
-    const n     = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(n)) next = n + 1;
-  }
-  return `${prefix}${String(next).padStart(3, "0")}`;
-};
-
 const getAutoSemester = (admissionYear) => {
   const now      = new Date();
   const diff     = now.getFullYear() - parseInt(admissionYear);
@@ -101,22 +81,25 @@ const getStudents = async (req, res) => {
 
 const addStudent = async (req, res) => {
   try {
-    let { name, email, password, phone, admissionYear, college, department, gender, semester: manualSem } = req.body;
+    let { name, email, password, phone, admissionYear, college, department, gender, semester: manualSem, studentId } = req.body;
 
-    if (!name || !email || !password || !college || !department || !admissionYear)
-      return res.status(400).json({ message: "All required fields missing" });
+    if (!name || !email || !password || !college || !department || !admissionYear || !studentId)
+      return res.status(400).json({ message: "All required fields missing (including studentId)" });
 
     email = email.toLowerCase().trim();
     if (await User.findOne({ email }))
       return res.status(400).json({ message: "Email already registered" });
 
-    const studentId = await generateStudentId(department, admissionYear);
-    const semester  = manualSem ? Number(manualSem) : getAutoSemester(admissionYear);
+    // Check if studentId already in use
+    if (await User.findOne({ studentId: studentId.trim() }))
+      return res.status(400).json({ message: "Student ID already in use. Please enter a unique Student ID." });
+
+    const semester = manualSem ? Number(manualSem) : getAutoSemester(admissionYear);
 
     const s = await User.create({
       name: name.trim(), email,
       password: await bcrypt.hash(password, 10),
-      phone: phone || "", studentId,
+      phone: phone || "", studentId: studentId.trim(),
       admissionYear: String(admissionYear),
       college, department, semester,
       gender: gender || "",
@@ -359,11 +342,11 @@ const bulkAddStudents = async (req, res) => {
       try {
         const {
           name, email, password, phone,
-          admissionYear, department, gender, section, semester: manualSem,
+          admissionYear, department, gender, section, semester: manualSem, studentId,
         } = s;
 
-        if (!name || !email || !password || !department || !admissionYear) {
-          results.failed.push({ rowNum: i + 2, email: email || "—", error: "Missing required fields" });
+        if (!name || !email || !password || !department || !admissionYear || !studentId) {
+          results.failed.push({ rowNum: i + 2, email: email || "—", error: "Missing required fields (studentId required)" });
           continue;
         }
 
@@ -374,7 +357,13 @@ const bulkAddStudents = async (req, res) => {
           continue;
         }
 
-        const studentId = await generateStudentId(department, admissionYear);
+        // Check duplicate studentId
+        const idExists = await User.findOne({ studentId: studentId.trim() });
+        if (idExists) {
+          results.failed.push({ rowNum: i + 2, email: cleanEmail, error: `Student ID "${studentId}" already in use` });
+          continue;
+        }
+
         const semester  = manualSem ? Number(manualSem) : getAutoSemester(admissionYear);
 
         await User.create({

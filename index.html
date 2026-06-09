@@ -1,438 +1,1285 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>COLLAहUB — College Management, Finally Digital</title>
-<meta name="description" content="A full-stack mobile platform for Indian colleges — attendance, timetables, results, assignments and digital ID cards." />
-<meta property="og:title" content="COLLAहUB — College Management Platform" />
-<meta property="og:description" content="Digitize your college. Attendance, timetables, results and more." />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COLLAहUB — College Management, Finally Digital</title>
+  <meta name="description"
+    content="A full-stack mobile platform for Indian colleges — attendance, timetables, results, assignments and digital ID cards." />
+  <meta property="og:title" content="COLLAहUB — College Management Platform" />
+  <meta property="og:description" content="Digitize your college. Attendance, timetables, results and more." />
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+    rel="stylesheet" />
 
-<style>
-:root{
-  --paper:#f5f1e3;
-  --ink:#1a1813;
-  --muted:#6b6557;
-  --border:rgba(26,24,19,.14);
-  --card:#fbf8ee;
-  --green:#1D9E75;
-  --green-dark:#0F6E56;
-  --mustard:#D4A93B;
-  --rust:#B8472A;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{
-  font-family:'DM Sans',sans-serif;
-  background:var(--paper);
-  color:var(--ink);
-  overflow-x:hidden;
-  background-image:radial-gradient(rgba(26,24,19,.07) 1px,transparent 1px);
-  background-size:22px 22px;
-}
-body::before{
-  content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.35;mix-blend-mode:multiply;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.08  0 0 0 0 0.05  0 0 0 0.35 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-}
-.font-display{font-family:'Syne',sans-serif;letter-spacing:-.02em}
-.font-serif-i{font-family:'Instrument Serif',serif;font-style:italic}
-.font-mono{font-family:'DM Mono',monospace}
-a{color:inherit;text-decoration:none}
+  <style>
+    :root {
+      --paper: #f5f1e3;
+      --ink: #1a1813;
+      --muted: #6b6557;
+      --border: rgba(26, 24, 19, .14);
+      --card: #fbf8ee;
+      --green: #1D9E75;
+      --green-dark: #0F6E56;
+      --mustard: #D4A93B;
+      --rust: #B8472A;
+    }
 
-/* progress bar */
-.progress{position:fixed;left:0;top:0;height:3px;width:0;background:var(--green);z-index:200;transition:width .05s linear}
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
 
-/* nav */
-nav{position:sticky;top:0;z-index:50;background:rgba(245,241,227,.9);backdrop-filter:blur(10px);border-bottom:2px solid rgba(26,24,19,.9)}
-.nav-inner{max-width:1120px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-family:'Syne',sans-serif;font-weight:700;font-size:20px;letter-spacing:-.5px}
-.logo span{color:var(--green)}
-.nav-links{display:flex;gap:32px}
-.nav-links a{font-size:14px;color:rgba(26,24,19,.7);font-weight:500;transition:color .2s}
-.nav-links a:hover{color:var(--ink)}
-.nav-cta{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:6px 16px;font-size:14px;font-weight:500;transition:.2s}
-.nav-cta:hover{background:var(--green);border-color:var(--green)}
-@media(max-width:720px){.nav-links{display:none}}
+    html {
+      scroll-behavior: smooth
+    }
 
-/* layout */
-main{position:relative;z-index:10}
-section{position:relative}
-.container{max-width:1120px;margin:0 auto;padding:0 24px}
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      overflow-x: hidden;
+      background-image: radial-gradient(rgba(26, 24, 19, .07) 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
 
-/* hero */
-.hero{padding:64px 24px 96px;border-bottom:2px solid rgba(26,24,19,.9);position:relative;overflow:hidden}
-.hero-inner{max-width:880px;margin:0 auto;text-align:center}
-.badge{display:inline-flex;align-items:center;gap:8px;border:2px solid var(--ink);background:var(--paper);padding:6px 16px;border-radius:999px;font-size:12px;font-weight:500;margin-bottom:24px}
-.dot{position:relative;display:inline-flex;width:8px;height:8px}
-.dot::before{content:"";position:absolute;inset:0;background:var(--green);border-radius:50%;animation:ping 1.6s cubic-bezier(0,0,.2,1) infinite}
-.dot::after{content:"";position:absolute;inset:0;background:var(--green);border-radius:50%}
-@keyframes ping{75%,100%{transform:scale(2.2);opacity:0}}
-h1{font-family:'Syne',sans-serif;font-weight:700;font-size:clamp(46px,8.5vw,88px);line-height:1.02;letter-spacing:-.02em;text-wrap:balance}
-.hero-sub{margin:32px auto 0;max-width:560px;font-size:17px;line-height:1.65;color:var(--muted);text-wrap:pretty}
-.hero-cta{margin-top:40px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;font-size:14px;font-weight:500;border-radius:999px;cursor:pointer;transition:transform .15s,box-shadow .15s,background .2s,color .2s;font-family:inherit}
-.btn-primary{background:var(--green);color:#fff;border:2px solid var(--green);box-shadow:4px 4px 0 0 var(--ink)}
-.btn-primary:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 0 var(--ink)}
-.btn-outline{background:var(--paper);border:2px solid var(--ink);color:var(--ink)}
-.btn-outline:hover{background:var(--ink);color:var(--paper)}
-.btn-dark{background:var(--ink);color:var(--paper);border:2px solid var(--ink)}
-.btn-ghost{background:transparent;color:var(--paper);border:2px solid rgba(245,241,227,.3)}
-.btn-ghost:hover{border-color:var(--paper)}
-.terminal{margin:40px auto 0;display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--paper);font-family:'DM Mono',monospace;font-size:13px;padding:10px 18px;border-radius:10px}
-.terminal .live{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
-.terminal a{color:var(--green)}
-.cursor{display:inline-block;animation:blink 1.05s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: .35;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.08  0 0 0 0 0.05  0 0 0 0.35 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    }
 
-/* hero badge spinner */
-.spinner{position:absolute;right:32px;top:48px;width:128px;height:128px;color:var(--green);animation:spin 22s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner svg{width:100%;height:100%;fill:currentColor;font-family:'Syne',sans-serif;font-size:10px;letter-spacing:.3em;text-transform:uppercase;font-weight:500}
-.spinner-sparkle{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:24px}
-@media(max-width:768px){.spinner{display:none}}
+    .font-display {
+      font-family: 'Syne', sans-serif;
+      letter-spacing: -.02em
+    }
 
-/* underline scribble */
-.accent-word{position:relative;display:inline-block;color:var(--green)}
-.accent-word svg{position:absolute;left:0;bottom:-8px;width:100%;height:12px;color:var(--mustard);overflow:visible}
-.accent-word path{stroke:currentColor;stroke-width:4;fill:none;stroke-linecap:round;stroke-dasharray:300;stroke-dashoffset:300;animation:dash 1.4s ease 1s forwards}
-@keyframes dash{to{stroke-dashoffset:0}}
+    .font-serif-i {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic
+    }
 
-/* reveal animation */
-.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.2,.8,.2,1),transform .8s cubic-bezier(.2,.8,.2,1)}
-.reveal.in{opacity:1;transform:none}
+    .font-mono {
+      font-family: 'DM Mono', monospace
+    }
 
-/* letter animation */
-.word .ltr{display:inline-block;opacity:0;transform:translateY(40px) rotate(-8deg);animation:rise .6s cubic-bezier(.2,.8,.2,1) forwards}
-@keyframes rise{to{opacity:1;transform:none}}
+    a {
+      color: inherit;
+      text-decoration: none
+    }
 
-/* ticker / marquee */
-.ticker{background:var(--ink);color:var(--paper);overflow:hidden;border-top:2px solid rgba(26,24,19,.9);border-bottom:2px solid rgba(26,24,19,.9)}
-.ticker-row{display:flex;gap:48px;white-space:nowrap;padding:12px 0;animation:marquee 28s linear infinite;width:max-content}
-.ticker-row.slow{animation-duration:60s}
-.ticker-row span{font-family:'Syne',sans-serif;font-weight:600;font-size:20px;letter-spacing:-.01em;display:inline-flex;align-items:center;gap:48px}
-.ticker-row .star{color:var(--mustard);font-size:14px}
-@keyframes marquee{to{transform:translateX(-50%)}}
 
-/* stats */
-.stats{background:var(--paper);border-bottom:2px solid rgba(26,24,19,.9)}
-.stats-grid{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
-.stat{padding:32px 24px;text-align:center;border-left:2px solid rgba(26,24,19,.9)}
-.stat:first-child{border-left:none}
-.stat-num{font-family:'Syne',sans-serif;font-size:clamp(32px,5vw,52px);font-weight:700;color:var(--green);line-height:1}
-.stat-label{margin-top:8px;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.15em;color:var(--muted)}
-@media(max-width:640px){
-  .stats-grid{grid-template-columns:repeat(2,1fr)}
-  .stat:nth-child(odd){border-left:none}
-  .stat:nth-child(3),.stat:nth-child(4){border-top:2px solid rgba(26,24,19,.9)}
-}
+    .progress {
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 3px;
+      width: 0;
+      background: var(--green);
+      z-index: 200;
+      transition: width .05s linear
+    }
 
-/* section heads */
-.section{padding:96px 24px}
-.kicker{display:inline-block;background:var(--ink);color:var(--paper);font-family:'DM Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.15em;padding:2px 8px;margin-bottom:12px}
-h2{font-family:'Syne',sans-serif;font-weight:700;font-size:clamp(34px,5vw,52px);line-height:1.05;letter-spacing:-.02em;text-wrap:balance}
-.section-desc{margin-top:12px;max-width:480px;font-size:14px;color:var(--muted)}
 
-/* features */
-.feat-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:48px}
-.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-@media(max-width:900px){.feat-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.feat-grid{grid-template-columns:1fr}}
-.feat-card{position:relative;overflow:hidden;background:var(--card);border:2px solid var(--ink);border-radius:18px;padding:24px;box-shadow:6px 6px 0 0 var(--ink);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
-.feat-card:hover{transform:translateY(-6px) rotate(-.4deg)}
-.feat-card:nth-child(even):hover{transform:translateY(-6px) rotate(.4deg)}
-.feat-icon{display:inline-flex;width:44px;height:44px;align-items:center;justify-content:center;border:2px solid var(--ink);background:rgba(29,158,117,.15);color:var(--green-dark);border-radius:12px;margin-bottom:16px;font-size:20px}
-.feat-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:600}
-.feat-desc{margin-top:8px;font-size:13.5px;line-height:1.6;color:var(--muted)}
-.feat-more{margin-top:20px;font-size:12px;font-weight:500;color:rgba(26,24,19,.4);display:inline-flex;align-items:center;gap:4px;transition:color .2s}
-.feat-card:hover .feat-more{color:var(--green)}
-.feat-card::after{content:"";position:absolute;right:-48px;top:-48px;width:112px;height:112px;border-radius:50%;background:rgba(212,169,59,0);transition:background .3s}
-.feat-card:hover::after{background:rgba(212,169,59,.18)}
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(245, 241, 227, .9);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid rgba(26, 24, 19, .9)
+    }
 
-/* roles */
-.roles{background:var(--ink);color:var(--paper);border-top:2px solid rgba(26,24,19,.9);border-bottom:2px solid rgba(26,24,19,.9)}
-.roles .kicker{background:transparent;border:1px solid rgba(245,241,227,.4);color:rgba(245,241,227,.7)}
-.roles-head{text-align:center;margin-bottom:48px}
-.roles-head p{margin:12px auto 0;max-width:440px;font-size:14px;color:rgba(245,241,227,.6)}
-.roles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
-@media(max-width:900px){.roles-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:540px){.roles-grid{grid-template-columns:1fr}}
-.role{border:2px solid rgba(245,241,227,.15);background:rgba(245,241,227,.04);backdrop-filter:blur(4px);border-radius:18px;padding:24px;transition:transform .2s}
-.role:hover{transform:translateY(-8px)}
-.role-num{font-family:'Syne',sans-serif;font-size:46px;font-weight:700;opacity:.3;line-height:1}
-.role-title{margin-top:8px;font-family:'Syne',sans-serif;font-size:24px;font-weight:600}
-.role ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:8px}
-.role li{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;color:rgba(245,241,227,.8)}
-.role li::before{content:"";display:inline-block;margin-top:7px;width:6px;height:6px;border-radius:50%;background:var(--c)}
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
 
-/* tech */
-.tech-grid{margin-top:40px;display:flex;flex-wrap:wrap;gap:12px}
-.pill{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:2px solid var(--ink);border-radius:999px;padding:8px 16px;font-size:13.5px;font-weight:500;box-shadow:3px 3px 0 0 var(--ink);transition:transform .2s}
-.pill:hover{transform:translateY(-3px) rotate(-1.5deg)}
-.pill:nth-child(even):hover{transform:translateY(-3px) rotate(1.5deg)}
-.pill .pdot{width:8px;height:8px;border-radius:50%;background:var(--c)}
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -.5px
+    }
 
-/* quote */
-.quote{background:rgba(212,169,59,.2);border-top:2px solid rgba(26,24,19,.9);border-bottom:2px solid rgba(26,24,19,.9);padding:80px 24px;text-align:center}
-.quote-inner{max-width:720px;margin:0 auto}
-.quote-icon{display:inline-block;font-size:24px;color:var(--green);margin-bottom:16px}
-.quote-text{font-family:'Syne',sans-serif;font-weight:700;font-size:clamp(22px,3.2vw,36px);line-height:1.25;text-wrap:balance}
-.quote-text span.q{font-family:'Instrument Serif',serif;font-style:italic;font-weight:400}
-.quote-attrib{margin-top:24px;display:flex;justify-content:center;align-items:center;gap:12px}
-.quote-avatar{width:40px;height:40px;border-radius:50%;background:var(--green);border:2px solid var(--ink)}
-.quote-name{font-size:14px;font-weight:600;text-align:left}
-.quote-role{font-size:12px;color:var(--muted)}
+    .logo span {
+      color: var(--green)
+    }
 
-/* cta */
-.cta{background:var(--ink);color:var(--paper);padding:96px 24px;text-align:center;overflow:hidden}
-.cta-inner{max-width:720px;margin:64px auto 0}
-.stamp{display:inline-flex;align-items:center;gap:8px;border:2px dashed var(--green);color:var(--green);border-radius:999px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
-.cta h2{margin-top:24px;color:var(--paper)}
-.cta p{margin:16px auto 0;max-width:420px;color:rgba(245,241,227,.65);font-size:15px}
-.cta-btns{margin-top:32px;display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
-.btn-cta-green{background:var(--green);color:#fff;border:2px solid var(--green);box-shadow:4px 4px 0 0 var(--paper)}
-.btn-cta-green:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 0 var(--paper)}
+    .nav-links {
+      display: flex;
+      gap: 32px
+    }
 
-/* footer */
-footer{background:var(--ink);color:rgba(245,241,227,.55);text-align:center;padding:32px 24px;font-size:13px;border-top:2px solid rgba(26,24,19,.9)}
-footer a{color:var(--green)}
-</style>
+    .nav-links a {
+      font-size: 14px;
+      color: rgba(26, 24, 19, .7);
+      font-weight: 500;
+      transition: color .2s
+    }
+
+    .nav-links a:hover {
+      color: var(--ink)
+    }
+
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--ink);
+      color: var(--paper);
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: .2s
+    }
+
+    .nav-cta:hover {
+      background: var(--green);
+      border-color: var(--green)
+    }
+
+    @media(max-width:720px) {
+      .nav-links {
+        display: none
+      }
+    }
+
+
+    main {
+      position: relative;
+      z-index: 10
+    }
+
+    section {
+      position: relative
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px
+    }
+
+
+    .hero {
+      padding: 64px 24px 96px;
+      border-bottom: 2px solid rgba(26, 24, 19, .9);
+      position: relative;
+      overflow: hidden
+    }
+
+    .hero-inner {
+      max-width: 880px;
+      margin: 0 auto;
+      text-align: center
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 2px solid var(--ink);
+      background: var(--paper);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 24px
+    }
+
+    .dot {
+      position: relative;
+      display: inline-flex;
+      width: 8px;
+      height: 8px
+    }
+
+    .dot::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--green);
+      border-radius: 50%;
+      animation: ping 1.6s cubic-bezier(0, 0, .2, 1) infinite
+    }
+
+    .dot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--green);
+      border-radius: 50%
+    }
+
+    @keyframes ping {
+
+      75%,
+      100% {
+        transform: scale(2.2);
+        opacity: 0
+      }
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: clamp(46px, 8.5vw, 88px);
+      line-height: 1.02;
+      letter-spacing: -.02em;
+      text-wrap: balance
+    }
+
+    .hero-sub {
+      margin: 32px auto 0;
+      max-width: 560px;
+      font-size: 17px;
+      line-height: 1.65;
+      color: var(--muted);
+      text-wrap: pretty
+    }
+
+    .hero-cta {
+      margin-top: 40px;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, background .2s, color .2s;
+      font-family: inherit
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+      border: 2px solid var(--green);
+      box-shadow: 4px 4px 0 0 var(--ink)
+    }
+
+    .btn-primary:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 0 var(--ink)
+    }
+
+    .btn-outline {
+      background: var(--paper);
+      border: 2px solid var(--ink);
+      color: var(--ink)
+    }
+
+    .btn-outline:hover {
+      background: var(--ink);
+      color: var(--paper)
+    }
+
+    .btn-dark {
+      background: var(--ink);
+      color: var(--paper);
+      border: 2px solid var(--ink)
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--paper);
+      border: 2px solid rgba(245, 241, 227, .3)
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--paper)
+    }
+
+    .terminal {
+      margin: 40px auto 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--ink);
+      color: var(--paper);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 10px
+    }
+
+    .terminal .live {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green)
+    }
+
+    .terminal a {
+      color: var(--green)
+    }
+
+    .cursor {
+      display: inline-block;
+      animation: blink 1.05s steps(1) infinite
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0
+      }
+    }
+
+
+    .spinner {
+      position: absolute;
+      right: 32px;
+      top: 48px;
+      width: 128px;
+      height: 128px;
+      color: var(--green);
+      animation: spin 22s linear infinite
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .spinner svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+      font-family: 'Syne', sans-serif;
+      font-size: 10px;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      font-weight: 500
+    }
+
+    .spinner-sparkle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px
+    }
+
+    @media(max-width:768px) {
+      .spinner {
+        display: none
+      }
+    }
+
+
+    .accent-word {
+      position: relative;
+      display: inline-block;
+      color: var(--green)
+    }
+
+    .accent-word svg {
+      position: absolute;
+      left: 0;
+      bottom: -8px;
+      width: 100%;
+      height: 12px;
+      color: var(--mustard);
+      overflow: visible
+    }
+
+    .accent-word path {
+      stroke: currentColor;
+      stroke-width: 4;
+      fill: none;
+      stroke-linecap: round;
+      stroke-dasharray: 300;
+      stroke-dashoffset: 300;
+      animation: dash 1.4s ease 1s forwards
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: 0
+      }
+    }
+
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .8s cubic-bezier(.2, .8, .2, 1), transform .8s cubic-bezier(.2, .8, .2, 1)
+    }
+
+    .reveal.in {
+      opacity: 1;
+      transform: none
+    }
+
+
+    .word .ltr {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(40px) rotate(-8deg);
+      animation: rise .6s cubic-bezier(.2, .8, .2, 1) forwards
+    }
+
+    @keyframes rise {
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+
+    .ticker {
+      background: var(--ink);
+      color: var(--paper);
+      overflow: hidden;
+      border-top: 2px solid rgba(26, 24, 19, .9);
+      border-bottom: 2px solid rgba(26, 24, 19, .9)
+    }
+
+    .ticker-row {
+      display: flex;
+      gap: 48px;
+      white-space: nowrap;
+      padding: 12px 0;
+      animation: marquee 28s linear infinite;
+      width: max-content
+    }
+
+    .ticker-row.slow {
+      animation-duration: 60s
+    }
+
+    .ticker-row span {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 20px;
+      letter-spacing: -.01em;
+      display: inline-flex;
+      align-items: center;
+      gap: 48px
+    }
+
+    .ticker-row .star {
+      color: var(--mustard);
+      font-size: 14px
+    }
+
+    @keyframes marquee {
+      to {
+        transform: translateX(-50%)
+      }
+    }
+
+
+    .stats {
+      background: var(--paper);
+      border-bottom: 2px solid rgba(26, 24, 19, .9)
+    }
+
+    .stats-grid {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr)
+    }
+
+    .stat {
+      padding: 32px 24px;
+      text-align: center;
+      border-left: 2px solid rgba(26, 24, 19, .9)
+    }
+
+    .stat:first-child {
+      border-left: none
+    }
+
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 700;
+      color: var(--green);
+      line-height: 1
+    }
+
+    .stat-label {
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .15em;
+      color: var(--muted)
+    }
+
+    @media(max-width:640px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .stat:nth-child(odd) {
+        border-left: none
+      }
+
+      .stat:nth-child(3),
+      .stat:nth-child(4) {
+        border-top: 2px solid rgba(26, 24, 19, .9)
+      }
+    }
+
+
+    .section {
+      padding: 96px 24px
+    }
+
+    .kicker {
+      display: inline-block;
+      background: var(--ink);
+      color: var(--paper);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .15em;
+      padding: 2px 8px;
+      margin-bottom: 12px
+    }
+
+    h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: clamp(34px, 5vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -.02em;
+      text-wrap: balance
+    }
+
+    .section-desc {
+      margin-top: 12px;
+      max-width: 480px;
+      font-size: 14px;
+      color: var(--muted)
+    }
+
+    /* features */
+    .feat-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      margin-bottom: 48px
+    }
+
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px
+    }
+
+    @media(max-width:900px) {
+      .feat-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media(max-width:600px) {
+      .feat-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .feat-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--card);
+      border: 2px solid var(--ink);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 6px 6px 0 0 var(--ink);
+      transition: transform .25s cubic-bezier(.2, .8, .2, 1)
+    }
+
+    .feat-card:hover {
+      transform: translateY(-6px) rotate(-.4deg)
+    }
+
+    .feat-card:nth-child(even):hover {
+      transform: translateY(-6px) rotate(.4deg)
+    }
+
+    .feat-icon {
+      display: inline-flex;
+      width: 44px;
+      height: 44px;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--ink);
+      background: rgba(29, 158, 117, .15);
+      color: var(--green-dark);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-size: 20px
+    }
+
+    .feat-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 600
+    }
+
+    .feat-desc {
+      margin-top: 8px;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--muted)
+    }
+
+    .feat-more {
+      margin-top: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(26, 24, 19, .4);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: color .2s
+    }
+
+    .feat-card:hover .feat-more {
+      color: var(--green)
+    }
+
+    .feat-card::after {
+      content: "";
+      position: absolute;
+      right: -48px;
+      top: -48px;
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      background: rgba(212, 169, 59, 0);
+      transition: background .3s
+    }
+
+    .feat-card:hover::after {
+      background: rgba(212, 169, 59, .18)
+    }
+
+    .roles {
+      background: var(--ink);
+      color: var(--paper);
+      border-top: 2px solid rgba(26, 24, 19, .9);
+      border-bottom: 2px solid rgba(26, 24, 19, .9)
+    }
+
+    .roles .kicker {
+      background: transparent;
+      border: 1px solid rgba(245, 241, 227, .4);
+      color: rgba(245, 241, 227, .7)
+    }
+
+    .roles-head {
+      text-align: center;
+      margin-bottom: 48px
+    }
+
+    .roles-head p {
+      margin: 12px auto 0;
+      max-width: 440px;
+      font-size: 14px;
+      color: rgba(245, 241, 227, .6)
+    }
+
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px
+    }
+
+    @media(max-width:900px) {
+      .roles-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media(max-width:540px) {
+      .roles-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .role {
+      border: 2px solid rgba(245, 241, 227, .15);
+      background: rgba(245, 241, 227, .04);
+      backdrop-filter: blur(4px);
+      border-radius: 18px;
+      padding: 24px;
+      transition: transform .2s
+    }
+
+    .role:hover {
+      transform: translateY(-8px)
+    }
+
+    .role-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 46px;
+      font-weight: 700;
+      opacity: .3;
+      line-height: 1
+    }
+
+    .role-title {
+      margin-top: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 600
+    }
+
+    .role ul {
+      list-style: none;
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .role li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13.5px;
+      color: rgba(245, 241, 227, .8)
+    }
+
+    .role li::before {
+      content: "";
+      display: inline-block;
+      margin-top: 7px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--c)
+    }
+
+    /* tech */
+    .tech-grid {
+      margin-top: 40px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 13.5px;
+      font-weight: 500;
+      box-shadow: 3px 3px 0 0 var(--ink);
+      transition: transform .2s
+    }
+
+    .pill:hover {
+      transform: translateY(-3px) rotate(-1.5deg)
+    }
+
+    .pill:nth-child(even):hover {
+      transform: translateY(-3px) rotate(1.5deg)
+    }
+
+    .pill .pdot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c)
+    }
+
+    /* quote */
+    .quote {
+      background: rgba(212, 169, 59, .2);
+      border-top: 2px solid rgba(26, 24, 19, .9);
+      border-bottom: 2px solid rgba(26, 24, 19, .9);
+      padding: 80px 24px;
+      text-align: center
+    }
+
+    .quote-inner {
+      max-width: 720px;
+      margin: 0 auto
+    }
+
+    .quote-icon {
+      display: inline-block;
+      font-size: 24px;
+      color: var(--green);
+      margin-bottom: 16px
+    }
+
+    .quote-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: clamp(22px, 3.2vw, 36px);
+      line-height: 1.25;
+      text-wrap: balance
+    }
+
+    .quote-text span.q {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-weight: 400
+    }
+
+    .quote-attrib {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px
+    }
+
+    .quote-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid var(--ink)
+    }
+
+    .quote-name {
+      font-size: 14px;
+      font-weight: 600;
+      text-align: left
+    }
+
+    .quote-role {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    /* cta */
+    .cta {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 96px 24px;
+      text-align: center;
+      overflow: hidden
+    }
+
+    .cta-inner {
+      max-width: 720px;
+      margin: 64px auto 0
+    }
+
+    .stamp {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 2px dashed var(--green);
+      color: var(--green);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase
+    }
+
+    .cta h2 {
+      margin-top: 24px;
+      color: var(--paper)
+    }
+
+    .cta p {
+      margin: 16px auto 0;
+      max-width: 420px;
+      color: rgba(245, 241, 227, .65);
+      font-size: 15px
+    }
+
+    .cta-btns {
+      margin-top: 32px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px
+    }
+
+    .btn-cta-green {
+      background: var(--green);
+      color: #fff;
+      border: 2px solid var(--green);
+      box-shadow: 4px 4px 0 0 var(--paper)
+    }
+
+    .btn-cta-green:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 0 var(--paper)
+    }
+
+    /* footer */
+    footer {
+      background: var(--ink);
+      color: rgba(245, 241, 227, .55);
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 13px;
+      border-top: 2px solid rgba(26, 24, 19, .9)
+    }
+
+    footer a {
+      color: var(--green)
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="progress" id="progress"></div>
+  <div class="progress" id="progress"></div>
 
-<nav>
-  <div class="nav-inner">
-    <a class="logo" href="#">COLLA<span>ह</span>UB</a>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#roles">Roles</a>
-      <a href="#tech">Tech</a>
-      <a href="#status">Status</a>
+  <nav>
+    <div class="nav-inner">
+      <a class="logo" href="#">COLLA<span>ह</span>UB</a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#roles">Roles</a>
+        <a href="#tech">Tech</a>
+        <a href="#status">Status</a>
+      </div>
+      <a href="https://github.com/Ayush-T-iwar-i" target="_blank" rel="noreferrer" class="nav-cta">
+        ⌥ GitHub →
+      </a>
     </div>
-    <a href="https://github.com/Ayush-T-iwar-i" target="_blank" rel="noreferrer" class="nav-cta">
-      ⌥ GitHub →
-    </a>
-  </div>
-</nav>
+  </nav>
 
-<main>
+  <main>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="spinner">
-      <svg viewBox="0 0 100 100">
-        <defs><path id="cir" d="M 50,50 m -36,0 a 36,36 0 1,1 72,0 a 36,36 0 1,1 -72,0" /></defs>
-        <text><textPath href="#cir">EST · 2025 · COLLAहUB · INDIA ·</textPath></text>
-      </svg>
-      <div class="spinner-sparkle">✦</div>
-    </div>
-
-    <div class="hero-inner">
-      <div class="badge"><span class="dot"></span> LIVE AT COLLAHUB.ONLINE</div>
-
-      <h1>
-        <span class="word" data-text="College" data-delay="100"></span><br/>
-        <span class="font-serif-i" style="color:rgba(26,24,19,.85)">management,</span><br/>
-        <span class="word" data-text="finally " data-delay="600"></span><span class="accent-word">digital.
-          <svg viewBox="0 0 200 14"><path d="M2 8 Q 50 1, 100 6 T 198 5"/></svg>
-        </span>
-      </h1>
-
-      <p class="hero-sub">A full-stack mobile platform for Indian colleges — attendance, timetables, results, assignments and digital ID cards, all in one neat little app.</p>
-
-      <div class="hero-cta">
-        <a href="#" class="btn btn-primary">⬇ Download App</a>
-        <a href="https://app.collahub.online/" class="btn btn-outline">🌐 Open as Web</a>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="spinner">
+        <svg viewBox="0 0 100 100">
+          <defs>
+            <path id="cir" d="M 50,50 m -36,0 a 36,36 0 1,1 72,0 a 36,36 0 1,1 -72,0" />
+          </defs>
+          <text>
+            <textPath href="#cir">EST · 2025 · COLLAहUB · INDIA ·</textPath>
+          </text>
+        </svg>
+        <div class="spinner-sparkle">✦</div>
       </div>
 
-      <div class="terminal">
-        <span class="live"></span>
-        <span style="opacity:.7">$</span> curl
-        <a href="#">api.collahub.online</a>
-        <span class="cursor">▍</span>
+      <div class="hero-inner">
+        <div class="badge"><span class="dot"></span> LIVE AT COLLAHUB.ONLINE</div>
+
+        <h1>
+          <span class="word" data-text="College" data-delay="100"></span><br />
+          <span class="font-serif-i" style="color:rgba(26,24,19,.85)">management,</span><br />
+          <span class="word" data-text="finally " data-delay="600"></span><span class="accent-word">digital.
+            <svg viewBox="0 0 200 14">
+              <path d="M2 8 Q 50 1, 100 6 T 198 5" />
+            </svg>
+          </span>
+        </h1>
+
+        <p class="hero-sub">A full-stack mobile platform for Indian colleges — attendance, timetables, results,
+          assignments and digital ID cards, all in one neat little app.</p>
+
+        <div class="hero-cta">
+          <a href="#" class="btn btn-primary">⬇ Download App</a>
+          <a href="https://app.collahub.online/" class="btn btn-outline">🌐 Open as Web</a>
+        </div>
+
+        <div class="terminal">
+          <span class="live"></span>
+          <span style="opacity:.7">$</span> curl
+          <a href="https://app.collahub.online/">api.collahub.online</a>
+          <span class="cursor">▍</span>
+        </div>
+      </div>
+    </section>
+
+
+    <div class="ticker">
+      <div class="ticker-row">
+        <span>✦ ATTENDANCE <span class="star">★</span> TIMETABLES <span class="star">★</span> RESULTS <span
+            class="star">★</span> DIGITAL ID <span class="star">★</span> OTP AUTH <span class="star">★</span>
+          MULTI-COLLEGE <span class="star">★</span> CLASS SHARING <span class="star">★</span> ASSIGNMENTS <span
+            class="star">★</span> QR CODES <span class="star">★</span> ZERO PAPER <span class="star">★</span></span>
+        <span>✦ ATTENDANCE <span class="star">★</span> TIMETABLES <span class="star">★</span> RESULTS <span
+            class="star">★</span> DIGITAL ID <span class="star">★</span> OTP AUTH <span class="star">★</span>
+          MULTI-COLLEGE <span class="star">★</span> CLASS SHARING <span class="star">★</span> ASSIGNMENTS <span
+            class="star">★</span> QR CODES <span class="star">★</span> ZERO PAPER <span class="star">★</span></span>
       </div>
     </div>
-  </section>
 
-  <!-- TICKER -->
-  <div class="ticker">
-    <div class="ticker-row">
-      <span>✦ ATTENDANCE <span class="star">★</span> TIMETABLES <span class="star">★</span> RESULTS <span class="star">★</span> DIGITAL ID <span class="star">★</span> OTP AUTH <span class="star">★</span> MULTI-COLLEGE <span class="star">★</span> CLASS SHARING <span class="star">★</span> ASSIGNMENTS <span class="star">★</span> QR CODES <span class="star">★</span> ZERO PAPER <span class="star">★</span></span>
-      <span>✦ ATTENDANCE <span class="star">★</span> TIMETABLES <span class="star">★</span> RESULTS <span class="star">★</span> DIGITAL ID <span class="star">★</span> OTP AUTH <span class="star">★</span> MULTI-COLLEGE <span class="star">★</span> CLASS SHARING <span class="star">★</span> ASSIGNMENTS <span class="star">★</span> QR CODES <span class="star">★</span> ZERO PAPER <span class="star">★</span></span>
-    </div>
-  </div>
+    <section class="stats">
+      <div class="stats-grid">
+        <div class="stat reveal">
+          <div class="stat-num" data-count="4">0</div>
+          <div class="stat-label">User Roles</div>
+        </div>
+        <div class="stat reveal">
+          <div class="stat-num" data-count="50" data-suffix="+">0</div>
+          <div class="stat-label">API Endpoints</div>
+        </div>
+        <div class="stat reveal">
+          <div class="stat-num" data-count="4" data-suffix="-layer">0</div>
+          <div class="stat-label">Conflict Detection</div>
+        </div>
+        <div class="stat reveal">
+          <div class="stat-num" data-count="100" data-suffix="%">0</div>
+          <div class="stat-label">Mobile First</div>
+        </div>
+      </div>
+    </section>
 
-  <!-- STATS -->
-  <section class="stats">
-    <div class="stats-grid">
-      <div class="stat reveal"><div class="stat-num" data-count="4">0</div><div class="stat-label">User Roles</div></div>
-      <div class="stat reveal"><div class="stat-num" data-count="50" data-suffix="+">0</div><div class="stat-label">API Endpoints</div></div>
-      <div class="stat reveal"><div class="stat-num" data-count="4" data-suffix="-layer">0</div><div class="stat-label">Conflict Detection</div></div>
-      <div class="stat reveal"><div class="stat-num" data-count="100" data-suffix="%">0</div><div class="stat-label">Mobile First</div></div>
-    </div>
-  </section>
 
-  <!-- FEATURES -->
-  <section id="features" class="section">
-    <div class="container">
-      <div class="feat-head">
+    <section id="features" class="section">
+      <div class="container">
+        <div class="feat-head">
+          <div class="reveal">
+            <div class="kicker">§ Features</div>
+            <h2>Everything in <span class="font-serif-i" style="color:var(--green)">one</span> place.</h2>
+          </div>
+          <p class="section-desc reveal">No more paper registers, scattered WhatsApp groups, or 4 different Excel
+            sheets. Run your entire college from a single, well-mannered app.</p>
+        </div>
+
+        <div class="feat-grid">
+          <div class="feat-card reveal">
+            <div class="feat-icon">✅</div>
+            <div class="feat-name">Smart Attendance</div>
+            <div class="feat-desc">Track Theory and Lab attendance separately. A color-coded date navigator shows marked
+              and unmarked days at a glance.</div>
+            <div class="feat-more">Learn more ↗</div>
+          </div>
+          <div class="feat-card reveal">
+            <div class="feat-icon">📅</div>
+            <div class="feat-name">Timetable Management</div>
+            <div class="feat-desc">4-layer conflict detection prevents teacher, room, batch, and subject clashes
+              automatically.</div>
+            <div class="feat-more">Learn more ↗</div>
+          </div>
+          <div class="feat-card reveal">
+            <div class="feat-icon">🔄</div>
+            <div class="feat-name">Class Sharing</div>
+            <div class="feat-desc">Substitute teacher feature lets faculty delegate classes. Access expires when the
+              period ends.</div>
+            <div class="feat-more">Learn more ↗</div>
+          </div>
+          <div class="feat-card reveal">
+            <div class="feat-icon">🪪</div>
+            <div class="feat-name">Digital ID Cards</div>
+            <div class="feat-desc">QR enabled identity cards for students and teachers. Download as PNG straight from
+              the app.</div>
+            <div class="feat-more">Learn more ↗</div>
+          </div>
+          <div class="feat-card reveal">
+            <div class="feat-icon">🔒</div>
+            <div class="feat-name">OTP Authentication</div>
+            <div class="feat-desc">Secure email-verified login with JWT access tokens and automatic refresh token
+              rotation.</div>
+            <div class="feat-more">Learn more ↗</div>
+          </div>
+          <div class="feat-card reveal">
+            <div class="feat-icon">🏫</div>
+            <div class="feat-name">Multi-College Support</div>
+            <div class="feat-desc">One platform for many institutions. Super Admin manages all colleges from a single
+              dashboard.</div>
+            <div class="feat-more">Learn more ↗</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="roles" class="roles section">
+      <div class="container">
+        <div class="roles-head reveal">
+          <div class="kicker">§ Access Control</div>
+          <h2>A dashboard for <span class="font-serif-i" style="color:var(--green)">every</span> role</h2>
+          <p>Hierarchical access — every user only ever sees exactly what they need to.</p>
+        </div>
+        <div class="roles-grid">
+          <div class="role reveal" style="--c:var(--rust)">
+            <div class="role-num" style="color:var(--rust)">01</div>
+            <div class="role-title">Super Admin</div>
+            <ul>
+              <li>Manage all colleges</li>
+              <li>Create admin accounts</li>
+              <li>Platform-wide statistics</li>
+              <li>Unrestricted access</li>
+            </ul>
+          </div>
+          <div class="role reveal" style="--c:var(--green)">
+            <div class="role-num" style="color:var(--green)">02</div>
+            <div class="role-title">Admin</div>
+            <ul>
+              <li>Manage one college</li>
+              <li>Add teachers and students</li>
+              <li>Approve subject requests</li>
+              <li>Assign timetables</li>
+            </ul>
+          </div>
+          <div class="role reveal" style="--c:var(--mustard)">
+            <div class="role-num" style="color:var(--mustard)">03</div>
+            <div class="role-title">Teacher</div>
+            <ul>
+              <li>Request subjects</li>
+              <li>Mark attendance</li>
+              <li>Share classes</li>
+              <li>Post notes &amp; assignments</li>
+            </ul>
+          </div>
+          <div class="role reveal" style="--c:#f5f1e3">
+            <div class="role-num" style="color:#f5f1e3">04</div>
+            <div class="role-title">Student</div>
+            <ul>
+              <li>View timetable</li>
+              <li>Track attendance</li>
+              <li>Submit assignments</li>
+              <li>Check results</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tech" class="section">
+      <div class="container">
         <div class="reveal">
-          <div class="kicker">§ Features</div>
-          <h2>Everything in <span class="font-serif-i" style="color:var(--green)">one</span> place.</h2>
+          <div class="kicker">§ Tech Stack</div>
+          <h2>Built with <span class="font-serif-i" style="color:var(--green)">modern</span> tools.</h2>
+          <p class="section-desc">Production-ready, mobile-first, full-stack architecture — boring tech that just works.
+          </p>
         </div>
-        <p class="section-desc reveal">No more paper registers, scattered WhatsApp groups, or 4 different Excel sheets. Run your entire college from a single, well-mannered app.</p>
-      </div>
-
-      <div class="feat-grid">
-        <div class="feat-card reveal"><div class="feat-icon">✅</div><div class="feat-name">Smart Attendance</div><div class="feat-desc">Track Theory and Lab attendance separately. A color-coded date navigator shows marked and unmarked days at a glance.</div><div class="feat-more">Learn more ↗</div></div>
-        <div class="feat-card reveal"><div class="feat-icon">📅</div><div class="feat-name">Timetable Management</div><div class="feat-desc">4-layer conflict detection prevents teacher, room, batch, and subject clashes automatically.</div><div class="feat-more">Learn more ↗</div></div>
-        <div class="feat-card reveal"><div class="feat-icon">🔄</div><div class="feat-name">Class Sharing</div><div class="feat-desc">Substitute teacher feature lets faculty delegate classes. Access expires when the period ends.</div><div class="feat-more">Learn more ↗</div></div>
-        <div class="feat-card reveal"><div class="feat-icon">🪪</div><div class="feat-name">Digital ID Cards</div><div class="feat-desc">QR enabled identity cards for students and teachers. Download as PNG straight from the app.</div><div class="feat-more">Learn more ↗</div></div>
-        <div class="feat-card reveal"><div class="feat-icon">🔒</div><div class="feat-name">OTP Authentication</div><div class="feat-desc">Secure email-verified login with JWT access tokens and automatic refresh token rotation.</div><div class="feat-more">Learn more ↗</div></div>
-        <div class="feat-card reveal"><div class="feat-icon">🏫</div><div class="feat-name">Multi-College Support</div><div class="feat-desc">One platform for many institutions. Super Admin manages all colleges from a single dashboard.</div><div class="feat-more">Learn more ↗</div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ROLES -->
-  <section id="roles" class="roles section">
-    <div class="container">
-      <div class="roles-head reveal">
-        <div class="kicker">§ Access Control</div>
-        <h2>A dashboard for <span class="font-serif-i" style="color:var(--green)">every</span> role</h2>
-        <p>Hierarchical access — every user only ever sees exactly what they need to.</p>
-      </div>
-      <div class="roles-grid">
-        <div class="role reveal" style="--c:var(--rust)">
-          <div class="role-num" style="color:var(--rust)">01</div>
-          <div class="role-title">Super Admin</div>
-          <ul><li>Manage all colleges</li><li>Create admin accounts</li><li>Platform-wide statistics</li><li>Unrestricted access</li></ul>
-        </div>
-        <div class="role reveal" style="--c:var(--green)">
-          <div class="role-num" style="color:var(--green)">02</div>
-          <div class="role-title">Admin</div>
-          <ul><li>Manage one college</li><li>Add teachers and students</li><li>Approve subject requests</li><li>Assign timetables</li></ul>
-        </div>
-        <div class="role reveal" style="--c:var(--mustard)">
-          <div class="role-num" style="color:var(--mustard)">03</div>
-          <div class="role-title">Teacher</div>
-          <ul><li>Request subjects</li><li>Mark attendance</li><li>Share classes</li><li>Post notes &amp; assignments</li></ul>
-        </div>
-        <div class="role reveal" style="--c:#f5f1e3">
-          <div class="role-num" style="color:#f5f1e3">04</div>
-          <div class="role-title">Student</div>
-          <ul><li>View timetable</li><li>Track attendance</li><li>Submit assignments</li><li>Check results</li></ul>
+        <div class="tech-grid reveal">
+          <span class="pill" style="--c:#61DAFB"><span class="pdot"></span>React Native</span>
+          <span class="pill" style="--c:#3C873A"><span class="pdot"></span>Node.js v24</span>
+          <span class="pill" style="--c:#13AA52"><span class="pdot"></span>MongoDB Atlas</span>
+          <span class="pill" style="--c:#46E3B7"><span class="pdot"></span>Render</span>
+          <span class="pill" style="--c:#000"><span class="pdot"></span>Expo EAS</span>
+          <span class="pill" style="--c:#3448C5"><span class="pdot"></span>Cloudinary</span>
+          <span class="pill" style="--c:#0a0a0a"><span class="pdot"></span>Resend</span>
+          <span class="pill" style="--c:#000"><span class="pdot"></span>Vercel</span>
+          <span class="pill" style="--c:#673AB7"><span class="pdot"></span>Hostinger DNS</span>
+          <span class="pill" style="--c:#3178C6"><span class="pdot"></span>TypeScript</span>
+          <span class="pill" style="--c:#D63AFF"><span class="pdot"></span>JWT Auth</span>
+          <span class="pill" style="--c:#06B6D4"><span class="pdot"></span>Tailwind</span>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- TECH -->
-  <section id="tech" class="section">
-    <div class="container">
-      <div class="reveal">
-        <div class="kicker">§ Tech Stack</div>
-        <h2>Built with <span class="font-serif-i" style="color:var(--green)">modern</span> tools.</h2>
-        <p class="section-desc">Production-ready, mobile-first, full-stack architecture — boring tech that just works.</p>
+    <section class="quote">
+      <div class="quote-inner reveal">
+        <div class="quote-icon">⚡</div>
+        <p class="quote-text"><span class="q">“</span>We threw away three Excel sheets, one paper register, and a
+          WhatsApp group of 412 people. COLLA<span style="color:var(--green)">ह</span>UB now runs the whole
+          department.<span class="q">”</span></p>
+        <div class="quote-attrib">
+          <div class="quote-avatar"></div>
+
+        </div>
       </div>
-      <div class="tech-grid reveal">
-        <span class="pill" style="--c:#61DAFB"><span class="pdot"></span>React Native</span>
-        <span class="pill" style="--c:#3C873A"><span class="pdot"></span>Node.js v24</span>
-        <span class="pill" style="--c:#13AA52"><span class="pdot"></span>MongoDB Atlas</span>
-        <span class="pill" style="--c:#46E3B7"><span class="pdot"></span>Render</span>
-        <span class="pill" style="--c:#000"><span class="pdot"></span>Expo EAS</span>
-        <span class="pill" style="--c:#3448C5"><span class="pdot"></span>Cloudinary</span>
-        <span class="pill" style="--c:#0a0a0a"><span class="pdot"></span>Resend</span>
-        <span class="pill" style="--c:#000"><span class="pdot"></span>Vercel</span>
-        <span class="pill" style="--c:#673AB7"><span class="pdot"></span>Hostinger DNS</span>
-        <span class="pill" style="--c:#3178C6"><span class="pdot"></span>TypeScript</span>
-        <span class="pill" style="--c:#D63AFF"><span class="pdot"></span>JWT Auth</span>
-        <span class="pill" style="--c:#06B6D4"><span class="pdot"></span>Tailwind</span>
+    </section>
+
+    <section id="status" class="cta">
+      <div class="ticker" style="border-color:rgba(245,241,227,.15)">
+        <div class="ticker-row slow">
+          <span>READY? <span class="star">★</span> DIGITIZE YOUR COLLEGE <span class="star">★</span> FREE TO TRY <span
+              class="star">★</span> NO PAPER <span class="star">★</span> NO EXCEL <span class="star">★</span> BUILT IN
+            INDIA <span class="star">★</span></span>
+          <span>READY? <span class="star">★</span> DIGITIZE YOUR COLLEGE <span class="star">★</span> FREE TO TRY <span
+              class="star">★</span> NO PAPER <span class="star">★</span> NO EXCEL <span class="star">★</span> BUILT IN
+            INDIA <span class="star">★</span></span>
+        </div>
       </div>
-    </div>
-  </section>
-
-  <!-- QUOTE -->
-  <section class="quote">
-    <div class="quote-inner reveal">
-      <div class="quote-icon">⚡</div>
-      <p class="quote-text"><span class="q">“</span>We threw away three Excel sheets, one paper register, and a WhatsApp group of 412 people. COLLA<span style="color:var(--green)">ह</span>UB now runs the whole department.<span class="q">”</span></p>
-      <div class="quote-attrib">
-        <div class="quote-avatar"></div>
-        
+      <div class="cta-inner reveal">
+        <span class="stamp">⏱ Onboarding · 2 days</span>
+        <h2>Ready to digitize<br />your <span class="font-serif-i" style="color:var(--green)">college?</span></h2>
+        <p>Join institutions already running on COLLA<span style="color:var(--green)">ह</span>UB for seamless
+          management.</p>
+        <div class="cta-btns">
+          <a href="mailto:ayush@gmail.com" class="btn btn-cta-green">Contact Ayush ↗</a>
+          <a href="https://github.com/Ayush-T-iwar-i" target="_blank" rel="noreferrer" class="btn btn-ghost">⌥ View on
+            GitHub</a>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </main>
 
-  <!-- CTA -->
-  <section id="status" class="cta">
-    <div class="ticker" style="border-color:rgba(245,241,227,.15)">
-      <div class="ticker-row slow">
-        <span>READY? <span class="star">★</span> DIGITIZE YOUR COLLEGE <span class="star">★</span> FREE TO TRY <span class="star">★</span> NO PAPER <span class="star">★</span> NO EXCEL <span class="star">★</span> BUILT IN INDIA <span class="star">★</span></span>
-        <span>READY? <span class="star">★</span> DIGITIZE YOUR COLLEGE <span class="star">★</span> FREE TO TRY <span class="star">★</span> NO PAPER <span class="star">★</span> NO EXCEL <span class="star">★</span> BUILT IN INDIA <span class="star">★</span></span>
-      </div>
-    </div>
-    <div class="cta-inner reveal">
-      <span class="stamp">⏱ Onboarding · 2 days</span>
-      <h2>Ready to digitize<br/>your <span class="font-serif-i" style="color:var(--green)">college?</span></h2>
-      <p>Join institutions already running on COLLA<span style="color:var(--green)">ह</span>UB for seamless management.</p>
-      <div class="cta-btns">
-        <a href="mailto:ayush@gmail.com" class="btn btn-cta-green">Contact Ayush ↗</a>
-        <a href="https://github.com/Ayush-T-iwar-i" target="_blank" rel="noreferrer" class="btn btn-ghost">⌥ View on GitHub</a>
-      </div>
-    </div>
-  </section>
-</main>
+  <footer>
+    Built with <span style="color:var(--green)">❤</span> by Ayush Tiwari ·
+    <a href="#">app.collahub.online</a> ·
+    <a href="#">API Status</a>
+  </footer>
 
-<footer>
-  Built with <span style="color:var(--green)">❤</span> by Ayush Tiwari ·
-  <a href="#">app.collahub.online</a> ·
-  <a href="#">API Status</a>
-</footer>
+  <script>
 
-<script>
-// scroll progress
-const prog=document.getElementById('progress');
-addEventListener('scroll',()=>{
-  const h=document.documentElement;
-  const p=h.scrollTop/(h.scrollHeight-h.clientHeight)*100;
-  prog.style.width=p+'%';
-});
+    const prog = document.getElementById('progress');
+    addEventListener('scroll', () => {
+      const h = document.documentElement;
+      const p = h.scrollTop / (h.scrollHeight - h.clientHeight) * 100;
+      prog.style.width = p + '%';
+    });
 
-// reveal on scroll
-const io=new IntersectionObserver(es=>{
-  es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
-},{rootMargin:'-60px'});
-document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { rootMargin: '-60px' });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-// animated counters
-const co=new IntersectionObserver(es=>{
-  es.forEach(e=>{
-    if(!e.isIntersecting)return;
-    const el=e.target, to=+el.dataset.count, suf=el.dataset.suffix||'';
-    const dur=1600, start=performance.now();
-    const tick=t=>{
-      const p=Math.min(1,(t-start)/dur);
-      const eased=1-Math.pow(1-p,3);
-      el.textContent=Math.round(to*eased)+suf;
-      if(p<1)requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    co.unobserve(el);
-  });
-},{rootMargin:'-60px'});
-document.querySelectorAll('[data-count]').forEach(el=>co.observe(el));
+    const co = new IntersectionObserver(es => {
+      es.forEach(e => {
+        if (!e.isIntersecting) return;
+        const el = e.target, to = +el.dataset.count, suf = el.dataset.suffix || '';
+        const dur = 1600, start = performance.now();
+        const tick = t => {
+          const p = Math.min(1, (t - start) / dur);
+          const eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(to * eased) + suf;
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        co.unobserve(el);
+      });
+    }, { rootMargin: '-60px' });
+    document.querySelectorAll('[data-count]').forEach(el => co.observe(el));
 
-// letter-by-letter hero words
-document.querySelectorAll('.word').forEach(w=>{
-  const txt=w.dataset.text, base=+w.dataset.delay||0;
-  w.innerHTML=[...txt].map((c,i)=>`<span class="ltr" style="animation-delay:${base+i*40}ms">${c===' '?'&nbsp;':c}</span>`).join('');
-});
-</script>
+
+    document.querySelectorAll('.word').forEach(w => {
+      const txt = w.dataset.text, base = +w.dataset.delay || 0;
+      w.innerHTML = [...txt].map((c, i) => `<span class="ltr" style="animation-delay:${base + i * 40}ms">${c === ' ' ? '&nbsp;' : c}</span>`).join('');
+    });
+  </script>
 </body>
+
 </html>

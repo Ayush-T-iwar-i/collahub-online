@@ -4,13 +4,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 
-// ── Auto URL select ───────────────────────────────────────
+
 const BASE_URL = "https://university-hub-code.onrender.com";
 
 
 if (__DEV__) console.log("🌐 API →", BASE_URL);
 
-// ── Axios instance ────────────────────────────────────────
+
 const API = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,

@@ -3,41 +3,23 @@ const bcrypt    = require("bcryptjs");
 const jwt       = require("jsonwebtoken");
 const validator = require("validator");
 
-/* ================= GENERATE TEACHER ID ================= */
-const generateTeacherId = async (college) => {
-  const year = new Date().getFullYear();
-
-  const collegeCode = college
-    .toUpperCase()
-    .replace(/\s+/g, "")
-    .substring(0, 4);
-
-  const count = await User.countDocuments({
-    role:    "teacher",
-    college: college,
-  });
-
-  const serial = (count + 1).toString().padStart(3, "0");
-  return `${year}${collegeCode}${serial}`;
-};
-
 /* ================= REGISTER TEACHER ================= */
 const registerTeacher = async (req, res) => {
   try {
-    // ✅ department add kiya
-    let { name, email, password, phone, college, department, university, age } = req.body;
+    let { name, email, password, phone, teacherId, college, department, university, age } = req.body;
 
-    // ✅ department bhi required
-    if (!name || !email || !password || !phone || !college || !department) {
+    // teacherId bhi required hai ab
+    if (!name || !email || !password || !phone || !teacherId || !college || !department) {
       return res.status(400).json({
         success: false,
-        message: "All fields required (name, email, password, phone, college, department)",
+        message: "All fields required (name, email, password, phone, teacherId, college, department)",
       });
     }
 
     email      = email.toLowerCase().trim();
     department = department.trim();
     college    = college.trim();
+    teacherId  = teacherId.trim();
 
     if (!validator.isEmail(email)) {
       return res.status(400).json({ success: false, message: "Invalid email format" });
@@ -52,18 +34,23 @@ const registerTeacher = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email already exists" });
     }
 
+    // Check if teacherId already in use
+    const teacherIdExist = await User.findOne({ teacherId });
+    if (teacherIdExist) {
+      return res.status(400).json({ success: false, message: "Teacher ID already in use. Please enter a unique Teacher ID." });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const teacherId      = await generateTeacherId(college);
 
     await User.create({
       teacherId,
       name,
       email,
       password: hashedPassword,
-      role:       "teacher",   // ✅ role teacher set
+      role:       "teacher",
       phone,
       college,
-      department,              // ✅ department save
+      department,
       university,
       age: age ? Number(age) : undefined,
     });

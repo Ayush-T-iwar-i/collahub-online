@@ -85,11 +85,11 @@ exports.verifyOtp = async (req, res) => {
 // ══════════════════════════════════════════════════════════
 exports.register = async (req, res) => {
   try {
-    let { name, email, password, phone, admissionYear, department, college, gender } = req.body;
+    let { name, email, password, phone, admissionYear, department, college, gender, studentId } = req.body;
     email = email?.toLowerCase().trim();
 
-    if (!name || !email || !password || !phone || !admissionYear || !department || !college)
-      return res.status(400).json({ success: false, message: "All fields are required" });
+    if (!name || !email || !password || !phone || !admissionYear || !department || !college || !studentId)
+      return res.status(400).json({ success: false, message: "All fields are required (including Student ID)" });
 
     if (!validator.isEmail(email))
       return res.status(400).json({ success: false, message: "Invalid email format" });
@@ -104,12 +104,10 @@ exports.register = async (req, res) => {
     if (pendingUser.name !== "pending" && pendingUser.isEmailVerified && !pendingUser.otp)
       return res.status(400).json({ success: false, message: "Email already registered" });
 
-    const deptMatch = department?.match(/\(([^)]+)\)/);
-    const deptCode  = deptMatch ? deptMatch[1].toUpperCase() : department?.split(" ")[0].toUpperCase() || "DEPT";
-    const year      = admissionYear || new Date().getFullYear();
-    const prefix    = `${year}-${deptCode}-`;
-    const count     = await User.countDocuments({ role: "student", studentId: { $regex: `^${prefix}` } });
-    const studentId = `${prefix}${String(count + 1).padStart(3, "0")}`;
+    // Check if studentId already exists
+    const existingStudentId = await User.findOne({ studentId: studentId.trim() });
+    if (existingStudentId)
+      return res.status(400).json({ success: false, message: "Student ID already in use. Please enter a unique Student ID." });
 
     const currentYear  = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
@@ -125,7 +123,7 @@ exports.register = async (req, res) => {
       { email },
       {
         $set: {
-          name: name.trim(), phone, studentId, admissionYear,
+          name: name.trim(), phone, studentId: studentId.trim(), admissionYear,
           department: department?.trim(), college: college?.trim(),
           gender: gender || "", password: hash,
           role: "student", semester, isEmailVerified: true,
@@ -137,7 +135,7 @@ exports.register = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Registered successfully! You can now login.",
-      studentId, semester,
+      studentId: studentId.trim(), semester,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

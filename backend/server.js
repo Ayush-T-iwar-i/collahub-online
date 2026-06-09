@@ -13,18 +13,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const ENV = process.env.NODE_ENV || "development";
 
-// ── Trust Proxy — is ESSENTIAL for Railway ─────────────
 app.set("trust proxy", 1);
 
-// ── DB Connect ────────────────────────────────────────────
 connectDB();
 
-// ══════════════════════════════════════════════════════════
-// CORS — Production + Development both handle
-// ══════════════════════════════════════════════════════════
 const ALLOWED_ORIGINS = [
 
-  // Render backend
+ 
   "https://university-hub-code.onrender.com",
 
   // Production frontend domains
@@ -32,24 +27,22 @@ const ALLOWED_ORIGINS = [
   "https://www.collahub.online",
   "https://app.collahub.online",
 
-  // Any Vercel preview deployment
   /^https:\/\/.*\.vercel\.app$/,
 
-  // Any Render deployment
   /^https:\/\/.*\.onrender\.com$/,
 
-  // Localhost
+
   "http://localhost:8081",
   "http://localhost:8082",
   "http://localhost:8083",
   "http://localhost:3000",
   "http://localhost:5000",
 
-  // Android emulator
+
   "http://10.0.2.2:8081",
   "http://10.0.2.2:5000",
 
-  // LAN devices
+
   /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/,
   /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/,
   /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(:\d+)?$/,
@@ -57,7 +50,7 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
+    
     if (!origin) return callback(null, true);
 
     const allowed = ALLOWED_ORIGINS.some((o) =>
@@ -68,7 +61,7 @@ app.use(cors({
       callback(null, true);
     } else {
       console.warn("⚠️  CORS blocked:", origin);
-      // In development — allow anyway (easier testing)
+     
       if (ENV === "development") {
         callback(null, true);
       } else {
@@ -83,14 +76,14 @@ app.use(cors({
   optionsSuccessStatus: 204,
 }));
 
-// ── Helmet ────────────────────────────────────────────────
+
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginOpenerPolicy: false,
-  contentSecurityPolicy: false, // Expo web needs this disabled
+  contentSecurityPolicy: false, 
 }));
 
-// ── Rate Limiting ─────────────────────────────────────────
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: ENV === "production" ? 10 : 100, // More lenient in dev
@@ -195,9 +188,6 @@ if (ENV !== "production") {
   });
 }
 
-// ══════════════════════════════════════════════════════════
-// ROUTES
-// ══════════════════════════════════════════════════════════
 app.use("/auth", require("./routes/authRoutes"));
 app.use("/admin", require("./routes/adminRoutes"));
 app.use("/students", require("./routes/studentTeacherRoutes"));
@@ -226,7 +216,6 @@ app.use("/super-admin", require("./routes/superAdminRoutes"));
 app.use("/biometric", require("./routes/biometricRoutes"));
 app.use("/teacher-notes", require("./routes/noteRoutes"));
 
-// ── 404 handler ───────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -234,10 +223,8 @@ app.use((req, res) => {
   });
 });
 
-// ── Global error handler ──────────────────────────────────
 app.use(errorHandler);
 
-// ── Start server ──────────────────────────────────────────
 app.listen(PORT, "0.0.0.0", () => {
   console.log("\n╔══════════════════════════════════════╗");
   console.log(`║  🚀 CollaHub API running              ║`);
