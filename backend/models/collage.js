@@ -1,23 +1,17 @@
 const mongoose = require("mongoose");
 
-const subjectSchema = new mongoose.Schema(
+const collegeSchema = new mongoose.Schema(
   {
-    name:        { type:String, required:true, trim:true },
-    code:        { type:String, required:true, trim:true },
-    type:        { type:String, enum:["Theory","Lab","Both"], default:"Theory" },
-    college:     { type:String, required:true, trim:true },
-    department:  { type:String, required:true, trim:true },
-    semester:    { type:Number, required:true, min:1, max:8 },
-    credits:     { type:Number, default:0 },
-    description: { type:String, trim:true, default:"" },
+    name: { type: String, required: true, unique: true, trim: true },
+    shortName: { type: String, trim: true, default: "" },
+    type: { type: String, default: "Engineering" },
+    address: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    email: { type: String, default: "" },
+    website: { type: String, default: "" },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
 
-// Same code+college+dept+sem will not be duplicated
-subjectSchema.index(
-  { code:1, college:1, department:1, semester:1 },
-  { unique:true }
-);
-
-module.exports = mongoose.model("Subject", subjectSchema);
+module.exports = mongoose.model("College", collegeSchema);

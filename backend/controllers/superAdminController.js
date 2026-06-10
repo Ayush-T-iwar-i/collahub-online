@@ -196,17 +196,36 @@ exports.sendBroadcast = async (req, res) => {
 // ══════════════════════════════════════════════════
 exports.getColleges = async (req, res) => {
   try {
-    const colleges = await User.distinct("college");
+    const College = require("../models/College");
+
+    // College model se saari colleges lo
+    const allColleges = await College.find().sort({ createdAt: -1 }).lean();
+
+    // Har college ke liye students/teachers/admins count karo
     const collegeData = await Promise.all(
-      colleges.filter(Boolean).map(async (c) => {
+      allColleges.map(async (c) => {
         const [students, teachers, admins] = await Promise.all([
-          User.countDocuments({ college: c, role: "student" }),
-          User.countDocuments({ college: c, role: "teacher" }),
-          User.countDocuments({ college: c, role: "admin"   }),
+          User.countDocuments({ college: c.name, role: "student" }),
+          User.countDocuments({ college: c.name, role: "teacher" }),
+          User.countDocuments({ college: c.name, role: "admin"   }),
         ]);
-        return { name: c, students, teachers, admins, total: students + teachers + admins };
+        return {
+          _id:       c._id,
+          name:      c.name,
+          shortName: c.shortName,
+          type:      c.type,
+          address:   c.address,
+          phone:     c.phone,
+          email:     c.email,
+          website:   c.website,
+          students,
+          teachers,
+          admins,
+          total: students + teachers + admins,
+        };
       })
     );
+
     res.json({ success: true, colleges: collegeData });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -215,37 +234,34 @@ exports.getColleges = async (req, res) => {
 
 // ══════════════════════════════════════════════════
 // ADD COLLEGE  —  POST /super-admin/colleges
-// College naam MongoDB mein store hota hai
 // ══════════════════════════════════════════════════
 exports.addCollege = async (req, res) => {
   try {
+    const College = require("../models/College");
     const { name, shortName, type, address, phone, email, website } = req.body;
+
     if (!name?.trim()) {
       return res.status(400).json({ success: false, message: "College name is required" });
     }
 
-    // Check duplicate
-    const exists = await User.findOne({ college: name.trim(), role: "admin" });
-    // We store colleges as a separate collection if model exists, else just validate
-    let College;
-    try { College = require("../models/College"); } catch {}
-
-    if (College) {
-      const dup = await College.findOne({ name: name.trim() });
-      if (dup) return res.status(400).json({ success: false, message: "This college already exists" });
-      const college = await College.create({
-        name: name.trim(), shortName, type, address, phone, email, website,
-        createdBy: req.user.id,
-      });
-      return res.status(201).json({ success: true, message: "College added successfully!", college });
+    // Duplicate check
+    const dup = await College.findOne({ name: name.trim() });
+    if (dup) {
+      return res.status(400).json({ success: false, message: "This college already exists" });
     }
 
-    // Fallback: no College model — just return success (college stored via admin users)
-    res.status(201).json({
-      success: true,
-      message: "College registered. Now create an admin for this college.",
-      college: { name: name.trim(), shortName, type, address },
+    const college = await College.create({
+      name:      name.trim(),
+      shortName: shortName?.trim() || "",
+      type:      type || "Engineering",
+      address:   address?.trim() || "",
+      phone:     phone?.trim() || "",
+      email:     email?.trim() || "",
+      website:   website?.trim() || "",
+      createdBy: req.user.id,
     });
+
+    res.status(201).json({ success: true, message: "College added successfully!", college });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
@@ -256,6 +272,7 @@ exports.addCollege = async (req, res) => {
 // ══════════════════════════════════════════════════
 exports.updateCollege = async (req, res) => {
   try {
+    const College = require("../models/College");
     const oldName = decodeURIComponent(req.params.name);
     const { name, shortName, type, address, phone, email, website } = req.body;
 
@@ -263,17 +280,26 @@ exports.updateCollege = async (req, res) => {
       return res.status(400).json({ success: false, message: "College name is required" });
     }
 
-    // Update all users with old college name
-    const result = await User.updateMany(
-      { college: oldName },
-      { $set: { college: name.trim() } }
+    // College model mein update karo
+    const updated = await College.findOneAndUpdate(
+      { name: oldName },
+      { $set: { name: name.trim(), shortName, type, address, phone, email, website } },
+      { new: true }
     );
 
-    res.json({
-      success: true,
-      message: `College updated successfully. ${result.modifiedCount} users updated.`,
-      college: { name: name.trim(), shortName, type, address },
-    });
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "College not found" });
+    }
+
+    // Agar naam badla to saare users ka college field bhi update karo
+    if (oldName !== name.trim()) {
+      await User.updateMany(
+        { college: oldName },
+        { $set: { college: name.trim() } }
+      );
+    }
+
+    res.json({ success: true, message: "College updated successfully!", college: updated });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
@@ -284,6 +310,7 @@ exports.updateCollege = async (req, res) => {
 // ══════════════════════════════════════════════════
 exports.deleteCollege = async (req, res) => {
   try {
+    const College = require("../models/College");
     const collegeName = decodeURIComponent(req.params.name);
 
     const [students, teachers, admins] = await Promise.all([
@@ -296,11 +323,13 @@ exports.deleteCollege = async (req, res) => {
     if (total > 0) {
       return res.status(400).json({
         success: false,
-        message: `Cannot delete college — ${total} users are still in this college (${students} students, ${teachers} teachers, ${admins} admins). Please delete all users first.`,
+        message: `Cannot delete — ${total} users still linked (${students} students, ${teachers} teachers, ${admins} admins). Remove all users first.`,
       });
     }
 
-    res.json({ success: true, message: `"${collegeName}" successfully deleted.` });
+    await College.findOneAndDelete({ name: collegeName });
+
+    res.json({ success: true, message: `"${collegeName}" deleted successfully.` });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

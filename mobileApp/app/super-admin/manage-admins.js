@@ -387,7 +387,7 @@ export default function ManageAdmins() {
                 {customCollege && (
                   <TextInput
                     style={[styles.input, { marginTop:8, borderColor:"rgba(167,139,250,0.4)" }]}
-                    placeholder="College ka poora naam likhein..."
+                    placeholder="College full Name "
                     placeholderTextColor="#374151"
                     value={form.college}
                     onChangeText={v => setForm(p => ({ ...p, college:v }))}
@@ -404,7 +404,7 @@ export default function ManageAdmins() {
                   <Ionicons name="person-outline" size={16} color="#4b5563" style={styles.inputIcon} />
                   <TextInput
                     style={styles.inputField}
-                    placeholder="Admin ka naam"
+                    placeholder="Admin full name"
                     placeholderTextColor="#374151"
                     value={form.name}
                     onChangeText={v => setForm(p => ({ ...p, name:v }))}

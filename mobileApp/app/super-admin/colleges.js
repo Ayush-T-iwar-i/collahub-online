@@ -1,6 +1,3 @@
-// ══════════════════════════════════════════════════════════════
-// super-admin-colleges.js  →  app/super-admin/colleges.js
-// ══════════════════════════════════════════════════════════════
 
 import React, { useState, useCallback } from "react";
 import {
