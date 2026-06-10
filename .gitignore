@@ -19,3 +19,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+
+# APK Files
+*.apk
+CollaHub.apk
